@@ -66,6 +66,74 @@
       </div>
     </div>
 
+    <!-- Formulário de Registro -->
+    <div id="register-page" class="d-none">
+      <div class="header">
+        <h1><i class="bi bi-building-lock me-2"></i>Sistema CGLIC</h1>
+      </div>
+
+      <div class="login-container">
+        <div class="login-form">
+          <form id="register-form">
+            <h3 class="text-center mb-4">Cadastro de Novo Usuário</h3>
+
+            <div class="form-group mb-3">
+              <label for="reg-nome">Nome Completo</label>
+              <div class="input-group">
+                <span class="icon">
+                  <i class="bi bi-person"></i>
+                </span>
+                <input type="text" id="reg-nome" placeholder="Digite seu nome completo" required>
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="reg-email">Email</label>
+              <div class="input-group">
+                <span class="icon">
+                  <i class="bi bi-envelope"></i>
+                </span>
+                <input type="email" id="reg-email" placeholder="seuemail@saude.gov.br" required>
+              </div>
+              <small class="text-muted">Apenas emails com domínio @saude.gov.br são aceitos</small>
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="reg-senha">Senha</label>
+              <div class="input-group">
+                <span class="icon">
+                  <i class="bi bi-lock"></i>
+                </span>
+                <input type="password" id="reg-senha" placeholder="Digite sua senha" required>
+                <span class="eye-icon" id="toggle-reg-password">
+                  <i class="bi bi-eye"></i>
+                </span>
+              </div>
+              <small class="text-muted">Mínimo de 8 caracteres</small>
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="reg-confirma-senha">Confirme a Senha</label>
+              <div class="input-group">
+                <span class="icon">
+                  <i class="bi bi-lock-fill"></i>
+                </span>
+                <input type="password" id="reg-confirma-senha" placeholder="Confirme sua senha" required>
+              </div>
+            </div>
+
+            <div class="error-message" id="register-error"></div>
+
+            <button type="submit" class="signin-btn">Cadastrar</button>
+
+            <div class="signup-link">
+              Já possui uma conta? <a href="#" id="login-link">Faça login</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Main Application -->
     <div id="main-app" class="d-none">
       <!-- Sidebar atualizado -->

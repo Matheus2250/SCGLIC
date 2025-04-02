@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Elementos do DOM
   const loginPage = document.getElementById("login-page");
+  const registerPage = document.getElementById("register-page");
   const mainApp = document.getElementById("main-app");
   const sidebar = document.getElementById("sidebar");
   const content = document.getElementById("content");
@@ -25,6 +26,48 @@ document.addEventListener("DOMContentLoaded", function () {
   );
   let usuarioModal;
 
+  // Funções para navegação entre login e registro
+  function showLoginPage() {
+    if (loginPage) loginPage.classList.remove("d-none");
+    if (registerPage) registerPage.classList.add("d-none");
+    if (mainApp) mainApp.classList.add("d-none");
+  }
+
+  function showRegisterPage() {
+    if (loginPage) loginPage.classList.add("d-none");
+    if (registerPage) registerPage.classList.remove("d-none");
+    if (mainApp) mainApp.classList.add("d-none");
+  }
+
+  function showMainApp() {
+    if (loginPage) loginPage.classList.add("d-none");
+    if (registerPage) registerPage.classList.add("d-none");
+    if (mainApp) mainApp.classList.remove("d-none");
+  }
+
+  // Validação de email (apenas domínio @saude.gov.br)
+  function validateEmail(email) {
+    const regex = /@saude\.gov\.br$/i;
+    return regex.test(email);
+  }
+
+  // Mensagens de erro
+  function showError(message) {
+    const errorElement = document.getElementById("login-error");
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.style.display = "block";
+    }
+  }
+
+  function showRegisterError(message) {
+    const errorElement = document.getElementById("register-error");
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.style.display = "block";
+    }
+  }
+
   // Adicionar toggle de visibilidade de senha
   const togglePassword = document.getElementById("toggle-password");
   const passwordInput = document.getElementById("senha");
@@ -41,13 +84,42 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Mensagens de erro
-  function showError(message) {
-    const errorElement = document.getElementById("login-error");
-    if (errorElement) {
-      errorElement.textContent = message;
-      errorElement.style.display = "block";
-    }
+  // Toggle para visualizar/ocultar senha na página de registro
+  const toggleRegPassword = document.getElementById("toggle-reg-password");
+  const regPasswordInput = document.getElementById("reg-senha");
+
+  if (toggleRegPassword && regPasswordInput) {
+    toggleRegPassword.addEventListener("click", function () {
+      const type =
+        regPasswordInput.getAttribute("type") === "password"
+          ? "text"
+          : "password";
+      regPasswordInput.setAttribute("type", type);
+
+      const eyeIcon = toggleRegPassword.querySelector("i");
+      eyeIcon.classList.toggle("bi-eye");
+      eyeIcon.classList.toggle("bi-eye-slash");
+    });
+  }
+
+  // Link para alternar para a página de registro
+  const signupLink = document.getElementById("signup-link");
+  if (signupLink) {
+    signupLink.addEventListener("click", function (e) {
+      e.preventDefault();
+      showRegisterError("");
+      showRegisterPage();
+    });
+  }
+
+  // Link para voltar à página de login
+  const loginLink = document.getElementById("login-link");
+  if (loginLink) {
+    loginLink.addEventListener("click", function (e) {
+      e.preventDefault();
+      showError("");
+      showLoginPage();
+    });
   }
 
   // Verificar autenticação
@@ -65,18 +137,6 @@ document.addEventListener("DOMContentLoaded", function () {
     } else {
       showLoginPage();
     }
-  }
-
-  // Mostrar página de login
-  function showLoginPage() {
-    loginPage.classList.remove("d-none");
-    mainApp.classList.add("d-none");
-  }
-
-  // Mostrar aplicação principal
-  function showMainApp() {
-    loginPage.classList.add("d-none");
-    mainApp.classList.remove("d-none");
   }
 
   // Carregador de páginas
@@ -215,16 +275,73 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+  // Registro de novo usuário
+  const registerForm = document.getElementById("register-form");
+  if (registerForm) {
+    registerForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const nome = document.getElementById("reg-nome").value;
+      const email = document.getElementById("reg-email").value;
+      const senha = document.getElementById("reg-senha").value;
+      const confirmaSenha = document.getElementById("reg-confirma-senha").value;
+
+      // Validar nome
+      if (!nome || nome.trim().length < 3) {
+        showRegisterError("Nome muito curto. Digite seu nome completo.");
+        return;
+      }
+
+      // Validar email
+      if (!validateEmail(email)) {
+        showRegisterError(
+          "Apenas emails com domínio @saude.gov.br são aceitos."
+        );
+        return;
+      }
+
+      // Validar senha
+      if (senha.length < 8) {
+        showRegisterError("A senha deve ter pelo menos 8 caracteres.");
+        return;
+      }
+
+      // Confirmar senha
+      if (senha !== confirmaSenha) {
+        showRegisterError("As senhas não coincidem.");
+        return;
+      }
+
+      // Enviar dados para o servidor
+      fetch(`${API_URL}/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ nome, email, senha }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            return response.json().then((data) => {
+              throw new Error(data.message || "Erro ao cadastrar usuário");
+            });
+          }
+          return response.json();
+        })
+        .then((data) => {
+          alert("Usuário cadastrado com sucesso! Você já pode fazer login.");
+          registerForm.reset();
+          showLoginPage();
+        })
+        .catch((error) => {
+          showRegisterError(error.message);
+        });
+    });
+  }
+
   // Links não funcionais
   document
     .querySelector(".forgot-password")
-    ?.addEventListener("click", function (e) {
-      e.preventDefault();
-      showError("Funcionalidade não implementada nesta versão.");
-    });
-
-  document
-    .getElementById("signup-link")
     ?.addEventListener("click", function (e) {
       e.preventDefault();
       showError("Funcionalidade não implementada nesta versão.");
@@ -275,6 +392,106 @@ document.addEventListener("DOMContentLoaded", function () {
       default:
         return "bg-secondary";
     }
+  }
+
+  // Função para carregar atividades recentes
+  function loadActivities() {
+    const activitiesLoading = document.getElementById("activities-loading");
+    const activitiesTable = document.getElementById("activities-table");
+    const activitiesContainer = document.getElementById(
+      "activities-table-container"
+    );
+    const noActivities = document.getElementById("no-activities");
+
+    if (
+      !activitiesLoading ||
+      !activitiesTable ||
+      !activitiesContainer ||
+      !noActivities
+    ) {
+      return;
+    }
+
+    activitiesLoading.classList.remove("d-none");
+    activitiesContainer.classList.add("d-none");
+    noActivities.classList.add("d-none");
+
+    fetch(`${API_URL}/atividades`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Falha ao carregar atividades");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        activitiesLoading.classList.add("d-none");
+
+        if (data.length === 0) {
+          noActivities.classList.remove("d-none");
+          return;
+        }
+
+        activitiesContainer.classList.remove("d-none");
+        activitiesTable.innerHTML = "";
+
+        data.forEach((atividade) => {
+          const row = document.createElement("tr");
+
+          // Formatar data/hora
+          const dataHora = new Date(atividade.data_hora);
+          const dataFormatada = `${dataHora.toLocaleDateString()} ${dataHora.toLocaleTimeString()}`;
+
+          // Definir ícone da ação
+          let iconeAcao = "";
+          let classeBadge = "";
+
+          switch (atividade.acao) {
+            case "Login":
+              iconeAcao = "bi-box-arrow-in-right";
+              classeBadge = "bg-info";
+              break;
+            case "Criação":
+              iconeAcao = "bi-plus-circle";
+              classeBadge = "bg-success";
+              break;
+            case "Atualização":
+              iconeAcao = "bi-pencil";
+              classeBadge = "bg-warning";
+              break;
+            case "Exclusão":
+              iconeAcao = "bi-trash";
+              classeBadge = "bg-danger";
+              break;
+            case "Cadastro":
+              iconeAcao = "bi-person-plus";
+              classeBadge = "bg-primary";
+              break;
+            default:
+              iconeAcao = "bi-gear";
+              classeBadge = "bg-secondary";
+          }
+
+          row.innerHTML = `
+            <td>${dataFormatada}</td>
+            <td>${atividade.usuario_nome}</td>
+            <td><span class="badge ${classeBadge}"><i class="bi ${iconeAcao} me-1"></i> ${
+            atividade.acao
+          }</span></td>
+            <td>${atividade.registro_descricao || "-"}</td>
+            <td>${atividade.detalhes || "-"}</td>
+          `;
+
+          activitiesTable.appendChild(row);
+        });
+      })
+      .catch((error) => {
+        activitiesLoading.classList.add("d-none");
+        console.error("Erro ao carregar atividades:", error);
+      });
   }
 
   // Inicializar Dashboard
@@ -356,6 +573,9 @@ document.addEventListener("DOMContentLoaded", function () {
             });
           });
         }
+
+        // Carregar atividades recentes
+        loadActivities();
       })
       .catch((error) => {
         if (dashboardLoading) dashboardLoading.classList.add("d-none");

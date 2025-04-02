@@ -29,7 +29,7 @@ const db = new sqlite3.Database("./database.db", (err) => {
 
 // Inicializar o banco de dados
 function initializeDatabase() {
-  // Criar tabela de usuários
+  // Tabelas existentes
   db.run(`CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nome TEXT NOT NULL,
@@ -38,7 +38,6 @@ function initializeDatabase() {
     nivel_acesso TEXT NOT NULL
   )`);
 
-  // Criar tabela de registros
   db.run(`CREATE TABLE IF NOT EXISTS registros (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nup TEXT,
@@ -67,7 +66,20 @@ function initializeDatabase() {
     ultima_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  // Inserir usuário administrador padrão se não existir
+  // Nova tabela de atividades
+  db.run(`CREATE TABLE IF NOT EXISTS atividades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    usuario_nome TEXT NOT NULL,
+    acao TEXT NOT NULL,
+    registro_id INTEGER,
+    registro_descricao TEXT,
+    detalhes TEXT,
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+  )`);
+
+  // Usuário padrão (existente)
   db.get(
     "SELECT * FROM usuarios WHERE email = 'admin@sistema.com'",
     (err, row) => {
@@ -87,6 +99,16 @@ function initializeDatabase() {
                   console.error(err.message);
                 } else {
                   console.log("Usuário administrador criado com sucesso");
+
+                  // Registrar atividade de criação do administrador
+                  registrarAtividade(
+                    1,
+                    "Administrador",
+                    "Criação de Sistema",
+                    null,
+                    null,
+                    "Sistema CGLIC inicializado com usuário administrador"
+                  );
                 }
               }
             );
@@ -95,6 +117,38 @@ function initializeDatabase() {
       }
     }
   );
+}
+
+// Função para registrar atividades
+function registrarAtividade(
+  usuarioId,
+  usuarioNome,
+  acao,
+  registroId,
+  registroDescricao,
+  detalhes
+) {
+  const sql = `
+    INSERT INTO atividades (
+      usuario_id, usuario_nome, acao, registro_id, registro_descricao, detalhes
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `;
+
+  db.run(
+    sql,
+    [usuarioId, usuarioNome, acao, registroId, registroDescricao, detalhes],
+    function (err) {
+      if (err) {
+        console.error("Erro ao registrar atividade:", err.message);
+      }
+    }
+  );
+}
+
+// Validação de email com domínio @saude.gov.br
+function validarEmailSaude(email) {
+  const regex = /@saude\.gov\.br$/i;
+  return regex.test(email);
 }
 
 // Middleware para verificar autenticação
@@ -138,9 +192,24 @@ app.post("/api/login", (req, res) => {
       }
 
       const token = jwt.sign(
-        { id: user.id, email: user.email, nivel_acesso: user.nivel_acesso },
+        {
+          id: user.id,
+          email: user.email,
+          nivel_acesso: user.nivel_acesso,
+          nome: user.nome,
+        },
         JWT_SECRET,
         { expiresIn: "8h" }
+      );
+
+      // Registrar atividade de login
+      registrarAtividade(
+        user.id,
+        user.nome,
+        "Login",
+        null,
+        null,
+        `Login bem-sucedido`
       );
 
       res.json({
@@ -154,6 +223,89 @@ app.post("/api/login", (req, res) => {
       });
     });
   });
+});
+
+// Rota para registro de novos usuários
+app.post("/api/register", (req, res) => {
+  const { nome, email, senha } = req.body;
+
+  if (!nome || !email || !senha) {
+    return res
+      .status(400)
+      .json({ message: "Todos os campos são obrigatórios" });
+  }
+
+  // Validar domínio de email
+  if (!validarEmailSaude(email)) {
+    return res
+      .status(400)
+      .json({ message: "Apenas emails com domínio @saude.gov.br são aceitos" });
+  }
+
+  // Verificar se o email já está em uso
+  db.get("SELECT id FROM usuarios WHERE email = ?", [email], (err, row) => {
+    if (err) {
+      return res.status(500).json({ message: "Erro no servidor" });
+    }
+
+    if (row) {
+      return res.status(400).json({ message: "Este email já está em uso" });
+    }
+
+    // Criptografar a senha
+    bcrypt.hash(senha, 10, (err, hash) => {
+      if (err) {
+        return res.status(500).json({ message: "Erro ao criptografar senha" });
+      }
+
+      // Todos os novos usuários começam como usuários normais (não admin)
+      const nivel_acesso = "usuario";
+
+      // Inserir o novo usuário
+      db.run(
+        "INSERT INTO usuarios (nome, email, senha, nivel_acesso) VALUES (?, ?, ?, ?)",
+        [nome, email, hash, nivel_acesso],
+        function (err) {
+          if (err) {
+            return res
+              .status(500)
+              .json({ message: "Erro ao criar usuário", error: err.message });
+          }
+
+          // Registrar atividade
+          registrarAtividade(
+            this.lastID,
+            nome,
+            "Cadastro",
+            null,
+            null,
+            `Novo usuário cadastrado: ${email}`
+          );
+
+          res.status(201).json({
+            message: "Usuário cadastrado com sucesso",
+            userId: this.lastID,
+          });
+        }
+      );
+    });
+  });
+});
+
+// Rota para obter atividades recentes
+app.get("/api/atividades", authenticateToken, (req, res) => {
+  db.all(
+    "SELECT * FROM atividades ORDER BY data_hora DESC LIMIT 20",
+    [],
+    (err, rows) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ message: "Erro ao obter atividades", error: err.message });
+      }
+      res.json(rows);
+    }
+  );
 });
 
 // Rota para obter todos os registros
@@ -221,7 +373,7 @@ app.post("/api/registros", authenticateToken, (req, res) => {
   const sql = `
     INSERT INTO registros (
       nup, dt_entrada_dipli, resp_instrucao, area_demandante, pregoeiro,
-      modalidade, tipo, numero, ano, prioridade, item_pgc, estimado_pgc,
+      modalidade, tipo, numero, modalidade, tipo, numero, ano, prioridade, item_pgc, estimado_pgc,
       ano_pgc, objeto, qtd_itens, valor_estimado, dt_abertura, situacao,
       andamentos, valor_homologado, economia, dt_homologacao
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -259,6 +411,16 @@ app.post("/api/registros", authenticateToken, (req, res) => {
           .status(500)
           .json({ message: "Erro ao criar registro", error: err.message });
       }
+
+      // Registrar atividade
+      registrarAtividade(
+        req.user.id,
+        req.user.nome || req.user.email,
+        "Criação",
+        this.lastID,
+        `NUP: ${nup}`,
+        `Novo registro criado: ${objeto}`
+      );
 
       res.status(201).json({
         id: this.lastID,
@@ -361,6 +523,16 @@ app.put("/api/registros/:id", authenticateToken, (req, res) => {
         return res.status(404).json({ message: "Registro não encontrado" });
       }
 
+      // Registrar atividade
+      registrarAtividade(
+        req.user.id,
+        req.user.nome || req.user.email,
+        "Atualização",
+        req.params.id,
+        `NUP: ${nup}`,
+        `Registro atualizado: ${objeto}`
+      );
+
       res.json({ message: "Registro atualizado com sucesso" });
     }
   );
@@ -368,19 +540,50 @@ app.put("/api/registros/:id", authenticateToken, (req, res) => {
 
 // Rota para excluir um registro
 app.delete("/api/registros/:id", authenticateToken, (req, res) => {
-  db.run("DELETE FROM registros WHERE id = ?", [req.params.id], function (err) {
-    if (err) {
-      return res
-        .status(500)
-        .json({ message: "Erro ao excluir registro", error: err.message });
-    }
+  // Primeiro obter informações do registro para registrar na atividade
+  db.get(
+    "SELECT nup, objeto FROM registros WHERE id = ?",
+    [req.params.id],
+    (err, registro) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ message: "Erro ao buscar registro", error: err.message });
+      }
 
-    if (this.changes === 0) {
-      return res.status(404).json({ message: "Registro não encontrado" });
-    }
+      if (!registro) {
+        return res.status(404).json({ message: "Registro não encontrado" });
+      }
 
-    res.json({ message: "Registro excluído com sucesso" });
-  });
+      // Excluir o registro
+      db.run(
+        "DELETE FROM registros WHERE id = ?",
+        [req.params.id],
+        function (err) {
+          if (err) {
+            return res
+              .status(500)
+              .json({
+                message: "Erro ao excluir registro",
+                error: err.message,
+              });
+          }
+
+          // Registrar atividade
+          registrarAtividade(
+            req.user.id,
+            req.user.nome || req.user.email,
+            "Exclusão",
+            req.params.id,
+            `NUP: ${registro.nup}`,
+            `Registro excluído: ${registro.objeto}`
+          );
+
+          res.json({ message: "Registro excluído com sucesso" });
+        }
+      );
+    }
+  );
 });
 
 // Rota para criar um novo usuário (apenas admin pode criar)
@@ -427,6 +630,16 @@ app.post("/api/usuarios", authenticateToken, (req, res) => {
               .json({ message: "Erro ao criar usuário", error: err.message });
           }
 
+          // Registrar atividade
+          registrarAtividade(
+            req.user.id,
+            req.user.nome || req.user.email,
+            "Criação de Usuário",
+            null,
+            null,
+            `Usuário criado: ${nome} (${email}) - Nível: ${nivel_acesso}`
+          );
+
           res.status(201).json({
             message: "Usuário criado com sucesso",
             userId: this.lastID,
@@ -456,6 +669,64 @@ app.get("/api/usuarios", authenticateToken, (req, res) => {
       }
 
       res.json(rows);
+    }
+  );
+});
+
+// Rota para excluir um usuário (apenas admin)
+app.delete("/api/usuarios/:id", authenticateToken, (req, res) => {
+  if (req.user.nivel_acesso !== "admin") {
+    return res.status(403).json({
+      message: "Acesso negado. Apenas administradores podem excluir usuários.",
+    });
+  }
+
+  // Impedir excluir o próprio usuário
+  if (req.user.id == req.params.id) {
+    return res.status(403).json({
+      message: "Você não pode excluir seu próprio usuário.",
+    });
+  }
+
+  // Primeiro obter informações do usuário para registrar na atividade
+  db.get(
+    "SELECT nome, email FROM usuarios WHERE id = ?",
+    [req.params.id],
+    (err, usuario) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ message: "Erro ao buscar usuário", error: err.message });
+      }
+
+      if (!usuario) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Excluir o usuário
+      db.run(
+        "DELETE FROM usuarios WHERE id = ?",
+        [req.params.id],
+        function (err) {
+          if (err) {
+            return res
+              .status(500)
+              .json({ message: "Erro ao excluir usuário", error: err.message });
+          }
+
+          // Registrar atividade
+          registrarAtividade(
+            req.user.id,
+            req.user.nome || req.user.email,
+            "Exclusão de Usuário",
+            null,
+            null,
+            `Usuário excluído: ${usuario.nome} (${usuario.email})`
+          );
+
+          res.json({ message: "Usuário excluído com sucesso" });
+        }
+      );
     }
   );
 });
