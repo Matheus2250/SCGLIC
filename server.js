@@ -14,7 +14,8 @@ const JWT_SECRET = "sua-chave-secreta-deve-ser-alterada-em-producao";
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json()); // Verifique se isto está presente
+app.use(bodyParser.urlencoded({ extended: true })); // Adicione isso se não existir
 app.use(express.static(path.join(__dirname, "public")));
 
 // Conectar ao banco de dados

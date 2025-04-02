@@ -320,13 +320,26 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         body: JSON.stringify({ nome, email, senha }),
       })
-        .then((response) => {
-          if (!response.ok) {
-            return response.json().then((data) => {
+        .then(async (response) => {
+          // Verificar o tipo de conteúdo antes de tentar fazer o parse
+          const contentType = response.headers.get("content-type");
+
+          if (contentType && contentType.includes("application/json")) {
+            // Se for JSON, processa normalmente
+            const data = await response.json();
+            if (!response.ok) {
               throw new Error(data.message || "Erro ao cadastrar usuário");
-            });
+            }
+            return data;
+          } else {
+            // Se não for JSON, captura o texto e mostra erro
+            const text = await response.text();
+            console.error(
+              "Resposta não-JSON recebida:",
+              text.substring(0, 500)
+            );
+            throw new Error("O servidor retornou uma resposta inesperada");
           }
-          return response.json();
         })
         .then((data) => {
           alert("Usuário cadastrado com sucesso! Você já pode fazer login.");
