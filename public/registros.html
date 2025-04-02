@@ -1,0 +1,72 @@
+<!-- Registros Page -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Lista de Registros</h2>
+  <button class="btn btn-primary" data-page="novo-registro">
+    <i class="bi bi-plus-circle"></i> Novo Registro
+  </button>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header bg-light">
+    <h5 class="m-0">Filtros</h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-3 mb-3">
+        <label for="filtro-modalidade" class="form-label">Modalidade</label>
+        <select id="filtro-modalidade" class="form-select">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="col-md-3 mb-3">
+        <label for="filtro-situacao" class="form-label">Situação</label>
+        <select id="filtro-situacao" class="form-select">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="col-md-3 mb-3">
+        <label for="filtro-ano" class="form-label">Ano</label>
+        <select id="filtro-ano" class="form-select">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="col-md-3 mb-3">
+        <label for="filtro-texto" class="form-label">Busca</label>
+        <input type="text" id="filtro-texto" class="form-control" placeholder="NUP, Objeto...">
+      </div>
+    </div>
+    <div class="d-flex justify-content-end">
+      <button id="aplicar-filtros" class="btn btn-primary">Aplicar Filtros</button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div id="registros-loading" class="loading">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Carregando...</span>
+      </div>
+    </div>
+    <div id="registros-container" class="table-responsive d-none">
+      <table class="table table-striped table-hover">
+        <thead>
+          <tr>
+            <th>NUP</th>
+            <th>Objeto</th>
+            <th>Modalidade</th>
+            <th>Situação</th>
+            <th>Valor Estimado</th>
+            <th>Valor Homologado</th>
+            <th>Economia</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="registros-table"></tbody>
+      </table>
+    </div>
+    <div id="nenhum-registro" class="alert alert-info d-none">
+      Nenhum registro encontrado.
+    </div>
+  </div>
+</div>

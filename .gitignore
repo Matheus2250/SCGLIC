@@ -1,0 +1,17 @@
+# Dependências
+node_modules/
+
+# Banco de dados SQLite
+*.db
+*.db-journal
+
+# Arquivos de ambiente
+.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# Arquivos temporários
+.DS_Store
+Thumbs.db

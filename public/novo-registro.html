@@ -1,0 +1,173 @@
+<!-- Novo registro com formatação melhorada -->
+<h2 id="form-title" class="mb-4">Novo Registro</h2>
+<div class="card">
+  <div class="card-body">
+    <form id="registro-form">
+      <input type="hidden" id="registro-id">
+
+      <div class="mb-4">
+        <h5 class="border-bottom pb-2 mb-3">Informações Básicas</h5>
+        <div class="row g-3">
+          <div class="col-md-12 mb-3">
+            <label for="nup" class="form-label">NUP</label>
+            <input type="text" class="form-control" id="nup" name="nup">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="dt_entrada_dipli" class="form-label">Data Entrada DIPLI</label>
+            <input type="date" class="form-control" id="dt_entrada_dipli" name="dt_entrada_dipli">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="resp_instrucao" class="form-label">Resp. Instrução</label>
+            <input type="text" class="form-control" id="resp_instrucao" name="resp_instrucao">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="area_demandante" class="form-label">Área Demandante</label>
+            <input type="text" class="form-control" id="area_demandante" name="area_demandante">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="pregoeiro" class="form-label">Pregoeiro</label>
+            <input type="text" class="form-control" id="pregoeiro" name="pregoeiro">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="modalidade" class="form-label">Modalidade</label>
+            <select class="form-select" id="modalidade" name="modalidade">
+              <option value="">Selecione...</option>
+              <option value="Pregão">Pregão</option>
+              <option value="Tomada de Preços">Tomada de Preços</option>
+              <option value="Concorrência">Concorrência</option>
+              <option value="Convite">Convite</option>
+              <option value="Dispensa">Dispensa</option>
+              <option value="Inexigibilidade">Inexigibilidade</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <h5 class="border-bottom pb-2 mb-3">Detalhes da Licitação</h5>
+        <div class="row g-3">
+          <div class="col-md-6 mb-3">
+            <label for="tipo" class="form-label">Tipo</label>
+            <select class="form-select" id="tipo" name="tipo">
+              <option value="">Selecione...</option>
+              <option value="Eletrônico">Eletrônico</option>
+              <option value="Presencial">Presencial</option>
+            </select>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="numero" class="form-label">Número</label>
+            <input type="text" class="form-control" id="numero" name="numero">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="ano" class="form-label">Ano</label>
+            <input type="text" class="form-control" id="ano" name="ano">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="prioridade" class="form-label">Prioridade</label>
+            <select class="form-select" id="prioridade" name="prioridade">
+              <option value="">Selecione...</option>
+              <option value="Alta">Alta</option>
+              <option value="Média">Média</option>
+              <option value="Baixa">Baixa</option>
+            </select>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="item_pgc" class="form-label">Item PGC</label>
+            <input type="text" class="form-control" id="item_pgc" name="item_pgc">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="estimado_pgc" class="form-label">Estimado PGC</label>
+            <input type="text" class="form-control" id="estimado_pgc" name="estimado_pgc">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="ano_pgc" class="form-label">Ano PGC</label>
+            <input type="text" class="form-control" id="ano_pgc" name="ano_pgc">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="qtd_itens" class="form-label">Quantidade de Itens</label>
+            <input type="number" class="form-control" id="qtd_itens" name="qtd_itens" min="0">
+          </div>
+
+          <div class="col-md-12 mb-3">
+            <label for="objeto" class="form-label">Objeto</label>
+            <textarea class="form-control" id="objeto" name="objeto" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <h5 class="border-bottom pb-2 mb-3">Valores e Datas</h5>
+        <div class="row g-3">
+          <div class="col-md-6 mb-3">
+            <label for="valor_estimado" class="form-label">Valor Estimado</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input type="number" class="form-control" id="valor_estimado" name="valor_estimado" step="0.01" min="0">
+            </div>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="dt_abertura" class="form-label">Data de Abertura</label>
+            <input type="date" class="form-control" id="dt_abertura" name="dt_abertura">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="situacao" class="form-label">Situação</label>
+            <select class="form-select" id="situacao" name="situacao">
+              <option value="">Selecione...</option>
+              <option value="Em Análise">Em Análise</option>
+              <option value="Em Andamento">Em Andamento</option>
+              <option value="Homologado">Homologado</option>
+              <option value="Fracassado">Fracassado</option>
+              <option value="Deserto">Deserto</option>
+              <option value="Cancelado">Cancelado</option>
+            </select>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="andamentos" class="form-label">Andamentos</label>
+            <textarea class="form-control" id="andamentos" name="andamentos" rows="2"></textarea>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="valor_homologado" class="form-label">Valor Homologado</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input type="number" class="form-control" id="valor_homologado" name="valor_homologado" step="0.01" min="0">
+            </div>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="economia" class="form-label">Economia</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input type="number" class="form-control" id="economia" name="economia" step="0.01" min="0">
+            </div>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="dt_homologacao" class="form-label">Data de Homologação</label>
+            <input type="date" class="form-control" id="dt_homologacao" name="dt_homologacao">
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end mt-4">
+        <button type="button" class="btn btn-secondary me-2" id="cancelar-registro">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>

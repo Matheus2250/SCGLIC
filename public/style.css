@@ -1,0 +1,407 @@
+/* Estilos Gerais */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  background-color: #ffffff;
+  margin: 0;
+  padding: 0;
+}
+
+/* Estilos para a página de login */
+.header {
+  background: linear-gradient(to right, #4186e0, #4fd8f9);
+  color: #000;
+  padding: 20px 40px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 70px);
+}
+
+.login-form {
+  background-color: #ffffff;
+  border-radius: 10px;
+  padding: 40px;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.login-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #333;
+}
+
+.input-group {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 10px 15px 10px 40px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.input-group input:focus {
+  border-color: #4186e0;
+}
+
+.input-group .icon {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  color: #666;
+}
+
+.input-group .eye-icon {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  color: #666;
+  cursor: pointer;
+}
+
+.remember-forgot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+}
+
+.remember-me input {
+  margin-right: 5px;
+}
+
+.forgot-password {
+  color: #4186e0;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.signin-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: background-color 0.3s;
+}
+
+.signin-btn:hover {
+  background-color: #333;
+}
+
+.signup-link {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+}
+
+.signup-link a {
+  color: #4186e0;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 14px;
+  margin-top: -15px;
+  margin-bottom: 15px;
+  display: none;
+}
+
+/* Estilos para o restante do sistema (sidebar, etc.) */
+.sidebar {
+  height: 100vh;
+  background-color: #212529;
+  color: white;
+  position: fixed;
+  transition: 0.3s;
+}
+
+.sidebar.collapsed {
+  width: 80px;
+}
+
+.sidebar.expanded {
+  width: 250px;
+}
+
+.content {
+  margin-left: 250px;
+  transition: 0.3s;
+}
+
+.content.expanded {
+  margin-left: 80px;
+}
+
+.nav-link {
+  color: rgba(255, 255, 255, 0.8);
+  padding: 10px 15px;
+}
+
+.nav-link:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.nav-text {
+  transition: opacity 0.3s;
+}
+
+.hidden {
+  opacity: 0;
+  display: none;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+}
+
+table {
+  font-size: 0.9rem;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.icon-column {
+  width: 50px;
+}
+
+/* Estilos para Cards e Elementos UI */
+.card {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  border: none;
+  margin-bottom: 20px;
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  padding: 15px 20px;
+  border-radius: 10px 10px 0 0 !important;
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.badge {
+  padding: 6px 10px;
+  font-weight: 500;
+}
+
+/* Estilos para formulários */
+.form-section {
+  margin-bottom: 30px;
+}
+
+.form-section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -10px;
+}
+
+.form-group {
+  padding: 0 10px;
+  margin-bottom: 15px;
+}
+
+.form-group.col-3 {
+  width: 25%;
+}
+
+.form-group.col-4 {
+  width: 33.333%;
+}
+
+.form-group.col-6 {
+  width: 50%;
+}
+
+.form-group.col-12 {
+  width: 100%;
+}
+
+/* Dashboard Estatísticas */
+.stat-card {
+  border-radius: 10px;
+  padding: 20px;
+  color: white;
+  transition: transform 0.3s;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+}
+
+.stat-card h5 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.stat-card h2 {
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 0;
+}
+
+/* Responsividade */
+@media (max-width: 991px) {
+  .form-group.col-3,
+  .form-group.col-4 {
+    width: 50%;
+  }
+}
+
+@media (max-width: 767px) {
+  .form-group.col-3,
+  .form-group.col-4,
+  .form-group.col-6 {
+    width: 100%;
+  }
+
+  .sidebar.expanded {
+    width: 100%;
+    z-index: 1050;
+  }
+
+  .content {
+    margin-left: 0;
+  }
+
+  .content.expanded {
+    margin-left: 0;
+  }
+}
+
+/* Adicione estes estilos ao seu arquivo styles.css */
+
+/* Estilos para o formulário melhorado */
+.form-label {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.3rem;
+}
+
+.form-control,
+.form-select {
+  height: auto;
+  padding: 0.6rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Estilos para as seções do formulário */
+.border-bottom.pb-2 {
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+/* Estilos específicos para os campos monetários */
+.input-group .input-group-text {
+  background-color: #f8f9fa;
+  border-color: #ced4da;
+}
+
+/* Estilos para a responsividade em dispositivos diferentes */
+@media (max-width: 767.98px) {
+  .col-md-6 {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Estilos para os botões */
+.btn {
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+.btn-secondary:hover {
+  background-color: #5c636a;
+  border-color: #565e64;
+}
+
+/* Melhorias visuais para os cards */
+.card {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.card-body {
+  padding: 1.5rem;
+}

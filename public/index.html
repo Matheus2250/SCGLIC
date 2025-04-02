@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema CGLIC</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="app">
+    <!-- Login Page -->
+    <div id="login-page">
+      <div class="header">
+        <h1>Sistema CGLIC</h1>
+      </div>
+
+      <div class="login-container">
+        <div class="login-form">
+          <form id="login-form">
+            <div class="form-group mb-3">
+              <label for="email">Email</label>
+              <div class="input-group">
+                <span class="icon">
+                  <i class="bi bi-envelope"></i>
+                </span>
+                <input type="email" id="email" placeholder="Enter your Email" required>
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <label for="senha">Password</label>
+              <div class="input-group">
+                <span class="icon">
+                  <i class="bi bi-lock"></i>
+                </span>
+                <input type="password" id="senha" placeholder="Enter your Password" required>
+                <span class="eye-icon" id="toggle-password">
+                  <i class="bi bi-eye"></i>
+                </span>
+              </div>
+            </div>
+
+            <div class="error-message" id="login-error"></div>
+
+            <div class="remember-forgot">
+              <div class="remember-me">
+                <input type="checkbox" id="remember">
+                <label for="remember" style="display: inline; margin-left: 5px;">Remember me</label>
+              </div>
+              <a href="#" class="forgot-password">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="signin-btn">Sign In</button>
+
+            <div class="signup-link">
+              Don't have an account? <a href="#" id="signup-link">Sign Up</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="main-app" class="d-none">
+      <!-- Sidebar -->
+      <div id="sidebar" class="sidebar expanded">
+        <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+          <h5 id="app-title" class="nav-text m-0">Sistema CGLIC</h5>
+          <button id="toggle-sidebar" class="btn btn-sm btn-dark">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+        </div>
+        <ul class="nav flex-column mt-3">
+          <li class="nav-item">
+            <a href="#" class="nav-link" data-page="dashboard">
+              <i class="bi bi-speedometer2 me-2"></i>
+              <span class="nav-text">Dashboard</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" data-page="registros">
+              <i class="bi bi-table me-2"></i>
+              <span class="nav-text">Registros</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" data-page="novo-registro">
+              <i class="bi bi-plus-circle me-2"></i>
+              <span class="nav-text">Novo Registro</span>
+            </a>
+          </li>
+          <li id="admin-menu" class="nav-item d-none">
+            <a href="#" class="nav-link" data-page="usuarios">
+              <i class="bi bi-people me-2"></i>
+              <span class="nav-text">Usuários</span>
+            </a>
+          </li>
+          <li class="nav-item mt-auto">
+            <a href="#" class="nav-link" id="logout-btn">
+              <i class="bi bi-box-arrow-left me-2"></i>
+              <span class="nav-text">Sair</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Content Area -->
+      <div id="content" class="content p-4">
+        <div id="page-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modais -->
+  <div class="modal fade" id="detalhes-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Detalhes do Registro</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="detalhes-content"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          <button type="button" class="btn btn-primary" id="editar-registro-btn">Editar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="confirmacao-modal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmação</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p id="confirmacao-texto">Tem certeza que deseja realizar esta ação?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="confirmacao-btn">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="main.js"></script>
+</body>
+
+</html>
