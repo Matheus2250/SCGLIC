@@ -276,6 +276,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
   // Registro de novo usuário
+  // Registro de novo usuário
   const registerForm = document.getElementById("register-form");
   if (registerForm) {
     registerForm.addEventListener("submit", function (e) {
@@ -313,7 +314,10 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       // Enviar dados para o servidor
-      fetch(`${API_URL}/register`, {
+      // Enviar dados para o servidor
+      // Enviar dados para o servidor
+      fetch(`${API_URL}/api/register`, {
+        // <-- Adicionar "/api" antes de "/register"
         method: "POST",
         headers: {
           "Content-Type": "application/json",

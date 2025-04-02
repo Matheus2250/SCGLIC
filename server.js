@@ -228,69 +228,84 @@ app.post("/api/login", (req, res) => {
 
 // Rota para registro de novos usuários
 app.post("/api/register", (req, res) => {
-  const { nome, email, senha } = req.body;
+  try {
+    const { nome, email, senha } = req.body;
 
-  if (!nome || !email || !senha) {
-    return res
-      .status(400)
-      .json({ message: "Todos os campos são obrigatórios" });
-  }
-
-  // Validar domínio de email
-  if (!validarEmailSaude(email)) {
-    return res
-      .status(400)
-      .json({ message: "Apenas emails com domínio @saude.gov.br são aceitos" });
-  }
-
-  // Verificar se o email já está em uso
-  db.get("SELECT id FROM usuarios WHERE email = ?", [email], (err, row) => {
-    if (err) {
-      return res.status(500).json({ message: "Erro no servidor" });
+    if (!nome || !email || !senha) {
+      return res
+        .status(400)
+        .json({ message: "Todos os campos são obrigatórios" });
     }
 
-    if (row) {
-      return res.status(400).json({ message: "Este email já está em uso" });
+    // Validar domínio de email
+    if (!validarEmailSaude(email)) {
+      return res.status(400).json({
+        message: "Apenas emails com domínio @saude.gov.br são aceitos",
+      });
     }
 
-    // Criptografar a senha
-    bcrypt.hash(senha, 10, (err, hash) => {
+    // Verificar se o email já está em uso
+    db.get("SELECT id FROM usuarios WHERE email = ?", [email], (err, row) => {
       if (err) {
-        return res.status(500).json({ message: "Erro ao criptografar senha" });
+        console.error("Erro na consulta:", err);
+        return res
+          .status(500)
+          .json({ message: "Erro no servidor", error: err.message });
       }
 
-      // Todos os novos usuários começam como usuários normais (não admin)
-      const nivel_acesso = "usuario";
+      if (row) {
+        return res.status(400).json({ message: "Este email já está em uso" });
+      }
 
-      // Inserir o novo usuário
-      db.run(
-        "INSERT INTO usuarios (nome, email, senha, nivel_acesso) VALUES (?, ?, ?, ?)",
-        [nome, email, hash, nivel_acesso],
-        function (err) {
-          if (err) {
-            return res
-              .status(500)
-              .json({ message: "Erro ao criar usuário", error: err.message });
-          }
-
-          // Registrar atividade
-          registrarAtividade(
-            this.lastID,
-            nome,
-            "Cadastro",
-            null,
-            null,
-            `Novo usuário cadastrado: ${email}`
-          );
-
-          res.status(201).json({
-            message: "Usuário cadastrado com sucesso",
-            userId: this.lastID,
+      // Criptografar a senha
+      bcrypt.hash(senha, 10, (err, hash) => {
+        if (err) {
+          console.error("Erro ao criptografar:", err);
+          return res.status(500).json({
+            message: "Erro ao criptografar senha",
+            error: err.message,
           });
         }
-      );
+
+        // Todos os novos usuários começam como usuários normais (não admin)
+        const nivel_acesso = "usuario";
+
+        // Inserir o novo usuário
+        db.run(
+          "INSERT INTO usuarios (nome, email, senha, nivel_acesso) VALUES (?, ?, ?, ?)",
+          [nome, email, hash, nivel_acesso],
+          function (err) {
+            if (err) {
+              console.error("Erro na inserção:", err);
+              return res
+                .status(500)
+                .json({ message: "Erro ao criar usuário", error: err.message });
+            }
+
+            // Registrar atividade
+            registrarAtividade(
+              this.lastID,
+              nome,
+              "Cadastro",
+              null,
+              null,
+              `Novo usuário cadastrado: ${email}`
+            );
+
+            res.status(201).json({
+              message: "Usuário cadastrado com sucesso",
+              userId: this.lastID,
+            });
+          }
+        );
+      });
     });
-  });
+  } catch (error) {
+    console.error("Erro geral:", error);
+    res
+      .status(500)
+      .json({ message: "Erro interno no servidor", error: error.message });
+  }
 });
 
 // Rota para obter atividades recentes
@@ -562,12 +577,10 @@ app.delete("/api/registros/:id", authenticateToken, (req, res) => {
         [req.params.id],
         function (err) {
           if (err) {
-            return res
-              .status(500)
-              .json({
-                message: "Erro ao excluir registro",
-                error: err.message,
-              });
+            return res.status(500).json({
+              message: "Erro ao excluir registro",
+              error: err.message,
+            });
           }
 
           // Registrar atividade
