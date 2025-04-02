@@ -2,65 +2,35 @@
 <h2 class="mb-4">Dashboard</h2>
 <div class="row">
   <div class="col-md-3 mb-4">
-    <div class="card text-white bg-primary stat-card">
+    <div class="card text-white stat-card bg-primary">
       <div class="card-body">
-        <h5 class="card-title">Total de Registros</h5>
+        <h5 class="card-title"><i class="bi bi-file-earmark-text me-2"></i>Total de Registros</h5>
         <h2 id="total-registros">0</h2>
       </div>
     </div>
   </div>
   <div class="col-md-3 mb-4">
-    <div class="card text-white bg-success stat-card">
+    <div class="card text-white stat-card bg-success">
       <div class="card-body">
-        <h5 class="card-title">Homologados</h5>
+        <h5 class="card-title"><i class="bi bi-check-circle me-2"></i>Homologados</h5>
         <h2 id="total-homologados">0</h2>
       </div>
     </div>
   </div>
   <div class="col-md-3 mb-4">
-    <div class="card text-white bg-warning stat-card">
+    <div class="card text-white stat-card bg-warning">
       <div class="card-body">
-        <h5 class="card-title">Em Andamento</h5>
+        <h5 class="card-title"><i class="bi bi-hourglass-split me-2"></i>Em Andamento</h5>
         <h2 id="total-andamento">0</h2>
       </div>
     </div>
   </div>
   <div class="col-md-3 mb-4">
-    <div class="card text-white bg-info stat-card">
+    <div class="card text-white stat-card bg-info">
       <div class="card-body">
-        <h5 class="card-title">Economia Total</h5>
+        <h5 class="card-title"><i class="bi bi-cash-coin me-2"></i>Economia Total</h5>
         <h2 id="total-economia">R$ 0,00</h2>
       </div>
-    </div>
-  </div>
-</div>
-<div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h5 class="m-0">Registros Recentes</h5>
-    <button class="btn btn-sm btn-outline-primary" data-page="registros">
-      Ver Todos <i class="bi bi-arrow-right"></i>
-    </button>
-  </div>
-  <div class="card-body">
-    <div id="dashboard-loading" class="loading">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Carregando...</span>
-      </div>
-    </div>
-    <div class="table-responsive" id="dashboard-table">
-      <table class="table table-striped table-hover">
-        <thead>
-          <tr>
-            <th>NUP</th>
-            <th>Objeto</th>
-            <th>Modalidade</th>
-            <th>Situação</th>
-            <th>Valor Estimado</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="recent-registros"></tbody>
-      </table>
     </div>
   </div>
 </div>
