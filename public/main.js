@@ -316,7 +316,7 @@ document.addEventListener("DOMContentLoaded", function () {
       // Enviar dados para o servidor
       // Enviar dados para o servidor
       // Enviar dados para o servidor
-      fetch(`${API_URL}/api/register`, {
+      fetch(`${API_URL}/register`, {
         // <-- Adicionar "/api" antes de "/register"
         method: "POST",
         headers: {

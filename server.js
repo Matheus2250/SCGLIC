@@ -387,13 +387,13 @@ app.post("/api/registros", authenticateToken, (req, res) => {
   } = req.body;
 
   const sql = `
-    INSERT INTO registros (
-      nup, dt_entrada_dipli, resp_instrucao, area_demandante, pregoeiro,
-      modalidade, tipo, numero, modalidade, tipo, numero, ano, prioridade, item_pgc, estimado_pgc,
-      ano_pgc, objeto, qtd_itens, valor_estimado, dt_abertura, situacao,
-      andamentos, valor_homologado, economia, dt_homologacao
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+  INSERT INTO registros (
+    nup, dt_entrada_dipli, resp_instrucao, area_demandante, pregoeiro,
+    modalidade, tipo, numero, ano, prioridade, item_pgc, estimado_pgc,
+    ano_pgc, objeto, qtd_itens, valor_estimado, dt_abertura, situacao,
+    andamentos, valor_homologado, economia, dt_homologacao
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
 
   db.run(
     sql,
