@@ -6,37 +6,69 @@
   </button>
 </div>
 
+<!-- Substitua a seção de filtros existente em registros.html -->
 <div class="card mb-4">
-  <div class="card-header bg-light">
+  <div class="card-header d-flex justify-content-between align-items-center bg-light">
     <h5 class="m-0">Filtros</h5>
+    <button class="btn btn-sm btn-outline-secondary" id="toggle-filtros">
+      <i class="bi bi-chevron-down" id="filtro-icon"></i>
+    </button>
   </div>
-  <div class="card-body">
-    <div class="row">
-      <div class="col-md-3 mb-3">
-        <label for="filtro-modalidade" class="form-label">Modalidade</label>
-        <select id="filtro-modalidade" class="form-select">
-          <option value="">Todas</option>
+  <div class="card-body" id="filtros-container">
+    <div id="filtros-ativos" class="mb-3">
+      <!-- Filtros ativos serão adicionados aqui dinamicamente -->
+    </div>
+
+    <div class="d-flex align-items-center mb-3">
+      <div class="d-flex align-items-center">
+        <select id="filtro-campo" class="form-select me-2">
+          <option value="">Selecione um campo</option>
+          <option value="nup">NUP</option>
+          <option value="objeto">Objeto</option>
+          <option value="modalidade">Modalidade</option>
+          <option value="situacao">Situação</option>
+          <option value="ano">Ano</option>
+          <option value="valor_estimado">Valor Estimado</option>
+          <option value="valor_homologado">Valor Homologado</option>
+          <option value="economia">Economia</option>
+          <option value="dt_abertura">Data de Abertura</option>
+          <option value="dt_homologacao">Data de Homologação</option>
+          <option value="pregoeiro">Pregoeiro</option>
+          <option value="area_demandante">Área Demandante</option>
+          <option value="resp_instrucao">Resp. Instrução</option>
         </select>
-      </div>
-      <div class="col-md-3 mb-3">
-        <label for="filtro-situacao" class="form-label">Situação</label>
-        <select id="filtro-situacao" class="form-select">
-          <option value="">Todas</option>
+
+        <select id="filtro-operador" class="form-select me-2">
+          <option value="igual">Igual a</option>
+          <option value="contem">Contém</option>
+          <option value="comeca">Começa com</option>
+          <option value="termina">Termina com</option>
+          <option value="maior">Maior que</option>
+          <option value="menor">Menor que</option>
+          <option value="entre">Entre</option>
         </select>
-      </div>
-      <div class="col-md-3 mb-3">
-        <label for="filtro-ano" class="form-label">Ano</label>
-        <select id="filtro-ano" class="form-select">
-          <option value="">Todos</option>
-        </select>
-      </div>
-      <div class="col-md-3 mb-3">
-        <label for="filtro-texto" class="form-label">Busca</label>
-        <input type="text" id="filtro-texto" class="form-control" placeholder="NUP, Objeto...">
+
+        <div id="filtro-valor-container" class="me-2">
+          <input type="text" id="filtro-valor" class="form-control" placeholder="Valor">
+        </div>
+
+        <div id="filtro-valor2-container" class="me-2 d-none">
+          <input type="text" id="filtro-valor2" class="form-control" placeholder="Valor Final">
+        </div>
+
+        <button id="adicionar-filtro" class="btn btn-primary">
+          <i class="bi bi-plus-circle"></i> Adicionar
+        </button>
       </div>
     </div>
-    <div class="d-flex justify-content-end">
-      <button id="aplicar-filtros" class="btn btn-primary">Aplicar Filtros</button>
+
+    <div class="d-flex justify-content-between">
+      <button id="limpar-filtros" class="btn btn-outline-secondary">
+        <i class="bi bi-x-circle"></i> Limpar Filtros
+      </button>
+      <button id="aplicar-filtros" class="btn btn-primary">
+        <i class="bi bi-search"></i> Aplicar Filtros
+      </button>
     </div>
   </div>
 </div>

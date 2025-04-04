@@ -122,7 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Verificar autenticação
+  // Substituir a função checkAuth() existente
   function checkAuth() {
     if (token && currentUser) {
       showMainApp();
@@ -130,6 +130,8 @@ document.addEventListener("DOMContentLoaded", function () {
       // Verificar se é admin para exibir menu de usuários
       if (currentUser.nivel_acesso === "admin") {
         adminMenu.classList.remove("d-none");
+      } else {
+        adminMenu.classList.add("d-none"); // Certifica-se de esconder para não-admins
       }
 
       // Carregar a página inicial (dashboard)
@@ -142,14 +144,23 @@ document.addEventListener("DOMContentLoaded", function () {
   // Carregador de páginas
   async function loadPage(pageName) {
     try {
+      // Impedir acesso a páginas restritas
+      if (
+        pageName === "usuarios" &&
+        (!currentUser || currentUser.nivel_acesso !== "admin")
+      ) {
+        alert(
+          "Acesso negado. Apenas administradores podem acessar esta página."
+        );
+        pageName = "dashboard";
+      }
+
       // Ativar item da navegação
       navLinks.forEach((link) => {
-        if (link.dataset.page === pageName) {
-          link.classList.add("active");
-        } else {
-          link.classList.remove("active");
-        }
+        // código existente permanece igual...
       });
+
+      // O resto da função permanece igual...
 
       // Carregar conteúdo HTML da página
       const response = await fetch(`${pageName}.html`);
@@ -615,6 +626,574 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Carregar opções para filtros
     carregarOpcoesFiltragem();
+    const toggleFiltros = document.getElementById("toggle-filtros");
+    const filtrosContainer = document.getElementById("filtros-container");
+    const filtroIcon = document.getElementById("filtro-icon");
+    const filtroCampo = document.getElementById("filtro-campo");
+    const filtroOperador = document.getElementById("filtro-operador");
+    const filtroValor = document.getElementById("filtro-valor");
+    const filtroValor2 = document.getElementById("filtro-valor2");
+    const filtroValorContainer = document.getElementById(
+      "filtro-valor-container"
+    );
+    const filtroValor2Container = document.getElementById(
+      "filtro-valor2-container"
+    );
+    const adicionarFiltro = document.getElementById("adicionar-filtro");
+    const limparFiltros = document.getElementById("limpar-filtros");
+    const filtrosAtivos = document.getElementById("filtros-ativos");
+
+    // Array para armazenar os filtros aplicados
+    let filtrosAplicados = [];
+
+    // Toggle para mostrar/esconder a área de filtros
+    if (toggleFiltros && filtrosContainer) {
+      toggleFiltros.addEventListener("click", function () {
+        if (filtrosContainer.style.display === "none") {
+          filtrosContainer.style.display = "block";
+          filtroIcon.classList.remove("bi-chevron-down");
+          filtroIcon.classList.add("bi-chevron-up");
+        } else {
+          filtrosContainer.style.display = "none";
+          filtroIcon.classList.remove("bi-chevron-up");
+          filtroIcon.classList.add("bi-chevron-down");
+        }
+      });
+    }
+
+    // Ajustar operadores disponíveis baseado no campo selecionado
+    if (filtroCampo && filtroOperador) {
+      filtroCampo.addEventListener("change", function () {
+        const campo = filtroCampo.value;
+
+        // Resetar o operador e valores
+        filtroOperador.innerHTML = "";
+        filtroValor.value = "";
+        filtroValor2.value = "";
+
+        // Esconder o segundo campo de valor
+        filtroValor2Container.classList.add("d-none");
+
+        if (!campo) return;
+
+        // Determinar tipo de campo para oferecer operadores adequados
+        if (
+          ["valor_estimado", "valor_homologado", "economia"].includes(campo)
+        ) {
+          // Campos numéricos
+          addOperadorOption("igual", "Igual a");
+          addOperadorOption("maior", "Maior que");
+          addOperadorOption("menor", "Menor que");
+          addOperadorOption("entre", "Entre");
+          filtroValor.type = "number";
+          filtroValor.step = "0.01";
+          filtroValor2.type = "number";
+          filtroValor2.step = "0.01";
+        } else if (
+          ["dt_abertura", "dt_homologacao", "dt_entrada_dipli"].includes(campo)
+        ) {
+          // Campos de data
+          addOperadorOption("igual", "Igual a");
+          addOperadorOption("antes", "Antes de");
+          addOperadorOption("depois", "Depois de");
+          addOperadorOption("entre", "Entre");
+          filtroValor.type = "date";
+          filtroValor2.type = "date";
+        } else {
+          // Campos de texto
+          addOperadorOption("igual", "Igual a");
+          addOperadorOption("contem", "Contém");
+          addOperadorOption("comeca", "Começa com");
+          addOperadorOption("termina", "Termina com");
+          filtroValor.type = "text";
+          filtroValor2.type = "text";
+        }
+      });
+    }
+
+    // Helper para adicionar opções ao select de operadores
+    function addOperadorOption(value, text) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = text;
+      filtroOperador.appendChild(option);
+    }
+
+    // Mostrar/esconder segundo campo de valor baseado no operador
+    if (filtroOperador) {
+      filtroOperador.addEventListener("change", function () {
+        const operador = filtroOperador.value;
+
+        if (operador === "entre") {
+          filtroValor2Container.classList.remove("d-none");
+        } else {
+          filtroValor2Container.classList.add("d-none");
+        }
+      });
+    }
+
+    // Adicionar um novo filtro
+    if (adicionarFiltro) {
+      adicionarFiltro.addEventListener("click", function () {
+        const campo = filtroCampo.value;
+        const operador = filtroOperador.value;
+        const valor = filtroValor.value;
+        const valor2 = filtroValor2.value;
+
+        if (
+          !campo ||
+          !operador ||
+          !valor ||
+          (operador === "entre" && !valor2)
+        ) {
+          alert("Por favor, preencha todos os campos do filtro.");
+          return;
+        }
+
+        // Criar objeto para representar o filtro
+        const filtro = {
+          id: Date.now(), // ID único
+          campo: campo,
+          operador: operador,
+          valor: valor,
+          valor2: operador === "entre" ? valor2 : null,
+          campLabel: filtroCampo.options[filtroCampo.selectedIndex].text,
+          operadorLabel:
+            filtroOperador.options[filtroOperador.selectedIndex].text,
+        };
+
+        // Adicionar ao array de filtros
+        filtrosAplicados.push(filtro);
+
+        // Atualizar a interface
+        atualizarFiltrosAtivos();
+
+        // Limpar os campos do formulário
+        filtroCampo.value = "";
+        filtroOperador.innerHTML = "";
+        filtroValor.value = "";
+        filtroValor2.value = "";
+        filtroValor2Container.classList.add("d-none");
+      });
+    }
+
+    // Atualizar a exibição dos filtros ativos
+    function atualizarFiltrosAtivos() {
+      if (!filtrosAtivos) return;
+
+      filtrosAtivos.innerHTML = "";
+
+      if (filtrosAplicados.length === 0) {
+        filtrosAtivos.innerHTML =
+          '<div class="alert alert-info">Nenhum filtro aplicado. Adicione filtros acima.</div>';
+        return;
+      }
+
+      const filtrosDiv = document.createElement("div");
+      filtrosDiv.className = "d-flex flex-wrap gap-2";
+
+      filtrosAplicados.forEach((filtro) => {
+        const filtroElement = document.createElement("div");
+        filtroElement.className =
+          "badge bg-light text-dark p-2 d-flex align-items-center";
+        filtroElement.style.fontSize = "0.9rem";
+
+        let descricao = `${filtro.campLabel} ${filtro.operadorLabel} ${filtro.valor}`;
+        if (filtro.operador === "entre") {
+          descricao = `${filtro.campLabel} ${filtro.operadorLabel} ${filtro.valor} e ${filtro.valor2}`;
+        }
+
+        filtroElement.innerHTML = `
+      <span>${descricao}</span>
+      <button class="btn btn-sm btn-link text-danger p-0 ms-2 remover-filtro" data-id="${filtro.id}">
+        <i class="bi bi-x-circle"></i>
+      </button>
+    `;
+
+        filtrosDiv.appendChild(filtroElement);
+      });
+
+      filtrosAtivos.appendChild(filtrosDiv);
+
+      // Adicionar event listeners para os botões de remover
+      document.querySelectorAll(".remover-filtro").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const filtroId = parseInt(this.dataset.id);
+          removerFiltro(filtroId);
+        });
+      });
+    }
+
+    // Remover um filtro
+    function removerFiltro(id) {
+      filtrosAplicados = filtrosAplicados.filter((f) => f.id !== id);
+      atualizarFiltrosAtivos();
+    }
+
+    // Limpar todos os filtros
+    if (limparFiltros) {
+      limparFiltros.addEventListener("click", function () {
+        filtrosAplicados = [];
+        atualizarFiltrosAtivos();
+      });
+    }
+
+    // Modificar a função aplicarFiltros para utilizar os filtros dinâmicos
+    // Event listener para aplicar filtros
+    if (aplicarFiltros) {
+      aplicarFiltros.addEventListener("click", function () {
+        // Usar a nova função de filtros dinâmicos em vez da antiga
+        aplicarFiltrosDinamicos();
+      });
+    }
+
+    function aplicarFiltrosDinamicos() {
+      console.log("Aplicando filtros dinâmicos...");
+      console.log("Filtros aplicados:", filtrosAplicados);
+
+      const registrosLoading = document.getElementById("registros-loading");
+      const registrosContainer = document.getElementById("registros-container");
+      const nenhumRegistro = document.getElementById("nenhum-registro");
+      const registrosTable = document.getElementById("registros-table");
+
+      if (registrosLoading) registrosLoading.classList.remove("d-none");
+      if (registrosContainer) registrosContainer.classList.add("d-none");
+      if (nenhumRegistro) nenhumRegistro.classList.add("d-none");
+
+      // Buscar todos os registros e então aplicar os filtros no cliente
+      fetch(`${API_URL}/registros`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Falha ao carregar registros");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("Total de registros antes da filtragem:", data.length);
+
+          if (registrosLoading) registrosLoading.classList.add("d-none");
+
+          // Aplicar todos os filtros ativos
+          let filteredData = data;
+
+          if (filtrosAplicados.length > 0) {
+            filteredData = data.filter((registro) => {
+              // Um registro deve passar por TODOS os filtros para ser incluído
+              return filtrosAplicados.every((filtro) => {
+                const resultado = avaliarFiltro(registro, filtro);
+                console.log(
+                  `Filtro: ${filtro.campo} ${filtro.operador} ${
+                    filtro.valor
+                  } - Registro valor: ${
+                    registro[filtro.campo]
+                  } - Resultado: ${resultado}`
+                );
+                return resultado;
+              });
+            });
+          }
+
+          console.log(
+            "Total de registros após filtragem:",
+            filteredData.length
+          );
+
+          if (filteredData.length === 0) {
+            if (nenhumRegistro) nenhumRegistro.classList.remove("d-none");
+            return;
+          }
+
+          // Exibir os resultados filtrados
+          exibirRegistros(filteredData);
+        })
+        .catch((error) => {
+          console.error("Erro ao aplicar filtros:", error);
+          if (registrosLoading) registrosLoading.classList.add("d-none");
+          alert("Erro ao carregar registros: " + error.message);
+        });
+    }
+
+    // Melhoria na função avaliarFiltro para lidar com valores nulos e conversões
+    function avaliarFiltro(registro, filtro) {
+      const valorCampo = registro[filtro.campo];
+
+      // Se o campo não existir no registro, não passa no filtro
+      if (
+        valorCampo === undefined ||
+        valorCampo === null ||
+        valorCampo === ""
+      ) {
+        return false;
+      }
+
+      // Campos numéricos
+      if (
+        ["valor_estimado", "valor_homologado", "economia"].includes(
+          filtro.campo
+        )
+      ) {
+        const valorNumerico = parseFloat(valorCampo);
+        const filtroValorNumerico = parseFloat(filtro.valor);
+
+        if (isNaN(valorNumerico) || isNaN(filtroValorNumerico)) {
+          return false;
+        }
+
+        switch (filtro.operador) {
+          case "igual":
+            return valorNumerico === filtroValorNumerico;
+          case "maior":
+            return valorNumerico > filtroValorNumerico;
+          case "menor":
+            return valorNumerico < filtroValorNumerico;
+          case "entre":
+            const filtroValor2Numerico = parseFloat(filtro.valor2);
+            return (
+              valorNumerico >= filtroValorNumerico &&
+              valorNumerico <= filtroValor2Numerico
+            );
+        }
+      }
+
+      // Campos de data
+      if (
+        ["dt_abertura", "dt_homologacao", "dt_entrada_dipli"].includes(
+          filtro.campo
+        )
+      ) {
+        const dataRegistro = new Date(valorCampo);
+        const dataFiltro = new Date(filtro.valor);
+
+        if (isNaN(dataRegistro.getTime()) || isNaN(dataFiltro.getTime())) {
+          return false;
+        }
+
+        switch (filtro.operador) {
+          case "igual":
+            // Comparar apenas a data, ignorando a hora
+            return (
+              dataRegistro.toISOString().split("T")[0] ===
+              dataFiltro.toISOString().split("T")[0]
+            );
+          case "antes":
+            return dataRegistro < dataFiltro;
+          case "depois":
+            return dataRegistro > dataFiltro;
+          case "entre":
+            const dataFiltro2 = new Date(filtro.valor2);
+            return dataRegistro >= dataFiltro && dataRegistro <= dataFiltro2;
+        }
+      }
+
+      // Campos de texto - converter para string e comparar em minúsculas
+      const valorString = String(valorCampo).toLowerCase();
+      const filtroValor = String(filtro.valor).toLowerCase();
+
+      switch (filtro.operador) {
+        case "igual":
+          return valorString === filtroValor;
+        case "contem":
+          return valorString.includes(filtroValor);
+        case "comeca":
+          return valorString.startsWith(filtroValor);
+        case "termina":
+          return valorString.endsWith(filtroValor);
+        default:
+          return false;
+      }
+    }
+
+    // Adicione função para debugging diretamente na página
+    function adicionarPainelDebug() {
+      const debugDiv = document.createElement("div");
+      debugDiv.id = "debug-panel";
+      debugDiv.style.cssText =
+        "position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #4CAF50; padding: 10px; border-radius: 5px; z-index: 9999; max-width: 400px; max-height: 300px; overflow: auto; font-family: monospace; display: none;";
+      debugDiv.innerHTML = '<h4>Debug</h4><div id="debug-content"></div>';
+      document.body.appendChild(debugDiv);
+
+      // Botão para mostrar/esconder
+      const debugBtn = document.createElement("button");
+      debugBtn.textContent = "Debug";
+      debugBtn.style.cssText =
+        "position: fixed; bottom: 10px; right: 10px; z-index: 10000; background: #333; color: #4CAF50; border: none; padding: 5px 10px; border-radius: 3px;";
+      document.body.appendChild(debugBtn);
+
+      debugBtn.addEventListener("click", function () {
+        const panel = document.getElementById("debug-panel");
+        if (panel.style.display === "none") {
+          panel.style.display = "block";
+          debugBtn.style.right = "420px";
+        } else {
+          panel.style.display = "none";
+          debugBtn.style.right = "10px";
+        }
+      });
+
+      // Sobrescrever console.log para exibir no painel
+      const oldLog = console.log;
+      console.log = function () {
+        oldLog.apply(console, arguments);
+        const content = document.getElementById("debug-content");
+        if (content) {
+          const args = Array.from(arguments);
+          const logLine = document.createElement("div");
+          logLine.style.borderBottom = "1px solid #666";
+          logLine.style.paddingBottom = "5px";
+          logLine.style.marginBottom = "5px";
+
+          // Tentar converter objetos para mostrar de forma mais amigável
+          let logText = args
+            .map((arg) => {
+              if (typeof arg === "object") {
+                try {
+                  return JSON.stringify(arg);
+                } catch (e) {
+                  return String(arg);
+                }
+              }
+              return String(arg);
+            })
+            .join(" ");
+
+          logLine.textContent = logText;
+          content.appendChild(logLine);
+          content.scrollTop = content.scrollHeight;
+        }
+      };
+    }
+
+    // Chamar após a definição de funções
+    adicionarPainelDebug();
+    // Avaliar se um registro passa por um filtro específico
+    function avaliarFiltro(registro, filtro) {
+      const valorCampo = registro[filtro.campo];
+
+      // Se o campo não existir no registro, não passa no filtro
+      if (valorCampo === undefined || valorCampo === null) {
+        return false;
+      }
+
+      // Converter para string para comparação
+      const valorString = String(valorCampo).toLowerCase();
+      const filtroValor = String(filtro.valor).toLowerCase();
+
+      switch (filtro.operador) {
+        case "igual":
+          return valorString === filtroValor;
+
+        case "contem":
+          return valorString.includes(filtroValor);
+
+        case "comeca":
+          return valorString.startsWith(filtroValor);
+
+        case "termina":
+          return valorString.endsWith(filtroValor);
+
+        case "maior":
+          return parseFloat(valorCampo) > parseFloat(filtro.valor);
+
+        case "menor":
+          return parseFloat(valorCampo) < parseFloat(filtro.valor);
+
+        case "entre":
+          return (
+            parseFloat(valorCampo) >= parseFloat(filtro.valor) &&
+            parseFloat(valorCampo) <= parseFloat(filtro.valor2)
+          );
+
+        case "antes":
+          return new Date(valorCampo) < new Date(filtro.valor);
+
+        case "depois":
+          return new Date(valorCampo) > new Date(filtro.valor);
+
+        default:
+          return false;
+      }
+    }
+
+    // Exibir registros na tabela (reutilizado do código existente)
+    function exibirRegistros(data) {
+      const registrosContainer = document.getElementById("registros-container");
+      const registrosTable = document.getElementById("registros-table");
+
+      if (!registrosContainer || !registrosTable) return;
+
+      registrosContainer.classList.remove("d-none");
+      registrosTable.innerHTML = "";
+
+      data.forEach((registro) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+      <td>${registro.nup || "-"}</td>
+      <td>${
+        registro.objeto
+          ? registro.objeto.length > 30
+            ? registro.objeto.substring(0, 30) + "..."
+            : registro.objeto
+          : "-"
+      }</td>
+      <td>${registro.modalidade || "-"}</td>
+      <td><span class="badge ${getBadgeClass(registro.situacao)}">${
+          registro.situacao || "-"
+        }</span></td>
+      <td>${formatarMoeda(registro.valor_estimado)}</td>
+      <td>${formatarMoeda(registro.valor_homologado)}</td>
+      <td>${formatarMoeda(registro.economia)}</td>
+      <td>
+        <div class="btn-group">
+          <button class="btn btn-sm btn-info visualizar-btn" data-id="${
+            registro.id
+          }" title="Visualizar">
+            <i class="bi bi-eye"></i>
+          </button>
+          <button class="btn btn-sm btn-primary editar-btn" data-id="${
+            registro.id
+          }" title="Editar">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-sm btn-danger excluir-btn" data-id="${
+            registro.id
+          }" title="Excluir">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </td>
+    `;
+        registrosTable.appendChild(row);
+      });
+
+      // Adicionar event listeners para os botões
+      document.querySelectorAll(".visualizar-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const id = this.dataset.id;
+          carregarDetalhesRegistro(id);
+        });
+      });
+
+      document.querySelectorAll(".editar-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const id = this.dataset.id;
+          carregarRegistroParaEdicao(id);
+        });
+      });
+
+      document.querySelectorAll(".excluir-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const id = this.dataset.id;
+          confirmarExclusao(id);
+        });
+      });
+    }
+
+    // Inicializar a UI de filtros
+    atualizarFiltrosAtivos();
 
     // Carregar registros
     carregarRegistros();
@@ -1203,7 +1782,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Inicializar página de usuários
   function initUsuarios() {
     // Verificar permissão de admin
-    if (currentUser.nivel_acesso !== "admin") {
+    if (!currentUser || currentUser.nivel_acesso !== "admin") {
       alert("Acesso negado. Apenas administradores podem acessar esta página.");
       loadPage("dashboard");
       return;

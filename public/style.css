@@ -689,3 +689,91 @@ input[type="checkbox"] {
 .mt-auto {
   margin-top: auto;
 }
+
+/* Adicione estes estilos ao seu arquivo style.css */
+
+/* Estilos para os filtros dinâmicos */
+#filtros-container {
+  transition: all 0.3s ease;
+}
+
+.filtro-badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  border-radius: 30px;
+  padding: 6px 12px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.filtro-badge .remover-filtro {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 0;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filtro-badge .remover-filtro:hover {
+  color: #a71d2a;
+}
+
+#toggle-filtros {
+  transition: all 0.3s ease;
+}
+
+#toggle-filtros:hover {
+  background-color: #e9ecef;
+}
+
+/* Animação para os filtros */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.badge {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Melhorias para os campos de filtro */
+#filtro-campo,
+#filtro-operador,
+#filtro-valor,
+#filtro-valor2 {
+  min-width: 150px;
+}
+
+@media (max-width: 992px) {
+  .d-flex.align-items-center {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  #filtro-campo,
+  #filtro-operador,
+  #filtro-valor,
+  #filtro-valor2 {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  #adicionar-filtro {
+    width: 100%;
+  }
+}
