@@ -122,23 +122,53 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Substituir a função checkAuth() existente
+  // Verificar autenticação
   function checkAuth() {
     if (token && currentUser) {
-      showMainApp();
+      // Verificar se o token é válido fazendo uma requisição simples
+      fetch(`${API_URL}/registros`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            // Se o token expirou ou é inválido, fazer logout
+            if (response.status === 401 || response.status === 403) {
+              logout();
+              alert("Sua sessão expirou. Por favor, faça login novamente.");
+              return;
+            }
+          }
 
-      // Verificar se é admin para exibir menu de usuários
-      if (currentUser.nivel_acesso === "admin") {
-        adminMenu.classList.remove("d-none");
-      } else {
-        adminMenu.classList.add("d-none"); // Certifica-se de esconder para não-admins
-      }
+          showMainApp();
 
-      // Carregar a página inicial (dashboard)
-      loadPage("dashboard");
+          // Verificar se é admin para exibir menu de usuários
+          if (currentUser.nivel_acesso === "admin") {
+            adminMenu.classList.remove("d-none");
+          } else {
+            adminMenu.classList.add("d-none"); // Certifica-se de esconder para não-admins
+          }
+
+          // Carregar a página inicial (dashboard)
+          loadPage("dashboard");
+        })
+        .catch((error) => {
+          console.error("Erro ao verificar autenticação:", error);
+          showLoginPage();
+        });
     } else {
       showLoginPage();
     }
+  }
+
+  // Função para logout
+  function logout() {
+    token = null;
+    currentUser = null;
+    localStorage.removeItem("token");
+    localStorage.removeItem("currentUser");
+    showLoginPage();
   }
 
   // Carregador de páginas
@@ -198,14 +228,17 @@ document.addEventListener("DOMContentLoaded", function () {
           });
         }
       });
+
+      return Promise.resolve(); // Retornar uma promise resolvida para permitir encadeamento
     } catch (error) {
       console.error("Erro ao carregar página:", error);
       pageContainer.innerHTML = `
-        <div class="alert alert-danger">
-          <h4>Erro ao carregar a página</h4>
-          <p>${error.message}</p>
-        </div>
-      `;
+      <div class="alert alert-danger">
+        <h4>Erro ao carregar a página</h4>
+        <p>${error.message}</p>
+      </div>
+    `;
+      return Promise.reject(error);
     }
   }
 
@@ -456,7 +489,21 @@ document.addEventListener("DOMContentLoaded", function () {
       .then((data) => {
         activitiesLoading.classList.add("d-none");
 
-        if (data.length === 0) {
+        // Filtrar atividades com base no tipo de usuário
+        let filteredActivities = data;
+
+        // Se não for administrador, filtrar para mostrar apenas criação, edição e exclusão de registros
+        if (currentUser && currentUser.nivel_acesso !== "admin") {
+          filteredActivities = data.filter(
+            (atividade) =>
+              (atividade.acao === "Criação" ||
+                atividade.acao === "Atualização" ||
+                atividade.acao === "Exclusão") &&
+              atividade.registro_id !== null
+          );
+        }
+
+        if (filteredActivities.length === 0) {
           noActivities.classList.remove("d-none");
           return;
         }
@@ -464,7 +511,7 @@ document.addEventListener("DOMContentLoaded", function () {
         activitiesContainer.classList.remove("d-none");
         activitiesTable.innerHTML = "";
 
-        data.forEach((atividade) => {
+        filteredActivities.forEach((atividade) => {
           const row = document.createElement("tr");
 
           // Formatar data/hora
@@ -502,14 +549,14 @@ document.addEventListener("DOMContentLoaded", function () {
           }
 
           row.innerHTML = `
-            <td>${dataFormatada}</td>
-            <td>${atividade.usuario_nome}</td>
-            <td><span class="badge ${classeBadge}"><i class="bi ${iconeAcao} me-1"></i> ${
+          <td>${dataFormatada}</td>
+          <td>${atividade.usuario_nome}</td>
+          <td><span class="badge ${classeBadge}"><i class="bi ${iconeAcao} me-1"></i> ${
             atividade.acao
           }</span></td>
-            <td>${atividade.registro_descricao || "-"}</td>
-            <td>${atividade.detalhes || "-"}</td>
-          `;
+          <td>${atividade.registro_descricao || "-"}</td>
+          <td>${atividade.detalhes || "-"}</td>
+        `;
 
           activitiesTable.appendChild(row);
         });
@@ -696,13 +743,16 @@ document.addEventListener("DOMContentLoaded", function () {
       this.atualizarUI();
     },
 
-    // Limpar todos os filtros
-    limparTodos: function () {
-      this.filtrosAtivos = [];
-      this.atualizarUI();
+    /// Botão para limpar todos os filtros
+    if(limparFiltrosBtn) {
+      limparFiltrosBtn.addEventListener("click", function () {
+        SistemaFiltros.limparTodos();
+        // Recarregar registros sem filtros aplicados
+        carregarRegistros();
+      });
     },
 
-    // Aplicar os filtros aos dados
+    /// Aplica os filtros
     aplicar: function (dados) {
       if (!this.filtrosAtivos.length) {
         return dados;
@@ -1322,60 +1372,56 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Carregar registro para edição
   function carregarRegistroParaEdicao(id) {
-    // Primeiro carregar a página de novo registro
-    loadPage("novo-registro").then(() => {
-      // Depois carregar os dados do registro para o formulário
-      fetch(`${API_URL}/registros/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((response) => response.json())
-        .then((registro) => {
-          // Atualizar título
-          const formTitle = document.getElementById("form-title");
-          if (formTitle) formTitle.textContent = "Editar Registro";
-
-          // Preencher formulário
-          document.getElementById("registro-id").value = registro.id;
-          document.getElementById("nup").value = registro.nup || "";
-          document.getElementById("dt_entrada_dipli").value =
-            registro.dt_entrada_dipli || "";
-          document.getElementById("resp_instrucao").value =
-            registro.resp_instrucao || "";
-          document.getElementById("area_demandante").value =
-            registro.area_demandante || "";
-          document.getElementById("pregoeiro").value = registro.pregoeiro || "";
-          document.getElementById("modalidade").value =
-            registro.modalidade || "";
-          document.getElementById("tipo").value = registro.tipo || "";
-          document.getElementById("numero").value = registro.numero || "";
-          document.getElementById("ano").value = registro.ano || "";
-          document.getElementById("prioridade").value =
-            registro.prioridade || "";
-          document.getElementById("item_pgc").value = registro.item_pgc || "";
-          document.getElementById("estimado_pgc").value =
-            registro.estimado_pgc || "";
-          document.getElementById("ano_pgc").value = registro.ano_pgc || "";
-          document.getElementById("objeto").value = registro.objeto || "";
-          document.getElementById("qtd_itens").value = registro.qtd_itens || "";
-          document.getElementById("valor_estimado").value =
-            registro.valor_estimado || "";
-          document.getElementById("dt_abertura").value =
-            registro.dt_abertura || "";
-          document.getElementById("situacao").value = registro.situacao || "";
-          document.getElementById("andamentos").value =
-            registro.andamentos || "";
-          document.getElementById("valor_homologado").value =
-            registro.valor_homologado || "";
-          document.getElementById("economia").value = registro.economia || "";
-          document.getElementById("dt_homologacao").value =
-            registro.dt_homologacao || "";
-        })
-        .catch((error) => {
-          console.error("Erro ao carregar registro para edição:", error);
+    loadPage("novo-registro")
+      .then(() => {
+        return fetch(`${API_URL}/registros/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
-    });
+      })
+      .then((response) => response.json())
+      .then((registro) => {
+        // Atualizar título
+        const formTitle = document.getElementById("form-title");
+        if (formTitle) formTitle.textContent = "Editar Registro";
+
+        // Preencher formulário
+        document.getElementById("registro-id").value = registro.id;
+        document.getElementById("nup").value = registro.nup || "";
+        document.getElementById("dt_entrada_dipli").value =
+          registro.dt_entrada_dipli || "";
+        document.getElementById("resp_instrucao").value =
+          registro.resp_instrucao || "";
+        document.getElementById("area_demandante").value =
+          registro.area_demandante || "";
+        document.getElementById("pregoeiro").value = registro.pregoeiro || "";
+        document.getElementById("modalidade").value = registro.modalidade || "";
+        document.getElementById("tipo").value = registro.tipo || "";
+        document.getElementById("numero").value = registro.numero || "";
+        document.getElementById("ano").value = registro.ano || "";
+        document.getElementById("prioridade").value = registro.prioridade || "";
+        document.getElementById("item_pgc").value = registro.item_pgc || "";
+        document.getElementById("estimado_pgc").value =
+          registro.estimado_pgc || "";
+        document.getElementById("ano_pgc").value = registro.ano_pgc || "";
+        document.getElementById("objeto").value = registro.objeto || "";
+        document.getElementById("qtd_itens").value = registro.qtd_itens || "";
+        document.getElementById("valor_estimado").value =
+          registro.valor_estimado || "";
+        document.getElementById("dt_abertura").value =
+          registro.dt_abertura || "";
+        document.getElementById("situacao").value = registro.situacao || "";
+        document.getElementById("andamentos").value = registro.andamentos || "";
+        document.getElementById("valor_homologado").value =
+          registro.valor_homologado || "";
+        document.getElementById("economia").value = registro.economia || "";
+        document.getElementById("dt_homologacao").value =
+          registro.dt_homologacao || "";
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar registro para edição:", error);
+      });
   }
 
   // Salvar registro (novo ou edição)
