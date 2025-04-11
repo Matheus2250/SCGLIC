@@ -744,12 +744,9 @@ document.addEventListener("DOMContentLoaded", function () {
     },
 
     /// Botão para limpar todos os filtros
-    if(limparFiltrosBtn) {
-      limparFiltrosBtn.addEventListener("click", function () {
-        SistemaFiltros.limparTodos();
-        // Recarregar registros sem filtros aplicados
-        carregarRegistros();
-      });
+    limparTodos: function () {
+      this.filtrosAtivos = [];
+      this.atualizarUI();
     },
 
     /// Aplica os filtros
@@ -1086,6 +1083,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (limparFiltrosBtn) {
       limparFiltrosBtn.addEventListener("click", function () {
         SistemaFiltros.limparTodos();
+        carregarRegistros(); // ou aplicarFiltrosAosDados()
       });
     }
 
