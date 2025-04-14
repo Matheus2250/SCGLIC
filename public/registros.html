@@ -1,9 +1,20 @@
 <!-- Registros Page -->
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2>Lista de Registros</h2>
-  <button class="btn btn-primary" data-page="novo-registro">
-    <i class="bi bi-plus-circle"></i> Novo Registro
-  </button>
+  <div>
+    <div class="btn-group me-2">
+      <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="exportButton" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-download me-1"></i> Exportar
+      </button>
+      <ul class="dropdown-menu" aria-labelledby="exportButton">
+        <li><a class="dropdown-item" href="#" id="exportCSV"><i class="bi bi-filetype-csv me-2"></i>CSV</a></li>
+        <li><a class="dropdown-item" href="#" id="exportExcel"><i class="bi bi-filetype-xlsx me-2"></i>Excel</a></li>
+      </ul>
+    </div>
+    <button class="btn btn-primary" data-page="novo-registro">
+      <i class="bi bi-plus-circle"></i> Novo Registro
+    </button>
+  </div>
 </div>
 
 <!-- Substitua a seção de filtros existente em registros.html -->
