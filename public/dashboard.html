@@ -1,38 +1,87 @@
 <!-- Dashboard Page -->
-<h2 class="mb-4">Dashboard</h2>
-<div class="row">
-  <div class="col-md-3 mb-3">
-    <div class="card text-white stat-card bg-primary cursor-pointer clickable-card" id="card-total-registros" data-pagina="registros">
-      <div class="card-body py-2">
-        <h5 class="card-title"><i class="bi bi-file-earmark-text me-2"></i>Total de Registros</h5>
-        <h2 id="total-registros">0</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Dashboard</h2>
+  <div>
+    <button class="btn btn-outline-primary" id="edit-dashboard-btn">
+      <i class="bi bi-gear"></i> Personalizar Dashboard
+    </button>
+    <button class="btn btn-success d-none" id="save-dashboard-btn">
+      <i class="bi bi-save"></i> Salvar Alterações
+    </button>
+    <button class="btn btn-outline-secondary d-none" id="cancel-dashboard-btn">
+      <i class="bi bi-x"></i> Cancelar
+    </button>
+  </div>
+</div>
+
+<div id="dashboard-cards" class="row">
+  <!-- Os cartões serão inseridos dinamicamente pelo JavaScript -->
+</div>
+
+<!-- Modal para configurar widget -->
+<div class="modal fade" id="widget-config-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Configurar Widget</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="widget-form">
+          <div class="mb-3">
+            <label for="widget-title" class="form-label">Título</label>
+            <input type="text" class="form-control" id="widget-title" required>
+          </div>
+          <div class="mb-3">
+            <label for="widget-type" class="form-label">Tipo de Informação</label>
+            <select class="form-control" id="widget-type" required>
+              <option value="total">Total de Registros</option>
+              <option value="homologados">Homologados</option>
+              <option value="andamento">Em Andamento</option>
+              <option value="fracassados">Fracassados</option>
+              <option value="economia">Economia Total</option>
+              <option value="valor_estimado">Valor Estimado Total</option>
+              <option value="valor_homologado">Valor Homologado Total</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="widget-size" class="form-label">Tamanho</label>
+            <select class="form-control" id="widget-size" required>
+              <option value="col-md-3">Pequeno (25%)</option>
+              <option value="col-md-4">Médio (33%)</option>
+              <option value="col-md-6">Grande (50%)</option>
+              <option value="col-md-12">Extra Grande (100%)</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="widget-color" class="form-label">Cor</label>
+            <select class="form-control" id="widget-color" required>
+              <option value="bg-primary">Azul</option>
+              <option value="bg-success">Verde</option>
+              <option value="bg-info">Ciano</option>
+              <option value="bg-warning">Amarelo</option>
+              <option value="bg-danger">Vermelho</option>
+              <option value="bg-secondary">Cinza</option>
+              <option value="bg-dark">Preto</option>
+            </select>
+          </div>
+          <input type="hidden" id="widget-id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-danger" id="delete-widget-btn">Excluir Widget</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="save-widget-btn">Salvar</button>
       </div>
     </div>
   </div>
-  <div class="col-md-3 mb-3">
-    <div class="card text-white stat-card bg-success cursor-pointer clickable-card" id="card-homologados" data-pagina="registros" data-filtro-campo="situacao" data-filtro-valor="Homologado">
-      <div class="card-body py-2">
-        <h5 class="card-title"><i class="bi bi-check-circle me-2"></i>Homologados</h5>
-        <h2 id="total-homologados">0</h2>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3 mb-3">
-    <div class="card text-white stat-card bg-warning cursor-pointer clickable-card" id="card-andamento" data-pagina="registros" data-filtro-campo="situacao" data-filtro-valor="Em Andamento">
-      <div class="card-body py-2">
-        <h5 class="card-title"><i class="bi bi-hourglass-split me-2"></i>Em Andamento</h5>
-        <h2 id="total-andamento">0</h2>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3 mb-3">
-    <div class="card text-white stat-card bg-info cursor-pointer clickable-card" id="card-economia" data-pagina="registros">
-      <div class="card-body py-2">
-        <h5 class="card-title"><i class="bi bi-cash-coin me-2"></i>Economia Total</h5>
-        <h2 id="total-economia">R$ 0,00</h2>
-      </div>
-    </div>
-  </div>
+</div>
+
+<!-- Botão flutuante para adicionar novo widget (visível apenas no modo de edição) -->
+<div id="add-widget-btn" class="position-fixed d-none" style="bottom: 20px; right: 20px; z-index: 1000;">
+  <button class="btn btn-primary btn-lg rounded-circle" style="width: 60px; height: 60px;">
+    <i class="bi bi-plus" style="font-size: 1.5rem;"></i>
+  </button>
 </div>
 
 <!-- Tabela de Atividades Recentes (adicionar ao dashboard.html) -->
@@ -112,5 +161,27 @@
 
   .clickable-card:hover::after {
     opacity: 1;
+  }
+  
+  .edit-mode .dashboard-widget {
+    position: relative;
+    border: 2px dashed #ccc;
+    cursor: move;
+  }
+  
+  .edit-mode .dashboard-widget .widget-controls {
+    display: flex !important;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 10;
+  }
+  
+  .widget-controls {
+    display: none !important;
+  }
+  
+  .dashboard-widget {
+    margin-bottom: 15px;
   }
 </style>

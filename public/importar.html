@@ -1,151 +1,69 @@
-<!-- Importar Registros -->
-<h2 class="mb-4"><i class="bi bi-cloud-upload me-2"></i>Importar Registros</h2>
-
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="m-0">Importar da Planilha Excel</h5>
-  </div>
-  <div class="card-body">
-    <div class="alert alert-info">
-      <i class="bi bi-info-circle me-2"></i>
-      Utilize esta funcionalidade para importar registros de uma planilha Excel.
-      Certifique-se de que a planilha tenha os cabeçalhos corretos conforme a especificação abaixo.
-    </div>
-
-    <div class="mb-4">
-      <h6>Instruções:</h6>
-      <ol>
-        <li>Prepare uma planilha Excel com os campos abaixo</li>
-        <li>Selecione o arquivo usando o botão "Escolher arquivo"</li>
-        <li>Clique em "Importar" para iniciar o processo</li>
-      </ol>
-    </div>
-
-    <div class="mb-4">
-      <h6>Cabeçalhos obrigatórios:</h6>
-      <div class="row">
-        <div class="col-md-4">
-          <ul class="list-group list-group-flush">
-            <li class="list-group-item"><i class="bi bi-check-circle-fill text-success me-2"></i>NUP</li>
-            <li class="list-group-item"><i class="bi bi-check-circle-fill text-success me-2"></i>OBJETO</li>
-            <li class="list-group-item"><i class="bi bi-check-circle-fill text-success me-2"></i>MODALIDADE</li>
-            <li class="list-group-item"><i class="bi bi-check-circle-fill text-success me-2"></i>SITUAÇÃO</li>
-          </ul>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar Registros - Sistema de Controle</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">Sistema de Controle</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/importar">Importar</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="logoutBtn">
+                            <i class="bi bi-box-arrow-right"></i> Sair
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
-        <div class="col-md-4">
-          <ul class="list-group list-group-flush">
-            <li class="list-group-item"><i class="bi bi-circle text-secondary me-2"></i>ÁREA DEMANDANTE</li>
-            <li class="list-group-item"><i class="bi bi-circle text-secondary me-2"></i>PREGOEIRO</li>
-            <li class="list-group-item"><i class="bi bi-circle text-secondary me-2"></i>TIPO</li>
-            <li class="list-group-item"><i class="bi bi-circle text-secondary me-2"></i>VALOR ESTIMADO</li>
-          </ul>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h2>Importar Registros</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <form id="importForm">
+                            <div class="mb-3">
+                                <label for="fileInput" class="form-label">Selecione o arquivo Excel</label>
+                                <input type="file" class="form-control" id="fileInput" accept=".xlsx,.xls" required>
+                                <div class="form-text">
+                                    O arquivo deve conter as colunas: Descrição, Valor, Data de Vencimento e Situação
+                                </div>
+                            </div>
+                            <div id="previewContainer" class="mb-3">
+                                <!-- Preview será inserido aqui -->
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> Importar Registros
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-4">
-          <ul class="list-group list-group-flush">
-            <li class="list-group-item"><i class="bi bi-circle text-secondary me-2"></i>VALOR HOMOLOGADO</li>
-            <li class="list-group-item"><i class="bi bi-circle text-secondary me-2"></i>ECONOMIA</li>
-            <li class="list-group-item"><i class="bi bi-circle text-secondary me-2"></i>DT ABERTURA</li>
-            <li class="list-group-item"><i class="bi bi-circle text-secondary me-2"></i>DT HOMOLOGAÇÃO</li>
-          </ul>
-        </div>
-      </div>
     </div>
 
-    <form id="importar-form" enctype="multipart/form-data">
-      <div class="mb-3">
-        <label for="excel-file" class="form-label">Arquivo Excel:</label>
-        <input class="form-control" type="file" id="excel-file" accept=".xlsx,.xls">
-        <div class="form-text">Somente arquivos .xlsx ou .xls são aceitos.</div>
-      </div>
-
-      <div class="form-check mb-3">
-        <input class="form-check-input" type="checkbox" id="limpar-dados">
-        <label class="form-check-label" for="limpar-dados">
-          Limpar dados existentes antes de importar
-        </label>
-        <div class="form-text text-danger">Cuidado: Isso excluirá TODOS os registros existentes.</div>
-      </div>
-
-      <button type="submit" class="btn btn-primary" id="btn-importar">
-        <i class="bi bi-upload me-2"></i>Importar
-      </button>
-    </form>
-  </div>
-</div>
-
-<div class="card d-none" id="resultado-importacao">
-  <div class="card-header">
-    <h5 class="m-0">Resultado da Importação</h5>
-  </div>
-  <div class="card-body">
-    <div id="loading-importacao" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status"></div>
-      <p class="mt-2">Importando registros, aguarde...</p>
-      <div class="progress mt-3">
-        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" id="progresso-importacao"></div>
-      </div>
-      <p class="mt-2" id="status-importacao">Preparando...</p>
-    </div>
-
-    <div id="resultado-sucesso" class="d-none">
-      <div class="alert alert-success">
-        <i class="bi bi-check-circle-fill me-2"></i>
-        <span id="mensagem-sucesso">Importação concluída com sucesso!</span>
-      </div>
-      <div>
-        <p><strong>Detalhes:</strong></p>
-        <ul>
-          <li>Total de registros processados: <span id="total-processados">0</span></li>
-          <li>Registros importados com sucesso: <span id="total-sucesso">0</span></li>
-          <li>Registros com erro: <span id="total-erros">0</span></li>
-        </ul>
-      </div>
-    </div>
-
-    <div id="resultado-erro" class="d-none">
-      <div class="alert alert-danger">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <span id="mensagem-erro">Ocorreu um erro durante a importação.</span>
-      </div>
-      <div>
-        <p><strong>Detalhes do erro:</strong></p>
-        <pre id="detalhes-erro" class="bg-light p-3 rounded"></pre>
-      </div>
-    </div>
-
-    <div class="mt-3 d-none" id="acoes-pos-importacao">
-      <a href="#" class="btn btn-primary" data-page="registros">
-        <i class="bi bi-table me-2"></i>Ver Registros
-      </a>
-      <button type="button" class="btn btn-outline-secondary" id="nova-importacao">
-        <i class="bi bi-arrow-repeat me-2"></i>Nova Importação
-      </button>
-    </div>
-  </div>
-</div>
-
-<style>
-  #importar-form .form-control:focus {
-    border-color: #3498db;
-    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
-  }
-
-  .progress {
-    height: 15px;
-  }
-
-  pre {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-
-  .list-group-item {
-    border-left: none;
-    border-right: none;
-    padding: 0.5rem 1rem;
-  }
-
-  .list-group-item:first-child {
-    border-top: none;
-  }
-</style>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
