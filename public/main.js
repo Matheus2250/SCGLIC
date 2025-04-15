@@ -192,8 +192,13 @@ document.addEventListener("DOMContentLoaded", function () {
       limparEventListeners();
 
       // Impedir acesso a páginas restritas
-      if (pageName === "usuarios" && (!currentUser || currentUser.nivel_acesso !== "admin")) {
-        alert("Acesso negado. Apenas administradores podem acessar esta página.");
+      if (
+        pageName === "usuarios" &&
+        (!currentUser || currentUser.nivel_acesso !== "admin")
+      ) {
+        alert(
+          "Acesso negado. Apenas administradores podem acessar esta página."
+        );
         pageName = "dashboard";
       }
 
@@ -221,9 +226,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // Carregar conteúdo HTML da página
       const response = await fetch(`${pageName}.html`, {
-        signal: controller.signal
+        signal: controller.signal,
       });
-      
+
       if (!response.ok) {
         throw new Error(`Erro ao carregar a página ${pageName}`);
       }
@@ -265,8 +270,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
       return Promise.resolve();
     } catch (error) {
-      if (error.name === 'AbortError') {
-        console.log('Requisição cancelada');
+      if (error.name === "AbortError") {
+        console.log("Requisição cancelada");
         return;
       }
       console.error("Erro ao carregar página:", error);
@@ -282,9 +287,11 @@ document.addEventListener("DOMContentLoaded", function () {
   // Função para limpar event listeners
   function limparEventListeners() {
     // Limpar listeners de botões de ação
-    document.querySelectorAll(".visualizar-btn, .editar-btn, .excluir-btn").forEach(btn => {
-      btn.replaceWith(btn.cloneNode(true));
-    });
+    document
+      .querySelectorAll(".visualizar-btn, .editar-btn, .excluir-btn")
+      .forEach((btn) => {
+        btn.replaceWith(btn.cloneNode(true));
+      });
 
     // Limpar listeners de filtros
     const elementosFiltro = [
@@ -295,10 +302,10 @@ document.addEventListener("DOMContentLoaded", function () {
       "limpar-filtros",
       "aplicar-filtros",
       "exportCSV",
-      "exportExcel"
+      "exportExcel",
     ];
 
-    elementosFiltro.forEach(id => {
+    elementosFiltro.forEach((id) => {
       const elemento = document.getElementById(id);
       if (elemento) {
         elemento.replaceWith(elemento.cloneNode(true));
@@ -306,12 +313,9 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Limpar listeners de paginação
-    const elementosPaginacao = [
-      "paginacao-anterior",
-      "paginacao-proxima"
-    ];
+    const elementosPaginacao = ["paginacao-anterior", "paginacao-proxima"];
 
-    elementosPaginacao.forEach(id => {
+    elementosPaginacao.forEach((id) => {
       const elemento = document.getElementById(id);
       if (elemento) {
         elemento.replaceWith(elemento.cloneNode(true));
@@ -427,7 +431,7 @@ document.addEventListener("DOMContentLoaded", function () {
       })
         .then((response) => {
           if (!response.ok) {
-            return response.json().then(data => {
+            return response.json().then((data) => {
               throw new Error(data.message || "Erro ao fazer login");
             });
           }
@@ -448,7 +452,9 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .catch((error) => {
           if (error.message === "Failed to fetch") {
-            showError("Não foi possível conectar ao servidor. Verifique se o servidor está rodando.");
+            showError(
+              "Não foi possível conectar ao servidor. Verifique se o servidor está rodando."
+            );
           } else {
             showError(error.message);
           }
@@ -572,14 +578,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function getBadgeClass(situacao) {
     if (!situacao) return "bg-secondary";
-    
+
     situacao = situacao.toLowerCase();
-    
-    if (situacao.includes("homologado") || situacao.includes("concluído") || situacao.includes("finalizado")) {
+
+    if (
+      situacao.includes("homologado") ||
+      situacao.includes("concluído") ||
+      situacao.includes("finalizado")
+    ) {
       return "bg-success";
-    } else if (situacao.includes("andamento") || situacao.includes("processamento")) {
+    } else if (
+      situacao.includes("andamento") ||
+      situacao.includes("processamento")
+    ) {
       return "bg-warning";
-    } else if (situacao.includes("cancelado") || situacao.includes("fracassado")) {
+    } else if (
+      situacao.includes("cancelado") ||
+      situacao.includes("fracassado")
+    ) {
       return "bg-danger";
     } else if (situacao.includes("aguardando")) {
       return "bg-info";
@@ -591,161 +607,177 @@ document.addEventListener("DOMContentLoaded", function () {
   // Função para obter o ícone para cada tipo de ação
   function getActionIcon(acao) {
     switch (acao?.toLowerCase()) {
-      case 'login':
-      case 'acesso':
-        return 'bi-box-arrow-in-right';
-      case 'criação':
-      case 'criacao':
-      case 'novo':
-      case 'novo registro':
-        return 'bi-plus-circle';
-      case 'atualização':
-      case 'atualizacao':
-      case 'edição':
-      case 'edicao':
-        return 'bi-pencil';
-      case 'exclusão':
-      case 'exclusao':
-      case 'remoção':
-      case 'remocao':
-        return 'bi-trash';
+      case "login":
+      case "acesso":
+        return "bi-box-arrow-in-right";
+      case "criação":
+      case "criacao":
+      case "novo":
+      case "novo registro":
+        return "bi-plus-circle";
+      case "atualização":
+      case "atualizacao":
+      case "edição":
+      case "edicao":
+        return "bi-pencil";
+      case "exclusão":
+      case "exclusao":
+      case "remoção":
+      case "remocao":
+        return "bi-trash";
       default:
-        return 'bi-arrow-right';
+        return "bi-arrow-right";
     }
   }
 
   // Função para obter a classe do badge para cada tipo de ação
   function getActionBadgeClass(acao) {
     switch (acao?.toLowerCase()) {
-      case 'login':
-      case 'acesso':
-        return 'bg-primary';
-      case 'criação':
-      case 'criacao':
-      case 'novo':
-      case 'novo registro':
-        return 'bg-success';
-      case 'atualização':
-      case 'atualizacao':
-      case 'edição':
-      case 'edicao':
-        return 'bg-warning';
-      case 'exclusão':
-      case 'exclusao':
-      case 'remoção':
-      case 'remocao':
-        return 'bg-danger';
+      case "login":
+      case "acesso":
+        return "bg-primary";
+      case "criação":
+      case "criacao":
+      case "novo":
+      case "novo registro":
+        return "bg-success";
+      case "atualização":
+      case "atualizacao":
+      case "edição":
+      case "edicao":
+        return "bg-warning";
+      case "exclusão":
+      case "exclusao":
+      case "remoção":
+      case "remocao":
+        return "bg-danger";
       default:
-        return 'bg-secondary';
+        return "bg-secondary";
     }
   }
 
   // Função para carregar atividades recentes
   async function loadActivities() {
     const activitiesTable = document.getElementById("activities-table");
-    const activitiesTableContainer = document.getElementById("activities-table-container");
+    const activitiesTableContainer = document.getElementById(
+      "activities-table-container"
+    );
     const activitiesLoading = document.getElementById("activities-loading");
     const noActivities = document.getElementById("no-activities");
-    
+
     if (!activitiesTable || !activitiesTableContainer) {
-        console.error("Elementos da tabela de atividades não encontrados");
-        return;
+      console.error("Elementos da tabela de atividades não encontrados");
+      return;
     }
-    
+
     // Mostrar loading e ocultar outros elementos
     if (activitiesLoading) activitiesLoading.classList.remove("d-none");
-    if (activitiesTableContainer) activitiesTableContainer.classList.add("d-none");
+    if (activitiesTableContainer)
+      activitiesTableContainer.classList.add("d-none");
     if (noActivities) noActivities.classList.add("d-none");
-    
+
     try {
-        // Buscar atividades recentes da API
-        const response = await fetch(`${API_URL}/atividades`, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Falha ao carregar atividades');
-        }
-        
-        const atividades = await response.json();
-        
-        // Se não houver atividades, mostrar mensagem
-        if (!atividades || atividades.length === 0) {
-            if (activitiesLoading) activitiesLoading.classList.add("d-none");
-            if (noActivities) {
-                noActivities.classList.remove("d-none");
-                noActivities.innerHTML = `
+      // Buscar atividades recentes da API
+      const response = await fetch(`${API_URL}/atividades`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Falha ao carregar atividades");
+      }
+
+      const atividades = await response.json();
+
+      // Se não houver atividades, mostrar mensagem
+      if (!atividades || atividades.length === 0) {
+        if (activitiesLoading) activitiesLoading.classList.add("d-none");
+        if (noActivities) {
+          noActivities.classList.remove("d-none");
+          noActivities.innerHTML = `
                     <i class="bi bi-info-circle me-2"></i>
                     Nenhuma atividade recente encontrada.
                 `;
-            }
-            return;
         }
-        
-        // Limpar a tabela
-        activitiesTable.innerHTML = "";
-        
-        // Adicionar cada atividade à tabela
-        atividades.forEach(atividade => {
-            // Formatar detalhes para não mostrar o objeto
-            let detalhes = "Registro atualizado";
-            
-            // Se for uma criação, mostrar "Registro criado"
-            if (atividade.acao?.toLowerCase().includes('criação') || atividade.acao?.toLowerCase().includes('criacao')) {
-                detalhes = "Registro criado";
-            }
-            // Se for uma exclusão, mostrar "Registro excluído"
-            else if (atividade.acao?.toLowerCase().includes('exclusão') || atividade.acao?.toLowerCase().includes('exclusao')) {
-                detalhes = "Registro excluído";
-            }
-            // Se for um login, mostrar "Acesso ao sistema"
-            else if (atividade.acao?.toLowerCase().includes('login') || atividade.acao?.toLowerCase().includes('acesso')) {
-                detalhes = "Acesso ao sistema";
-            }
+        return;
+      }
 
-            const row = document.createElement("tr");
-            row.innerHTML = `
+      // Limpar a tabela
+      activitiesTable.innerHTML = "";
+
+      // Adicionar cada atividade à tabela
+      atividades.forEach((atividade) => {
+        // Formatar detalhes para não mostrar o objeto
+        let detalhes = "Registro atualizado";
+
+        // Se for uma criação, mostrar "Registro criado"
+        if (
+          atividade.acao?.toLowerCase().includes("criação") ||
+          atividade.acao?.toLowerCase().includes("criacao")
+        ) {
+          detalhes = "Registro criado";
+        }
+        // Se for uma exclusão, mostrar "Registro excluído"
+        else if (
+          atividade.acao?.toLowerCase().includes("exclusão") ||
+          atividade.acao?.toLowerCase().includes("exclusao")
+        ) {
+          detalhes = "Registro excluído";
+        }
+        // Se for um login, mostrar "Acesso ao sistema"
+        else if (
+          atividade.acao?.toLowerCase().includes("login") ||
+          atividade.acao?.toLowerCase().includes("acesso")
+        ) {
+          detalhes = "Acesso ao sistema";
+        }
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
                 <td>${formatarDataHora(atividade.data_hora)}</td>
                 <td>${atividade.usuario_nome || atividade.usuario || "-"}</td>
                 <td><span class="badge ${getActionBadgeClass(atividade.acao)}">
-                    <i class="bi ${getActionIcon(atividade.acao)} me-1"></i>${atividade.acao || "-"}
+                    <i class="bi ${getActionIcon(atividade.acao)} me-1"></i>${
+          atividade.acao || "-"
+        }
                 </span></td>
-                <td>${atividade.registro_nup || atividade.registro_id || "-"}</td>
+                <td>${
+                  atividade.registro_nup || atividade.registro_id || "-"
+                }</td>
                 <td>${detalhes}</td>
             `;
-            activitiesTable.appendChild(row);
-        });
-        
-        // Mostrar a tabela
-        if (activitiesTableContainer) activitiesTableContainer.classList.remove("d-none");
-        
+        activitiesTable.appendChild(row);
+      });
+
+      // Mostrar a tabela
+      if (activitiesTableContainer)
+        activitiesTableContainer.classList.remove("d-none");
     } catch (error) {
-        console.error("Erro ao carregar atividades:", error);
-        if (noActivities) {
-            noActivities.classList.remove("d-none");
-            noActivities.innerHTML = `
+      console.error("Erro ao carregar atividades:", error);
+      if (noActivities) {
+        noActivities.classList.remove("d-none");
+        noActivities.innerHTML = `
                 <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>
                 Erro ao carregar atividades recentes: ${error.message}
             `;
-        }
+      }
     } finally {
-        if (activitiesLoading) activitiesLoading.classList.add("d-none");
+      if (activitiesLoading) activitiesLoading.classList.add("d-none");
     }
-}
+  }
 
   // Função auxiliar para formatar data e hora
   function formatarDataHora(dataHora) {
     if (!dataHora) return "-";
     try {
       const data = new Date(dataHora);
-      return data.toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      return data.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       });
     } catch (e) {
       return dataHora;
@@ -761,9 +793,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const cancelDashboardBtn = document.getElementById("cancel-dashboard-btn");
     const addWidgetBtn = document.getElementById("add-widget-btn");
     const dashboardLoading = document.getElementById("dashboard-loading");
-    
+
     // Referências ao modal
-    const widgetConfigModal = new bootstrap.Modal(document.getElementById("widget-config-modal"));
+    const widgetConfigModal = new bootstrap.Modal(
+      document.getElementById("widget-config-modal")
+    );
     const widgetForm = document.getElementById("widget-form");
     const widgetTitle = document.getElementById("widget-title");
     const widgetType = document.getElementById("widget-type");
@@ -772,17 +806,17 @@ document.addEventListener("DOMContentLoaded", function () {
     const widgetId = document.getElementById("widget-id");
     const saveWidgetBtn = document.getElementById("save-widget-btn");
     const deleteWidgetBtn = document.getElementById("delete-widget-btn");
-    
+
     // Array para armazenar os widgets do usuário
     let userWidgets = [];
-    
+
     // Variáveis para armazenar dados
     let isEditMode = false;
-    
+
     // Função para carregar configurações de widgets salvas
     function loadUserWidgets() {
       const savedWidgets = localStorage.getItem("dashboardWidgets");
-      
+
       if (savedWidgets) {
         userWidgets = JSON.parse(savedWidgets);
       } else {
@@ -794,7 +828,7 @@ document.addEventListener("DOMContentLoaded", function () {
             type: "total",
             size: "col-md-3",
             color: "bg-primary",
-            icon: "bi-file-earmark-text"
+            icon: "bi-file-earmark-text",
           },
           {
             id: "widget-" + Date.now() + "-2",
@@ -802,7 +836,7 @@ document.addEventListener("DOMContentLoaded", function () {
             type: "homologados",
             size: "col-md-3",
             color: "bg-success",
-            icon: "bi-check-circle"
+            icon: "bi-check-circle",
           },
           {
             id: "widget-" + Date.now() + "-3",
@@ -810,7 +844,7 @@ document.addEventListener("DOMContentLoaded", function () {
             type: "andamento",
             size: "col-md-3",
             color: "bg-warning",
-            icon: "bi-hourglass-split"
+            icon: "bi-hourglass-split",
           },
           {
             id: "widget-" + Date.now() + "-4",
@@ -818,147 +852,161 @@ document.addEventListener("DOMContentLoaded", function () {
             type: "economia",
             size: "col-md-3",
             color: "bg-info",
-            icon: "bi-cash-coin"
-          }
+            icon: "bi-cash-coin",
+          },
         ];
-        
+
         // Salvar widgets padrão
         saveUserWidgets();
       }
     }
-    
+
     // Função para salvar configurações de widgets
     function saveUserWidgets() {
       localStorage.setItem("dashboardWidgets", JSON.stringify(userWidgets));
     }
-    
+
     // Função para obter o ícone apropriado para cada tipo de widget
     function getWidgetIcon(type) {
       switch (type) {
-        case "total": return "bi-file-earmark-text";
-        case "homologados": return "bi-check-circle";
-        case "andamento": return "bi-hourglass-split";
-        case "fracassados": return "bi-x-circle";
-        case "economia": return "bi-cash-coin";
-        case "valor_estimado": return "bi-currency-dollar";
-        case "valor_homologado": return "bi-cash-stack";
-        default: return "bi-card-text";
+        case "total":
+          return "bi-file-earmark-text";
+        case "homologados":
+          return "bi-check-circle";
+        case "andamento":
+          return "bi-hourglass-split";
+        case "fracassados":
+          return "bi-x-circle";
+        case "economia":
+          return "bi-cash-coin";
+        case "valor_estimado":
+          return "bi-currency-dollar";
+        case "valor_homologado":
+          return "bi-cash-stack";
+        default:
+          return "bi-card-text";
       }
     }
-    
+
     // Função para obter dados para o widget com base no tipo
     function getWidgetData(type) {
       if (!allRegistros.length) return "0";
-      
+
       switch (type) {
         case "total":
           return allRegistros.length.toString();
-          
+
         case "homologados": {
-          const homologados = allRegistros.filter(r => {
+          const homologados = allRegistros.filter((r) => {
             if (!r.situacao) return false;
             return r.situacao.toUpperCase().includes("HOMOLOGADO");
           });
           return homologados.length.toString();
         }
-        
+
         case "andamento": {
-          const andamento = allRegistros.filter(r => {
+          const andamento = allRegistros.filter((r) => {
             if (!r.situacao) return false;
             return r.situacao.toUpperCase().includes("EM ANDAMENTO");
           });
           return andamento.length.toString();
         }
-        
+
         case "fracassados": {
-          const fracassados = allRegistros.filter(r => {
+          const fracassados = allRegistros.filter((r) => {
             if (!r.situacao) return false;
-            return r.situacao.toUpperCase().includes("FRACASSADO") || 
-                   r.situacao.toUpperCase().includes("DESERTO") ||
-                   r.situacao.toUpperCase().includes("CANCELADO");
+            return (
+              r.situacao.toUpperCase().includes("FRACASSADO") ||
+              r.situacao.toUpperCase().includes("DESERTO") ||
+              r.situacao.toUpperCase().includes("CANCELADO")
+            );
           });
           return fracassados.length.toString();
         }
-        
+
         case "economia": {
-          const homologados = allRegistros.filter(r => {
+          const homologados = allRegistros.filter((r) => {
             if (!r.situacao) return false;
             return r.situacao.toUpperCase().includes("HOMOLOGADO");
           });
-          
+
           let economia = 0;
-          homologados.forEach(r => {
+          homologados.forEach((r) => {
             if (r.economia) {
               economia += parseFloat(r.economia);
             }
           });
           return formatarMoeda(economia);
         }
-        
+
         case "valor_estimado": {
           let valorTotal = 0;
-          allRegistros.forEach(r => {
+          allRegistros.forEach((r) => {
             if (r.valor_estimado) {
               valorTotal += parseFloat(r.valor_estimado);
             }
           });
           return formatarMoeda(valorTotal);
         }
-        
+
         case "valor_homologado": {
-          const homologados = allRegistros.filter(r => {
+          const homologados = allRegistros.filter((r) => {
             if (!r.situacao) return false;
             return r.situacao.toUpperCase().includes("HOMOLOGADO");
           });
-          
+
           let valorTotal = 0;
-          homologados.forEach(r => {
+          homologados.forEach((r) => {
             if (r.valor_homologado) {
               valorTotal += parseFloat(r.valor_homologado);
             }
           });
           return formatarMoeda(valorTotal);
         }
-        
+
         default:
           return "0";
       }
     }
-    
+
     // Função para obter o filtro para cada tipo de widget
     function getWidgetFilter(type) {
       switch (type) {
         case "total":
           return {};
-          
+
         case "homologados":
           return { campo: "situacao", operador: "igual", valor: "Homologado" };
-          
+
         case "andamento":
-          return { campo: "situacao", operador: "igual", valor: "Em Andamento" };
-          
+          return {
+            campo: "situacao",
+            operador: "igual",
+            valor: "Em Andamento",
+          };
+
         case "fracassados":
           return { campo: "situacao", operador: "contem", valor: "Fracassado" };
-          
+
         case "economia":
           return { campo: "economia", operador: "maior", valor: "0" };
-          
+
         case "valor_estimado":
           return { campo: "valor_estimado", operador: "maior", valor: "0" };
-          
+
         case "valor_homologado":
           return { campo: "valor_homologado", operador: "maior", valor: "0" };
-          
+
         default:
           return {};
       }
     }
-    
+
     // Função para gerar o HTML de um widget
     function generateWidgetHTML(widget) {
       const widgetData = getWidgetData(widget.type);
       const icon = widget.icon || getWidgetIcon(widget.type);
-      
+
       return `
         <div class="dashboard-widget ${widget.size}" id="${widget.id}" data-widget-id="${widget.id}">
           <div class="card text-white stat-card ${widget.color} cursor-pointer clickable-card" data-type="${widget.type}">
@@ -975,33 +1023,37 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
       `;
     }
-    
+
     // Função para renderizar todos os widgets
     function renderWidgets() {
       if (!dashboardCards) return;
-      
+
       dashboardCards.innerHTML = "";
-      
-      userWidgets.forEach(widget => {
+
+      userWidgets.forEach((widget) => {
         dashboardCards.innerHTML += generateWidgetHTML(widget);
       });
-      
+
       // Adicionar event listeners aos cartões quando não estiver em modo de edição
       if (!isEditMode) {
-        document.querySelectorAll(".dashboard-widget .card").forEach(card => {
-          card.addEventListener("click", function() {
+        document.querySelectorAll(".dashboard-widget .card").forEach((card) => {
+          card.addEventListener("click", function () {
             const widgetType = this.getAttribute("data-type");
             const filter = getWidgetFilter(widgetType);
-            
+
             loadPage("registros").then(() => {
               if (Object.keys(filter).length === 0) return;
-              
+
               // Limpar filtros existentes
               SistemaFiltros.limparTodos();
-              
+
               // Adicionar novo filtro baseado no tipo do widget
-              SistemaFiltros.adicionar(filter.campo, filter.operador, filter.valor);
-              
+              SistemaFiltros.adicionar(
+                filter.campo,
+                filter.operador,
+                filter.valor
+              );
+
               // Aplicar filtros
               aplicarFiltrosAosDados();
             });
@@ -1009,13 +1061,13 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       } else {
         // Adicionar event listener aos botões de edição quando estiver em modo de edição
-        document.querySelectorAll(".edit-widget-btn").forEach(btn => {
-          btn.addEventListener("click", function(e) {
+        document.querySelectorAll(".edit-widget-btn").forEach((btn) => {
+          btn.addEventListener("click", function (e) {
             e.stopPropagation(); // Impedir que o clique propague para o card
             const widgetEl = this.closest(".dashboard-widget");
             const widgetId = widgetEl.getAttribute("data-widget-id");
-            const widget = userWidgets.find(w => w.id === widgetId);
-            
+            const widget = userWidgets.find((w) => w.id === widgetId);
+
             if (widget) {
               // Preencher o formulário com os dados do widget
               document.getElementById("widget-id").value = widget.id;
@@ -1023,7 +1075,7 @@ document.addEventListener("DOMContentLoaded", function () {
               document.getElementById("widget-type").value = widget.type;
               document.getElementById("widget-size").value = widget.size;
               document.getElementById("widget-color").value = widget.color;
-              
+
               // Mostrar o modal
               widgetConfigModal.show();
             }
@@ -1031,12 +1083,12 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       }
     }
-    
-    // Função para atualizar os valores dos widgets 
+
+    // Função para atualizar os valores dos widgets
     function updateWidgetValues() {
       if (!dashboardCards) return;
-      
-      userWidgets.forEach(widget => {
+
+      userWidgets.forEach((widget) => {
         const widgetEl = document.getElementById(widget.id);
         if (widgetEl) {
           const valueEl = widgetEl.querySelector(".widget-value");
@@ -1046,124 +1098,132 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       });
     }
-    
+
     // Função para ativar o modo de edição
     function enableEditMode() {
       isEditMode = true;
-      
+
       // Mostrar botões de salvar e cancelar, ocultar botão de editar
       editDashboardBtn.classList.add("d-none");
       saveDashboardBtn.classList.remove("d-none");
       cancelDashboardBtn.classList.remove("d-none");
       addWidgetBtn.classList.remove("d-none");
-      
+
       // Adicionar classe para indicar modo de edição
       dashboardCards.classList.add("edit-mode");
-      
+
       // Recarregar widgets com controles de edição
       renderWidgets();
     }
-    
+
     // Função para desativar o modo de edição
     function disableEditMode() {
       isEditMode = false;
-      
+
       // Ocultar botões de salvar e cancelar, mostrar botão de editar
       editDashboardBtn.classList.remove("d-none");
       saveDashboardBtn.classList.add("d-none");
       cancelDashboardBtn.classList.add("d-none");
       addWidgetBtn.classList.add("d-none");
-      
+
       // Remover classe de modo de edição
       dashboardCards.classList.remove("edit-mode");
-      
+
       // Recarregar widgets sem controles de edição
       renderWidgets();
     }
-    
+
     // Event listeners para os botões
     if (editDashboardBtn) {
       editDashboardBtn.addEventListener("click", enableEditMode);
     }
-    
+
     if (saveDashboardBtn) {
-      saveDashboardBtn.addEventListener("click", function() {
+      saveDashboardBtn.addEventListener("click", function () {
         saveUserWidgets();
         disableEditMode();
       });
     }
-    
+
     if (cancelDashboardBtn) {
-      cancelDashboardBtn.addEventListener("click", function() {
+      cancelDashboardBtn.addEventListener("click", function () {
         // Recarregar widgets do localStorage
         loadUserWidgets();
         disableEditMode();
       });
     }
-    
+
     if (addWidgetBtn) {
-      addWidgetBtn.addEventListener("click", function() {
+      addWidgetBtn.addEventListener("click", function () {
         // Limpar o formulário
         widgetForm.reset();
-        widgetId.value = "widget-" + Date.now() + "-" + (userWidgets.length + 1);
-        
+        widgetId.value =
+          "widget-" + Date.now() + "-" + (userWidgets.length + 1);
+
         // Mostrar o modal
         widgetConfigModal.show();
       });
     }
-    
+
     if (saveWidgetBtn) {
-      saveWidgetBtn.addEventListener("click", function() {
+      saveWidgetBtn.addEventListener("click", function () {
         // Verificar se o formulário é válido
         if (!widgetForm.checkValidity()) {
           widgetForm.reportValidity();
           return;
         }
-        
+
         const id = widgetId.value;
         const title = widgetTitle.value;
         const type = widgetType.value;
         const size = widgetSize.value;
         const color = widgetColor.value;
         const icon = getWidgetIcon(type);
-        
+
         // Verificar se é um widget existente ou novo
-        const existingWidgetIndex = userWidgets.findIndex(w => w.id === id);
-        
+        const existingWidgetIndex = userWidgets.findIndex((w) => w.id === id);
+
         if (existingWidgetIndex >= 0) {
           // Atualizar widget existente
-          userWidgets[existingWidgetIndex] = { id, title, type, size, color, icon };
+          userWidgets[existingWidgetIndex] = {
+            id,
+            title,
+            type,
+            size,
+            color,
+            icon,
+          };
         } else {
           // Adicionar novo widget
           userWidgets.push({ id, title, type, size, color, icon });
         }
-        
+
         // Fechar o modal
         widgetConfigModal.hide();
-        
+
         // Renderizar widgets
         renderWidgets();
       });
     }
-    
+
     if (deleteWidgetBtn) {
-      deleteWidgetBtn.addEventListener("click", function() {
+      deleteWidgetBtn.addEventListener("click", function () {
         const id = widgetId.value;
-        
+
         // Remover widget
-        userWidgets = userWidgets.filter(w => w.id !== id);
-        
+        userWidgets = userWidgets.filter((w) => w.id !== id);
+
         // Fechar o modal
         widgetConfigModal.hide();
-        
+
         // Renderizar widgets
         renderWidgets();
       });
     }
-    
+
     // Carregar configurações de widgets
     loadUserWidgets();
-    
+
     // Carregar dados
     fetch(`${API_URL}/registros`, {
       headers: {
@@ -1178,20 +1238,20 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .then((data) => {
         if (dashboardLoading) dashboardLoading.classList.add("d-none");
-        
+
         // Armazenar todos os registros
         allRegistros = data;
-        
+
         // Renderizar widgets
         renderWidgets();
-        
+
         // Carregar atividades recentes
         loadActivities();
       })
       .catch((error) => {
         if (dashboardLoading) dashboardLoading.classList.add("d-none");
         console.error("Erro:", error);
-        
+
         // Mesmo em caso de erro, tentar carregar atividades (pode haver dados em cache)
         loadActivities();
       });
@@ -1217,7 +1277,11 @@ document.addEventListener("DOMContentLoaded", function () {
     try {
       // Verificar se podemos usar o cache
       const agora = new Date().getTime();
-      if (registrosCache && ultimaAtualizacaoCache && (agora - ultimaAtualizacaoCache < TEMPO_CACHE)) {
+      if (
+        registrosCache &&
+        ultimaAtualizacaoCache &&
+        agora - ultimaAtualizacaoCache < TEMPO_CACHE
+      ) {
         // Usar dados do cache
         await processarDadosRegistros(registrosCache);
       } else {
@@ -1229,11 +1293,13 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         if (!response.ok) {
-          throw new Error(`Falha ao carregar registros: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Falha ao carregar registros: ${response.status} ${response.statusText}`
+          );
         }
 
         const data = await response.json();
-        
+
         // Atualizar cache
         registrosCache = data;
         ultimaAtualizacaoCache = agora;
@@ -1308,7 +1374,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // Exibir informações da paginação
     const paginacaoInfo = document.getElementById("paginacao-info");
     if (paginacaoInfo) {
-      paginacaoInfo.textContent = `Mostrando ${inicio + 1} a ${fim} de ${allRegistros.length} registros`;
+      paginacaoInfo.textContent = `Mostrando ${inicio + 1} a ${fim} de ${
+        allRegistros.length
+      } registros`;
     }
   }
 
@@ -1319,7 +1387,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const nenhumRegistro = document.getElementById("nenhum-registro");
 
     if (!registrosContainer || !registrosTable) {
-      console.error("Elementos essenciais para exibição de registros não encontrados");
+      console.error(
+        "Elementos essenciais para exibição de registros não encontrados"
+      );
       return;
     }
 
@@ -1342,21 +1412,35 @@ document.addEventListener("DOMContentLoaded", function () {
       const row = document.createElement("tr");
       row.innerHTML = `
         <td>${registro.nup || "-"}</td>
-        <td>${registro.objeto ? (registro.objeto.length > 30 ? registro.objeto.substring(0, 30) + "..." : registro.objeto) : "-"}</td>
+        <td>${
+          registro.objeto
+            ? registro.objeto.length > 30
+              ? registro.objeto.substring(0, 30) + "..."
+              : registro.objeto
+            : "-"
+        }</td>
         <td>${registro.modalidade || "-"}</td>
-        <td><span class="badge ${getBadgeClass(registro.situacao)}">${registro.situacao || "-"}</span></td>
+        <td><span class="badge ${getBadgeClass(registro.situacao)}">${
+        registro.situacao || "-"
+      }</span></td>
         <td>${formatarMoeda(registro.valor_estimado)}</td>
         <td>${formatarMoeda(registro.valor_homologado)}</td>
         <td>${formatarMoeda(registro.economia)}</td>
         <td>
           <div class="btn-group">
-            <button class="btn btn-sm btn-info visualizar-btn" data-id="${registro.id}" title="Visualizar">
+            <button class="btn btn-sm btn-info visualizar-btn" data-id="${
+              registro.id
+            }" title="Visualizar">
               <i class="bi bi-eye"></i>
             </button>
-            <button class="btn btn-sm btn-primary editar-btn" data-id="${registro.id}" title="Editar">
+            <button class="btn btn-sm btn-primary editar-btn" data-id="${
+              registro.id
+            }" title="Editar">
               <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn btn-sm btn-danger excluir-btn" data-id="${registro.id}" title="Excluir">
+            <button class="btn btn-sm btn-danger excluir-btn" data-id="${
+              registro.id
+            }" title="Excluir">
               <i class="bi bi-trash"></i>
             </button>
           </div>
@@ -1371,7 +1455,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Adicionar event listeners de forma otimizada
     const addEventListeners = (selector, handler) => {
-      document.querySelectorAll(selector).forEach(btn => {
+      document.querySelectorAll(selector).forEach((btn) => {
         btn.addEventListener("click", () => handler(btn.dataset.id));
       });
     };
@@ -2537,7 +2621,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Visualizar detalhes do registro
   async function carregarDetalhesRegistro(id) {
     const detalhesContent = document.getElementById("detalhes-content");
-    
+
     try {
       const response = await fetch(`${API_URL}/registros/${id}`, {
         headers: {
@@ -2550,7 +2634,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       const registro = await response.json();
-      
+
       detalhesContent.innerHTML = `
         <div class="registro-detalhes">
           <div class="registro-header">
@@ -2560,7 +2644,9 @@ document.addEventListener("DOMContentLoaded", function () {
             </div>
             <div>
               <h4>Situação</h4>
-              <div class="situacao ${registro.situacao?.toLowerCase() || 'pendente'}">
+              <div class="situacao ${
+                registro.situacao?.toLowerCase() || "pendente"
+              }">
                 <i class="bi ${getSituacaoIcon(registro.situacao)}"></i>
                 ${registro.situacao || "Pendente"}
               </div>
@@ -2600,22 +2686,34 @@ document.addEventListener("DOMContentLoaded", function () {
             
             <div class="registro-info-item">
               <label>Valor Estimado</label>
-              <div class="valor monetario">${formatarMoeda(registro.valor_estimado)}</div>
+              <div class="valor monetario">${formatarMoeda(
+                registro.valor_estimado
+              )}</div>
             </div>
             
             <div class="registro-info-item">
               <label>Valor Homologado</label>
-              <div class="valor monetario">${formatarMoeda(registro.valor_homologado)}</div>
+              <div class="valor monetario">${formatarMoeda(
+                registro.valor_homologado
+              )}</div>
             </div>
             
             <div class="registro-info-item">
               <label>Data de Abertura</label>
-              <div class="valor data">${registro.data_abertura ? formatarData(registro.data_abertura) : "-"}</div>
+              <div class="valor data">${
+                registro.data_abertura
+                  ? formatarData(registro.data_abertura)
+                  : "-"
+              }</div>
             </div>
             
             <div class="registro-info-item">
               <label>Data Entrada DIPLI</label>
-              <div class="valor data">${registro.data_entrada_dipli ? formatarData(registro.data_entrada_dipli) : "-"}</div>
+              <div class="valor data">${
+                registro.data_entrada_dipli
+                  ? formatarData(registro.data_entrada_dipli)
+                  : "-"
+              }</div>
             </div>
             
             <div class="registro-info-item">
@@ -2650,22 +2748,27 @@ document.addEventListener("DOMContentLoaded", function () {
           </div>
           
           <div class="registro-acoes">
-            <button class="btn btn-editar" onclick="carregarRegistroParaEdicao('${registro.id}')">
+            <button class="btn btn-editar" onclick="carregarRegistroParaEdicao('${
+              registro.id
+            }')">
               <i class="bi bi-pencil"></i>
               Editar
             </button>
-            <button class="btn btn-excluir" onclick="confirmarExclusao('${registro.id}')">
+            <button class="btn btn-excluir" onclick="confirmarExclusao('${
+              registro.id
+            }')">
               <i class="bi bi-trash"></i>
               Excluir
             </button>
           </div>
         </div>
       `;
-      
+
       // Mostrar modal
-      const modal = new bootstrap.Modal(document.getElementById("detalhes-modal"));
+      const modal = new bootstrap.Modal(
+        document.getElementById("detalhes-modal")
+      );
       modal.show();
-      
     } catch (error) {
       console.error("Erro:", error);
       alert("Erro ao carregar detalhes do registro");
@@ -2674,14 +2777,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function getSituacaoIcon(situacao) {
     switch (situacao?.toLowerCase()) {
-      case 'concluido':
-        return 'bi-check-circle-fill';
-      case 'cancelado':
-        return 'bi-x-circle-fill';
-      case 'pendente':
-        return 'bi-clock-fill';
+      case "concluido":
+        return "bi-check-circle-fill";
+      case "cancelado":
+        return "bi-x-circle-fill";
+      case "pendente":
+        return "bi-clock-fill";
       default:
-        return 'bi-dash-circle-fill';
+        return "bi-dash-circle-fill";
     }
   }
 
@@ -2953,308 +3056,185 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Função para inicializar a página de importação
-  function initImportar() {
-    const pageContainer = document.getElementById("page-container");
-    
-    pageContainer.innerHTML = `
-      <div class="container">
-        <div class="row mb-4">
-          <div class="col">
-            <h2><i class="bi bi-cloud-upload me-2"></i>Importar Dados</h2>
-          </div>
+  async function initImportar() {
+    try {
+      const response = await fetch("importar.html");
+      if (!response.ok) {
+        throw new Error("Erro ao carregar a página de importação");
+      }
+
+      const html = await response.text();
+      const pageContainer = document.getElementById("page-container");
+      pageContainer.innerHTML = html;
+
+      // Configurar formulários e eventos depois que o HTML for carregado
+      configImportacaoCompleta();
+      configImportacaoValores();
+    } catch (error) {
+      console.error("Erro ao inicializar página de importação:", error);
+      const pageContainer = document.getElementById("page-container");
+      pageContainer.innerHTML = `
+        <div class="alert alert-danger">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          Erro ao carregar a página de importação. Por favor, tente novamente.
         </div>
+      `;
+    }
+  }
 
-        <div class="card">
-          <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs">
-              <li class="nav-item">
-                <a class="nav-link active" href="#" data-import-type="full">Importação Completa</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="#" data-import-type="values">Importar Valores</a>
-              </li>
-            </ul>
-          </div>
-          
-          <div class="card-body">
-            <div id="import-full" class="import-section">
-              <h5 class="card-title mb-4">Importar Planilha Completa</h5>
-              <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>
-                Esta opção permite importar todos os dados dos registros.
-                Certifique-se de que a planilha contenha as colunas necessárias.
-              </div>
-              <form id="import-form">
-                <div class="mb-4">
-                  <input type="file" class="form-control" id="excel-file" accept=".xlsx,.xls">
-                </div>
-                <div class="form-check mb-3">
-                  <input class="form-check-input" type="checkbox" id="limpar-dados">
-                  <label class="form-check-label" for="limpar-dados">
-                    Limpar dados existentes antes de importar
-                  </label>
-                  <div class="form-text text-danger">Cuidado: Isso excluirá TODOS os registros existentes.</div>
-                </div>
-                <button type="submit" class="btn btn-primary">
-                  <i class="bi bi-cloud-upload me-2"></i>Importar Dados
-                </button>
-              </form>
-            </div>
+  // Configurar formulário de importação completa
+  function configImportacaoCompleta() {
+    const form = document.getElementById("importar-form");
+    if (!form) return;
 
-            <div id="import-values" class="import-section d-none">
-              <h5 class="card-title mb-4">Importar Valores Monetários</h5>
-              <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>
-                Esta opção permite importar apenas os valores estimados e homologados. 
-                A planilha deve conter as colunas: NUP, Valor Estimado e Valor Homologado.
-              </div>
-              <div class="mb-4">
-                <input type="file" class="form-control" id="values-file" accept=".xlsx,.xls">
-              </div>
-              <button class="btn btn-primary" id="import-values-btn">
-                <i class="bi bi-cloud-upload me-2"></i>Importar Valores
-              </button>
-            </div>
-
-            <div id="preview-container" class="mt-4 d-none">
-              <h6>Prévia dos Dados:</h6>
-              <div class="table-responsive">
-                <table class="table table-sm table-bordered">
-                  <thead id="preview-header"></thead>
-                  <tbody id="preview-body"></tbody>
-                </table>
-              </div>
-              <div class="mt-3">
-                <button class="btn btn-success" id="confirm-import">
-                  <i class="bi bi-check-circle me-2"></i>Confirmar Importação
-                </button>
-                <button class="btn btn-secondary" id="cancel-import">
-                  <i class="bi bi-x-circle me-2"></i>Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Variáveis para armazenar dados
-    let excelData = null;
-    let importType = 'full';
-
-    // Event listeners para as tabs
-    document.querySelectorAll('.nav-link').forEach(tab => {
-      tab.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.nav-link').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        importType = tab.dataset.importType;
-        document.querySelectorAll('.import-section').forEach(section => {
-          section.classList.add('d-none');
-        });
-        document.getElementById(`import-${importType}`).classList.remove('d-none');
-        document.getElementById('preview-container').classList.add('d-none');
-      });
-    });
-
-    // Event listener para importação completa
-    document.getElementById('import-form').addEventListener('submit', async (e) => {
+    form.addEventListener("submit", async function (e) {
       e.preventDefault();
-      
-      const fileInput = document.getElementById('excel-file');
-      const limparDados = document.getElementById('limpar-dados').checked;
-      
-      if (!fileInput.files[0]) {
-        alert('Por favor, selecione um arquivo Excel.');
+
+      const fileInput = document.getElementById("excel-file");
+      const limparDados = document.getElementById("limpar-dados").checked;
+
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Por favor, selecione um arquivo Excel");
         return;
       }
 
-      try {
-        const formData = new FormData();
-        formData.append('excel', fileInput.files[0]);
-        formData.append('limparDados', limparDados);
+      const file = fileInput.files[0];
 
-        const response = await fetch(`${API_URL}/importar-excel`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`
-          },
-          body: formData
-        });
+      // Mostrar interface de resultado
+      const resultadoImportacao = document.getElementById(
+        "resultado-importacao"
+      );
+      resultadoImportacao.classList.remove("d-none");
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Erro ao importar arquivo');
-        }
-
-        const result = await response.json();
-        alert(`Importação concluída com sucesso!\nTotal processado: ${result.totalProcessados}\nSucessos: ${result.sucessos}\nFalhas: ${result.falhas}`);
-        
-        // Limpar formulário
-        fileInput.value = '';
-        document.getElementById('limpar-dados').checked = false;
-
-      } catch (error) {
-        console.error('Erro na importação:', error);
-        alert(error.message || 'Erro ao importar os dados. Por favor, tente novamente.');
-      }
-    });
-
-    // Função para processar arquivo de valores
-    async function processValuesFile(file) {
-      try {
-        // Validate file type
-        if (!file.name.match(/\.(xlsx|xls)$/i)) {
-          showErrorModal('Por favor, selecione um arquivo Excel válido (.xlsx ou .xls)');
-          return;
-        }
-
-        // Show loading toast
-        const loadingToast = showToast('Processando arquivo...', 'info', true);
-
-        // Create FormData and append file
-        const formData = new FormData();
-        formData.append('file', file);
-
-        // Send to server
-        const response = await fetch(`${API_URL}/registros/importar-valores`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
-
-        if (!response.ok) {
-          const result = await response.json();
-          throw new Error(result.error || 'Erro ao importar os valores');
-        }
-
-        const result = await response.json();
-
-        // Show success message
-        showToast('Importação concluída com sucesso!', 'success');
-
-        // Reload records and activities
-        await Promise.all([
-          loadRecords(),
-          loadActivities()
-        ]);
-
-      } catch (error) {
-        console.error('Erro ao processar arquivo:', error);
-        showErrorModal(error.message || 'Erro ao processar o arquivo. Por favor, tente novamente.');
-      }
-    }
-
-    // Event listener for values file input
-    document.getElementById('values-file').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        processValuesFile(file);
-      }
-    });
-
-    // Event listener para confirmar importação
-    document.getElementById('confirm-import').addEventListener('click', async () => {
-      if (!excelData || excelData.length === 0) {
-          showToast('error', 'Nenhum dado para importar');
-          return;
-      }
-
-      const loadingToast = showToast('info', 'Importando valores...', true);
+      // Ocultar interface de sucesso/erro
+      document.getElementById("resultado-sucesso").classList.add("d-none");
+      document.getElementById("resultado-erro").classList.add("d-none");
+      document.getElementById("acoes-pos-importacao").classList.add("d-none");
 
       try {
-          const response = await fetch('/api/registros/importar-valores', {
-              method: 'POST',
+        // Ler arquivo Excel
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+
+            // Processar dados do Excel
+            const primeiraAba = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[primeiraAba];
+            const registros = XLSX.utils.sheet_to_json(worksheet);
+
+            // Validar dados
+            if (!registros || registros.length === 0) {
+              throw new Error("Nenhum registro encontrado no arquivo Excel");
+            }
+
+            // Mostrar progresso
+            const progressBar = document.getElementById("progresso-importacao");
+            progressBar.style.width = "10%";
+
+            document.getElementById(
+              "status-importacao"
+            ).textContent = `Processando ${registros.length} registros...`;
+
+            // Preparar para envio
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("limparDados", limparDados);
+
+            // Enviar para o servidor
+            const response = await fetch(`${API_URL}/importar`, {
+              method: "POST",
               headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
+                Authorization: `Bearer ${token}`,
               },
-              body: JSON.stringify({ dados: excelData })
-          });
+              body: formData,
+            });
 
-          const result = await response.json();
+            progressBar.style.width = "100%";
 
-          if (!response.ok) {
-              throw new Error(result.error || 'Erro ao importar valores');
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(
+                errorData.message || "Erro ao importar registros"
+              );
+            }
+
+            const resultado = await response.json();
+
+            // Mostrar resultados
+            document
+              .getElementById("resultado-sucesso")
+              .classList.remove("d-none");
+            document
+              .getElementById("acoes-pos-importacao")
+              .classList.remove("d-none");
+            document
+              .getElementById("loading-importacao")
+              .classList.add("d-none");
+
+            document.getElementById("total-processados").textContent =
+              resultado.total || 0;
+            document.getElementById("total-sucesso").textContent =
+              resultado.sucessos || 0;
+            document.getElementById("total-erros").textContent =
+              resultado.erros || 0;
+            document.getElementById("mensagem-sucesso").textContent =
+              resultado.message || "Dados importados com sucesso";
+
+            document.getElementById("status-importacao").textContent =
+              "Importação concluída!";
+          } catch (error) {
+            mostrarErroImportacao(error.message);
           }
+        };
 
-          if (result.erros && result.erros.length > 0) {
-              // Show errors in modal
-              const errorList = result.erros.map(error => `<li>${error.nup}: ${error.erro}</li>`).join('');
-              const modalContent = `
-                  <div class="alert alert-danger">
-                      <h5>Erros encontrados durante a importação:</h5>
-                      <ul>${errorList}</ul>
-                  </div>
-              `;
-              showModal('Erros na Importação', modalContent);
-              showToast('error', `Importação concluída com ${result.erros.length} erros`);
-          } else {
-              showToast('success', `Valores importados com sucesso! ${result.atualizados} registros atualizados.`);
-          }
+        reader.onerror = function () {
+          mostrarErroImportacao("Erro ao ler o arquivo");
+        };
 
-          // Reload records and activities
-          await loadRecords();
-          await loadActivities();
-
-          // Reset form
-          document.getElementById('preview-container').classList.add('d-none');
-          document.getElementById('values-file').value = '';
-          excelData = null;
-
+        reader.readAsArrayBuffer(file);
       } catch (error) {
-          console.error('Erro na importação:', error);
-          showToast('error', error.message || 'Erro ao importar os valores. Por favor, tente novamente.');
-      } finally {
-          if (loadingToast) {
-              loadingToast.close();
-          }
+        mostrarErroImportacao(error.message);
       }
     });
 
-    // Event listener para cancelar importação
-    document.getElementById('cancel-import').addEventListener('click', () => {
-      document.getElementById('preview-container').classList.add('d-none');
-      document.getElementById('values-file').value = '';
-      excelData = null;
-    });
-
-    // Função para mostrar prévia dos dados
-    function showPreview(data, headers) {
-        const previewContainer = document.getElementById('preview-container');
-        const previewHeader = document.getElementById('preview-header');
-        const previewBody = document.getElementById('preview-body');
-
-        // Limpar conteúdo anterior
-        previewHeader.innerHTML = '';
-        previewBody.innerHTML = '';
-
-        // Adicionar cabeçalhos
-        const headerRow = document.createElement('tr');
-        headers.forEach(header => {
-            const th = document.createElement('th');
-            th.textContent = header;
-            headerRow.appendChild(th);
-        });
-        previewHeader.appendChild(headerRow);
-
-        // Adicionar dados
-        data.forEach(row => {
-            const tr = document.createElement('tr');
-            headers.forEach(header => {
-                const td = document.createElement('td');
-                const value = row[header.toLowerCase().replace(' ', '_')];
-                td.textContent = value || '-';
-                tr.appendChild(td);
-            });
-            previewBody.appendChild(tr);
-        });
-
-        // Mostrar container
-        previewContainer.classList.remove('d-none');
+    // Botão de nova importação
+    const btnNovaImportacao = document.getElementById("nova-importacao");
+    if (btnNovaImportacao) {
+      btnNovaImportacao.addEventListener("click", function () {
+        document.getElementById("importar-form").reset();
+        document.getElementById("resultado-importacao").classList.add("d-none");
+      });
     }
+  }
+
+  // Configurar formulário de importação de valores
+  function configImportacaoValores() {
+    const form = document.getElementById("importar-valores-form");
+    if (!form) return;
+
+    // Adicionar evento de submit
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      alert("A importação de valores será implementada em breve.");
+    });
+  }
+
+  // Mostrar erro de importação
+  function mostrarErroImportacao(mensagem) {
+    document.getElementById("loading-importacao").classList.add("d-none");
+    document.getElementById("resultado-erro").classList.remove("d-none");
+    document.getElementById("acoes-pos-importacao").classList.remove("d-none");
+    document.getElementById("mensagem-erro").textContent =
+      mensagem || "Ocorreu um erro durante a importação";
+    document.getElementById("status-importacao").textContent =
+      "Erro na importação";
+    document.getElementById("progresso-importacao").style.width = "100%";
+    document
+      .getElementById("progresso-importacao")
+      .classList.remove("bg-primary");
+    document.getElementById("progresso-importacao").classList.add("bg-danger");
   }
 
   // Iniciar verificação de autenticação ao carregar a página

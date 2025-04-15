@@ -1,69 +1,122 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Importar Registros - Sistema de Controle</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="styles.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/dashboard">Sistema de Controle</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+<!-- Importar Registros -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-cloud-upload me-2"></i>Importar Registros</h2>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <ul class="nav nav-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="completa-tab" data-bs-toggle="tab" data-bs-target="#completa" type="button" role="tab">
+          <i class="bi bi-file-earmark-spreadsheet me-1"></i>Importação Completa
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="valores-tab" data-bs-toggle="tab" data-bs-target="#valores" type="button" role="tab">
+          <i class="bi bi-currency-dollar me-1"></i>Importar Valores
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content mt-4">
+      <!-- Tab Importação Completa -->
+      <div class="tab-pane fade show active" id="completa" role="tabpanel">
+        <form id="importar-form" class="needs-validation" novalidate>
+          <div class="mb-3">
+            <label for="excel-file" class="form-label">Arquivo Excel</label>
+            <input type="file" class="form-control" id="excel-file" accept=".xlsx,.xls" required>
+            <div class="form-text">Selecione um arquivo Excel (.xlsx ou .xls)</div>
+          </div>
+
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="limpar-dados">
+              <label class="form-check-label" for="limpar-dados">
+                Limpar dados existentes antes de importar
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-upload me-1"></i>Importar Dados
+          </button>
+        </form>
+
+        <!-- Resultado da Importação -->
+        <div id="resultado-importacao" class="mt-4 d-none">
+          <div class="progress mb-3">
+            <div id="progresso-importacao" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+          </div>
+
+          <p id="status-importacao" class="text-muted text-center">Preparando importação...</p>
+
+          <!-- Loading -->
+          <div id="loading-importacao" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Carregando...</span>
+            </div>
+          </div>
+
+          <!-- Sucesso -->
+          <div id="resultado-sucesso" class="alert alert-success d-none" role="alert">
+            <h4 class="alert-heading"><i class="bi bi-check-circle me-2"></i>Importação Concluída!</h4>
+            <p id="mensagem-sucesso">Dados importados com sucesso.</p>
+            <hr>
+            <div class="row">
+              <div class="col-md-4">
+                <p class="mb-1">Total Processado:</p>
+                <h4 id="total-processados">0</h4>
+              </div>
+              <div class="col-md-4">
+                <p class="mb-1">Sucessos:</p>
+                <h4 id="total-sucesso" class="text-success">0</h4>
+              </div>
+              <div class="col-md-4">
+                <p class="mb-1">Erros:</p>
+                <h4 id="total-erros" class="text-danger">0</h4>
+              </div>
+            </div>
+          </div>
+
+          <!-- Erro -->
+          <div id="resultado-erro" class="alert alert-danger d-none" role="alert">
+            <h4 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Erro na Importação</h4>
+            <p id="mensagem-erro">Ocorreu um erro durante a importação.</p>
+            <hr>
+            <pre id="detalhes-erro" class="mb-0"></pre>
+          </div>
+
+          <!-- Ações pós-importação -->
+          <div id="acoes-pos-importacao" class="text-center mt-3 d-none">
+            <button id="nova-importacao" class="btn btn-outline-primary">
+              <i class="bi bi-arrow-repeat me-1"></i>Nova Importação
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/dashboard">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/importar">Importar</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="logoutBtn">
-                            <i class="bi bi-box-arrow-right"></i> Sair
-                        </a>
-                    </li>
-                </ul>
-            </div>
+            <button class="btn btn-primary ms-2" data-page="registros">
+              <i class="bi bi-table me-1"></i>Ver Registros
+            </button>
+          </div>
         </div>
-    </nav>
+      </div>
 
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-12">
-                <h2>Importar Registros</h2>
-                <div class="card">
-                    <div class="card-body">
-                        <form id="importForm">
-                            <div class="mb-3">
-                                <label for="fileInput" class="form-label">Selecione o arquivo Excel</label>
-                                <input type="file" class="form-control" id="fileInput" accept=".xlsx,.xls" required>
-                                <div class="form-text">
-                                    O arquivo deve conter as colunas: Descrição, Valor, Data de Vencimento e Situação
-                                </div>
-                            </div>
-                            <div id="previewContainer" class="mb-3">
-                                <!-- Preview será inserido aqui -->
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-upload"></i> Importar Registros
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+      <!-- Tab Importar Valores -->
+      <div class="tab-pane fade" id="valores" role="tabpanel">
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          Esta funcionalidade permite importar apenas os valores homologados e economia dos registros existentes.
         </div>
+
+        <form id="importar-valores-form" class="needs-validation" novalidate>
+          <div class="mb-3">
+            <label for="valores-file" class="form-label">Arquivo Excel</label>
+            <input type="file" class="form-control" id="valores-file" accept=".xlsx,.xls" required>
+            <div class="form-text">Selecione um arquivo Excel com as colunas: NUP, Valor Homologado e Economia</div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-upload me-1"></i>Importar Valores
+          </button>
+        </form>
+      </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="main.js"></script>
-</body>
-</html>
+  </div>
+</div>
