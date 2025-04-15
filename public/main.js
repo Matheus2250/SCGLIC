@@ -243,28 +243,45 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Toggle sidebar
-  toggleSidebarBtn.addEventListener("click", function () {
+  toggleSidebarBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+
     if (sidebar.classList.contains("expanded")) {
       sidebar.classList.remove("expanded");
       sidebar.classList.add("collapsed");
       content.classList.remove("expanded");
       content.classList.add("expanded");
-      this.innerHTML = '<i class="bi bi-chevron-right"></i>';
 
       // Esconder textos dos links
-      document.querySelectorAll(".nav-text").forEach((el) => {
+      document.querySelectorAll(".nav-text:not(.logo-text)").forEach((el) => {
         el.classList.add("hidden");
       });
+
+      // Atualizar o texto do botão
+      const iconSpan = this.querySelector("i");
+      iconSpan.classList.remove("bi-chevron-left");
+      iconSpan.classList.add("bi-chevron-right");
+
+      // Ocultar o texto "Recolher Menu"
+      this.querySelector(".nav-text").classList.add("hidden");
     } else {
       sidebar.classList.add("expanded");
       sidebar.classList.remove("collapsed");
       content.classList.remove("expanded");
-      this.innerHTML = '<i class="bi bi-chevron-left"></i>';
 
       // Mostrar textos dos links
       document.querySelectorAll(".nav-text").forEach((el) => {
         el.classList.remove("hidden");
       });
+
+      // Atualizar o texto do botão
+      const iconSpan = this.querySelector("i");
+      iconSpan.classList.remove("bi-chevron-right");
+      iconSpan.classList.add("bi-chevron-left");
+
+      // Atualizar o texto para "Recolher Menu"
+      const textSpan = this.querySelector(".nav-text");
+      textSpan.textContent = "Recolher Menu";
     }
   });
 
@@ -576,6 +593,80 @@ document.addEventListener("DOMContentLoaded", function () {
     const recentRegistros = document.getElementById("recent-registros");
     const dashboardLoading = document.getElementById("dashboard-loading");
     const dashboardTable = document.getElementById("dashboard-table");
+
+    // Adicionar event listeners aos cards para navegação com filtros
+    const cardTotalRegistros = document.getElementById("card-total-registros");
+    const cardHomologados = document.getElementById("card-homologados");
+    const cardAndamento = document.getElementById("card-andamento");
+    const cardEconomia = document.getElementById("card-economia");
+
+    // Event listener para o card de Total de Registros
+    if (cardTotalRegistros) {
+      cardTotalRegistros.addEventListener("click", function () {
+        loadPage("registros");
+      });
+    }
+
+    // Event listener para o card de Homologados
+    if (cardHomologados) {
+      cardHomologados.addEventListener("click", function () {
+        loadPage("registros").then(() => {
+          // Após carregar a página de registros, aplicar o filtro por situação "Homologado"
+          const campo = this.getAttribute("data-filtro-campo");
+          const valor = this.getAttribute("data-filtro-valor");
+
+          if (campo && valor) {
+            // Limpar filtros existentes
+            SistemaFiltros.limparTodos();
+
+            // Adicionar novo filtro para "Homologado"
+            SistemaFiltros.adicionar(campo, "igual", valor);
+
+            // Aplicar filtros
+            aplicarFiltrosAosDados();
+          }
+        });
+      });
+    }
+
+    // Event listener para o card de Em Andamento
+    if (cardAndamento) {
+      cardAndamento.addEventListener("click", function () {
+        loadPage("registros").then(() => {
+          // Após carregar a página de registros, aplicar o filtro por situação "Em Andamento"
+          const campo = this.getAttribute("data-filtro-campo");
+          const valor = this.getAttribute("data-filtro-valor");
+
+          if (campo && valor) {
+            // Limpar filtros existentes
+            SistemaFiltros.limparTodos();
+
+            // Adicionar novo filtro para "Em Andamento"
+            SistemaFiltros.adicionar(campo, "igual", valor);
+
+            // Aplicar filtros
+            aplicarFiltrosAosDados();
+          }
+        });
+      });
+    }
+
+    // Event listener para o card de Economia Total
+    if (cardEconomia) {
+      cardEconomia.addEventListener("click", function () {
+        loadPage("registros").then(() => {
+          // Após carregar a página de registros, aplicar filtro para mostrar apenas registros com economia > 0
+          // Limpar filtros existentes
+          SistemaFiltros.limparTodos();
+
+          // Adicionar novo filtro para economia > 0
+          SistemaFiltros.adicionar("economia", "maior", "0");
+
+          // Aplicar filtros
+          aplicarFiltrosAosDados();
+        });
+      });
+    }
 
     if (dashboardLoading) dashboardLoading.classList.remove("d-none");
     if (dashboardTable) dashboardTable.classList.add("d-none");
@@ -1038,6 +1129,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const adicionarFiltroBtn = document.getElementById("adicionar-filtro");
     const limparFiltrosBtn = document.getElementById("limpar-filtros");
     const aplicarFiltrosBtn = document.getElementById("aplicar-filtros");
+    const exportCSVBtn = document.getElementById("exportCSV");
+    const exportExcelBtn = document.getElementById("exportExcel");
 
     // Toggle para mostrar/esconder área de filtros
     if (toggleFiltros && filtrosContainer) {
@@ -1094,8 +1187,110 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
+    // Botão para exportar em CSV
+    if (exportCSVBtn) {
+      exportCSVBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        exportarRegistros("csv");
+      });
+    }
+
+    // Botão para exportar em Excel
+    if (exportExcelBtn) {
+      exportExcelBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        exportarRegistros("excel");
+      });
+    }
+
     // Inicializar a UI de filtros
     SistemaFiltros.atualizarUI();
+  }
+
+  // Função para exportar registros com filtros
+  function exportarRegistros(formato) {
+    // Mostrar indicador de carregamento
+    const loadingIndicator = document.createElement("div");
+    loadingIndicator.className =
+      "position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center";
+    loadingIndicator.style.backgroundColor = "rgba(0, 0, 0, 0.3)";
+    loadingIndicator.style.zIndex = "9999";
+    loadingIndicator.innerHTML = `
+      <div class="spinner-border text-light" role="status">
+        <span class="visually-hidden">Exportando...</span>
+      </div>
+    `;
+    document.body.appendChild(loadingIndicator);
+
+    // Preparar URL e tipo de conteúdo com base no formato
+    const url =
+      formato === "csv" ? `${API_URL}/export/csv` : `${API_URL}/export/excel`;
+
+    // Criar um form data com os filtros atuais
+    const filtrosAtivos = SistemaFiltros.filtrosAtivos;
+
+    // Fazer requisição POST para o servidor
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ filtros: filtrosAtivos }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Falha ao exportar registros");
+        }
+
+        // Para CSV, o tipo é text/csv
+        if (formato === "csv") {
+          return response.text();
+        }
+
+        // Para Excel, o tipo é um arrayBuffer
+        return response.arrayBuffer();
+      })
+      .then((data) => {
+        // Remover indicador de carregamento
+        document.body.removeChild(loadingIndicator);
+
+        // Criar um blob com os dados obtidos
+        const blob =
+          formato === "csv"
+            ? new Blob([data], { type: "text/csv;charset=utf-8;" })
+            : new Blob([data], {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              });
+
+        // Criar URL para o blob
+        const url = window.URL.createObjectURL(blob);
+
+        // Criar elemento <a> para download
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = formato === "csv" ? "registros.csv" : "registros.xlsx";
+        document.body.appendChild(a);
+
+        // Simular clique para iniciar o download
+        a.click();
+
+        // Limpar recursos
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        // Mostrar mensagem de sucesso
+        alert(`Exportação em ${formato.toUpperCase()} concluída com sucesso!`);
+      })
+      .catch((error) => {
+        // Remover indicador de carregamento em caso de erro
+        if (document.body.contains(loadingIndicator)) {
+          document.body.removeChild(loadingIndicator);
+        }
+
+        console.error(`Erro ao exportar em ${formato}:`, error);
+        alert(`Erro ao exportar registros: ${error.message}`);
+      });
   }
 
   // Aplicar filtros aos dados de registros
@@ -1564,152 +1759,42 @@ document.addEventListener("DOMContentLoaded", function () {
         Authorization: `Bearer ${token}`,
       },
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Falha ao carregar lista de usuários");
+        }
+        return response.json();
+      })
       .then((data) => {
         if (usuariosLoading) usuariosLoading.classList.add("d-none");
         if (usuariosContainer) usuariosContainer.classList.remove("d-none");
-
         if (usuariosTable) {
           usuariosTable.innerHTML = "";
-
           data.forEach((usuario) => {
             const row = document.createElement("tr");
             row.innerHTML = `
-            <td>${usuario.id}</td>
-            <td>${usuario.nome}</td>
-            <td>${usuario.email}</td>
-            <td>${
-              usuario.nivel_acesso === "admin" ? "Administrador" : "Usuário"
-            }</td>
-            <td>
-              <button class="btn btn-sm btn-danger excluir-usuario-btn" data-id="${
-                usuario.id
-              }" title="Excluir">
-                <i class="bi bi-trash"></i>
-              </button>
-            </td>
-          `;
+              <td>${usuario.nome}</td>
+              <td>${usuario.email}</td>
+              <td>${usuario.nivel_acesso}</td>
+              <td>
+                <div class="btn-group">
+                  <button class="btn btn-sm btn-primary editar-btn" data-id="${usuario.id}" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-danger excluir-btn" data-id="${usuario.id}" title="Excluir">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            `;
             usuariosTable.appendChild(row);
-          });
-
-          // Event listeners para botões de exclusão
-          document.querySelectorAll(".excluir-usuario-btn").forEach((btn) => {
-            btn.addEventListener("click", function () {
-              const id = this.dataset.id;
-              // Não permitir excluir o próprio usuário
-              if (id == currentUser.id) {
-                alert("Você não pode excluir seu próprio usuário.");
-                return;
-              }
-              confirmarExclusaoUsuario(id);
-            });
           });
         }
       })
       .catch((error) => {
         if (usuariosLoading) usuariosLoading.classList.add("d-none");
-        console.error("Erro ao carregar usuários:", error);
-      });
-
-    // Event listener para botão novo usuário
-    if (novoUsuarioBtn) {
-      novoUsuarioBtn.addEventListener("click", function () {
-        document.getElementById("usuario-form").reset();
-        document.getElementById("usuario-id").value = "";
-        document.getElementById("usuario-modal-title").textContent =
-          "Novo Usuário";
-
-        // Event listener para salvar usuário
-        document.getElementById("salvar-usuario-btn").onclick = function () {
-          salvarUsuario();
-        };
-
-        usuarioModal.show();
-      });
-    }
-  }
-
-  // Confirmar exclusão de usuário
-  function confirmarExclusaoUsuario(id) {
-    const confirmacaoTexto = document.getElementById("confirmacao-texto");
-    const confirmacaoBtn = document.getElementById("confirmacao-btn");
-
-    if (confirmacaoTexto)
-      confirmacaoTexto.textContent =
-        "Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.";
-
-    if (confirmacaoBtn) {
-      confirmacaoBtn.onclick = function () {
-        excluirUsuario(id);
-        confirmacaoModal.hide();
-      };
-    }
-
-    confirmacaoModal.show();
-  }
-
-  // Excluir usuário
-  function excluirUsuario(id) {
-    fetch(`${API_URL}/usuarios/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Falha ao excluir usuário");
-        }
-        return response.json();
-      })
-      .then(() => {
-        // Recarregar usuários
-        initUsuarios();
-        alert("Usuário excluído com sucesso!");
-      })
-      .catch((error) => {
-        console.error("Erro ao excluir usuário:", error);
-        alert("Erro ao excluir usuário: " + error.message);
+        console.error("Erro ao carregar lista de usuários:", error);
+        alert("Erro ao carregar lista de usuários: " + error.message);
       });
   }
-
-  // Salvar usuário
-  function salvarUsuario() {
-    const nome = document.getElementById("usuario-nome").value;
-    const email = document.getElementById("usuario-email").value;
-    const senha = document.getElementById("usuario-senha").value;
-    const nivel_acesso = document.getElementById("usuario-nivel").value;
-
-    if (!nome || !email || !senha || !nivel_acesso) {
-      alert("Todos os campos são obrigatórios");
-      return;
-    }
-
-    fetch(`${API_URL}/usuarios`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ nome, email, senha, nivel_acesso }),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Falha ao criar usuário");
-        }
-        return response.json();
-      })
-      .then(() => {
-        usuarioModal.hide();
-        alert("Usuário criado com sucesso!");
-        initUsuarios();
-      })
-      .catch((error) => {
-        console.error("Erro ao criar usuário:", error);
-        alert("Erro ao criar usuário: " + error.message);
-      });
-  }
-
-  // Inicializar a aplicação
-  checkAuth();
 });

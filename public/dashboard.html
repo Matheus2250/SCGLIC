@@ -1,33 +1,33 @@
 <!-- Dashboard Page -->
 <h2 class="mb-4">Dashboard</h2>
 <div class="row">
-  <div class="col-md-3 mb-4">
-    <div class="card text-white stat-card bg-primary">
-      <div class="card-body">
+  <div class="col-md-3 mb-3">
+    <div class="card text-white stat-card bg-primary cursor-pointer clickable-card" id="card-total-registros" data-pagina="registros">
+      <div class="card-body py-2">
         <h5 class="card-title"><i class="bi bi-file-earmark-text me-2"></i>Total de Registros</h5>
         <h2 id="total-registros">0</h2>
       </div>
     </div>
   </div>
-  <div class="col-md-3 mb-4">
-    <div class="card text-white stat-card bg-success">
-      <div class="card-body">
+  <div class="col-md-3 mb-3">
+    <div class="card text-white stat-card bg-success cursor-pointer clickable-card" id="card-homologados" data-pagina="registros" data-filtro-campo="situacao" data-filtro-valor="Homologado">
+      <div class="card-body py-2">
         <h5 class="card-title"><i class="bi bi-check-circle me-2"></i>Homologados</h5>
         <h2 id="total-homologados">0</h2>
       </div>
     </div>
   </div>
-  <div class="col-md-3 mb-4">
-    <div class="card text-white stat-card bg-warning">
-      <div class="card-body">
+  <div class="col-md-3 mb-3">
+    <div class="card text-white stat-card bg-warning cursor-pointer clickable-card" id="card-andamento" data-pagina="registros" data-filtro-campo="situacao" data-filtro-valor="Em Andamento">
+      <div class="card-body py-2">
         <h5 class="card-title"><i class="bi bi-hourglass-split me-2"></i>Em Andamento</h5>
         <h2 id="total-andamento">0</h2>
       </div>
     </div>
   </div>
-  <div class="col-md-3 mb-4">
-    <div class="card text-white stat-card bg-info">
-      <div class="card-body">
+  <div class="col-md-3 mb-3">
+    <div class="card text-white stat-card bg-info cursor-pointer clickable-card" id="card-economia" data-pagina="registros">
+      <div class="card-body py-2">
         <h5 class="card-title"><i class="bi bi-cash-coin me-2"></i>Economia Total</h5>
         <h2 id="total-economia">R$ 0,00</h2>
       </div>
@@ -67,3 +67,50 @@
     </div>
   </div>
 </div>
+
+<style>
+  .cursor-pointer {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .cursor-pointer:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  .stat-card {
+    min-height: 120px;
+  }
+
+  .stat-card h5.card-title {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+
+  .stat-card h2 {
+    font-size: 1.8rem;
+    margin-bottom: 0;
+  }
+
+  .clickable-card {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .clickable-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .clickable-card:hover::after {
+    opacity: 1;
+  }
+</style>

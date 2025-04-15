@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const path = require("path");
 const bodyParser = require("body-parser");
+const XLSX = require("xlsx");
 
 // Inicializar aplicação
 const app = express();
@@ -745,10 +746,282 @@ app.delete("/api/usuarios/:id", authenticateToken, (req, res) => {
   );
 });
 
-// Rota de página inicial para servir o frontend
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// Rota para exportar registros em CSV
+app.post("/api/export/csv", authenticateToken, (req, res) => {
+  try {
+    const { filtros } = req.body;
+
+    // Obter todos os registros para depois aplicar filtros
+    db.all(
+      "SELECT * FROM registros ORDER BY data_criacao DESC",
+      [],
+      (err, registros) => {
+        if (err) {
+          return res
+            .status(500)
+            .json({ message: "Erro ao obter registros", error: err.message });
+        }
+
+        // Aplicar filtros se existirem
+        let registrosFiltrados = registros;
+        if (filtros && filtros.length > 0) {
+          registrosFiltrados = aplicarFiltros(registros, filtros);
+        }
+
+        // Transformar os dados para o formato CSV
+        const csvContent = gerarCSV(registrosFiltrados);
+
+        // Configurar headers para download
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=registros.csv"
+        );
+
+        // Enviar dados CSV
+        res.send(csvContent);
+
+        // Registrar atividade de exportação
+        registrarAtividade(
+          req.user.id,
+          req.user.nome || req.user.email,
+          "Exportação",
+          null,
+          "CSV",
+          `Exportação de ${registrosFiltrados.length} registros em CSV`
+        );
+      }
+    );
+  } catch (error) {
+    console.error("Erro na exportação CSV:", error);
+    res
+      .status(500)
+      .json({ message: "Erro ao exportar registros", error: error.message });
+  }
 });
+
+// Rota para exportar registros em Excel
+app.post("/api/export/excel", authenticateToken, (req, res) => {
+  try {
+    const { filtros } = req.body;
+
+    // Obter todos os registros para depois aplicar filtros
+    db.all(
+      "SELECT * FROM registros ORDER BY data_criacao DESC",
+      [],
+      (err, registros) => {
+        if (err) {
+          return res
+            .status(500)
+            .json({ message: "Erro ao obter registros", error: err.message });
+        }
+
+        // Aplicar filtros se existirem
+        let registrosFiltrados = registros;
+        if (filtros && filtros.length > 0) {
+          registrosFiltrados = aplicarFiltros(registros, filtros);
+        }
+
+        // Criar workbook Excel
+        const wb = XLSX.utils.book_new();
+
+        // Converter dados para formato adequado para o Excel
+        const ws = XLSX.utils.json_to_sheet(registrosFiltrados);
+
+        // Adicionar planilha ao workbook
+        XLSX.utils.book_append_sheet(wb, ws, "Registros");
+
+        // Converter para buffer
+        const excelBuffer = XLSX.write(wb, {
+          type: "buffer",
+          bookType: "xlsx",
+        });
+
+        // Configurar headers para download
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=registros.xlsx"
+        );
+
+        // Enviar buffer do Excel
+        res.send(excelBuffer);
+
+        // Registrar atividade de exportação
+        registrarAtividade(
+          req.user.id,
+          req.user.nome || req.user.email,
+          "Exportação",
+          null,
+          "Excel",
+          `Exportação de ${registrosFiltrados.length} registros em Excel`
+        );
+      }
+    );
+  } catch (error) {
+    console.error("Erro na exportação Excel:", error);
+    res
+      .status(500)
+      .json({ message: "Erro ao exportar registros", error: error.message });
+  }
+});
+
+// Função auxiliar para aplicar filtros aos registros
+function aplicarFiltros(registros, filtros) {
+  return registros.filter((registro) => {
+    // Cada registro precisa satisfazer TODOS os filtros
+    return filtros.every((filtro) => {
+      const valor = registro[filtro.campo];
+
+      // Se o valor não existir no registro
+      if (valor === null || valor === undefined || valor === "") {
+        return false;
+      }
+
+      // Determinar o tipo de filtro
+      if (
+        filtro.campo === "valor_estimado" ||
+        filtro.campo === "valor_homologado" ||
+        filtro.campo === "economia"
+      ) {
+        // Campos numéricos
+        const valorNum = parseFloat(valor);
+        const filtroValorNum = parseFloat(filtro.valor);
+
+        if (isNaN(valorNum) || isNaN(filtroValorNum)) {
+          return false;
+        }
+
+        switch (filtro.operador) {
+          case "igual":
+            return valorNum === filtroValorNum;
+          case "maior":
+            return valorNum > filtroValorNum;
+          case "menor":
+            return valorNum < filtroValorNum;
+          case "entre":
+            const filtroValor2Num = parseFloat(filtro.valor2);
+            if (isNaN(filtroValor2Num)) return false;
+            return valorNum >= filtroValorNum && valorNum <= filtroValor2Num;
+          default:
+            return false;
+        }
+      } else if (
+        filtro.campo === "dt_abertura" ||
+        filtro.campo === "dt_homologacao" ||
+        filtro.campo === "dt_entrada_dipli"
+      ) {
+        // Campos de data
+        const dataRegistro = new Date(valor);
+        const dataFiltro = new Date(filtro.valor);
+
+        if (isNaN(dataRegistro.getTime()) || isNaN(dataFiltro.getTime())) {
+          return false;
+        }
+
+        // Remover componente de hora para comparar apenas datas
+        const dataRegistroSemHora = new Date(
+          dataRegistro.toISOString().split("T")[0]
+        );
+        const dataFiltroSemHora = new Date(
+          dataFiltro.toISOString().split("T")[0]
+        );
+
+        switch (filtro.operador) {
+          case "igual":
+            return (
+              dataRegistroSemHora.getTime() === dataFiltroSemHora.getTime()
+            );
+          case "antes":
+          case "menor":
+            return dataRegistroSemHora.getTime() < dataFiltroSemHora.getTime();
+          case "depois":
+          case "maior":
+            return dataRegistroSemHora.getTime() > dataFiltroSemHora.getTime();
+          case "entre":
+            const dataFiltro2 = new Date(filtro.valor2);
+            if (isNaN(dataFiltro2.getTime())) return false;
+            const dataFiltro2SemHora = new Date(
+              dataFiltro2.toISOString().split("T")[0]
+            );
+            return (
+              dataRegistroSemHora.getTime() >= dataFiltroSemHora.getTime() &&
+              dataRegistroSemHora.getTime() <= dataFiltro2SemHora.getTime()
+            );
+          default:
+            return false;
+        }
+      } else {
+        // Campos de texto
+        const valorTexto = String(valor).toLowerCase();
+        const filtroTexto = String(filtro.valor).toLowerCase();
+
+        switch (filtro.operador) {
+          case "igual":
+            return valorTexto === filtroTexto;
+          case "contem":
+            return valorTexto.includes(filtroTexto);
+          case "comeca":
+            return valorTexto.startsWith(filtroTexto);
+          case "termina":
+            return valorTexto.endsWith(filtroTexto);
+          default:
+            return false;
+        }
+      }
+    });
+  });
+}
+
+// Função auxiliar para gerar CSV
+function gerarCSV(registros) {
+  if (registros.length === 0) {
+    return "Nenhum registro encontrado";
+  }
+
+  // Obter os cabeçalhos (colunas) a partir do primeiro registro
+  const colunas = Object.keys(registros[0]);
+
+  // Criar a linha de cabeçalho
+  let csvContent = colunas.join(",") + "\n";
+
+  // Adicionar cada registro como uma linha
+  registros.forEach((registro) => {
+    const linha = colunas.map((coluna) => {
+      // Tratar valores para evitar problemas com CSV
+      const valor = registro[coluna];
+      if (valor === null || valor === undefined) {
+        return "";
+      }
+
+      // Escapar vírgulas e aspas
+      const valorStr = String(valor).replace(/"/g, '""');
+      return `"${valorStr}"`;
+    });
+
+    csvContent += linha.join(",") + "\n";
+  });
+
+  return csvContent;
+}
+
+// Alterar a rota catch-all problemática
+app.get(
+  [
+    "/",
+    "/index.html",
+    "/dashboard",
+    "/registros",
+    "/usuarios",
+    "/novo-registro",
+  ],
+  (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+  }
+);
 
 // Iniciar o servidor
 app.listen(PORT, () => {
