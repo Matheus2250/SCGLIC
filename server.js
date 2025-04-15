@@ -7,6 +7,8 @@ const cors = require("cors");
 const path = require("path");
 const bodyParser = require("body-parser");
 const XLSX = require("xlsx");
+const multer = require("multer");
+const fs = require("fs");
 
 // Inicializar aplicação
 const app = express();
@@ -18,6 +20,12 @@ app.use(cors());
 app.use(bodyParser.json()); // Verifique se isto está presente
 app.use(bodyParser.urlencoded({ extended: true })); // Adicione isso se não existir
 app.use(express.static(path.join(__dirname, "public")));
+
+// Configurar middleware para upload de arquivos
+const upload = multer({
+  dest: "uploads/",
+  limits: { fileSize: 10 * 1024 * 1024 }, // limite de 10MB
+});
 
 // Conectar ao banco de dados
 const db = new sqlite3.Database("./database.db", (err) => {
@@ -746,128 +754,469 @@ app.delete("/api/usuarios/:id", authenticateToken, (req, res) => {
   );
 });
 
-// Rota para exportar registros em CSV
-app.post("/api/export/csv", authenticateToken, (req, res) => {
+// Rota para exportar registros no formato CSV
+app.post("/api/export/csv", authenticateToken, async (req, res) => {
   try {
-    const { filtros } = req.body;
+    // Obter o usuário logado para registrar a atividade
+    const usuarioId = req.user.id;
+    const usuario = await db.get("SELECT nome FROM usuarios WHERE id = ?", [
+      usuarioId,
+    ]);
+    if (!usuario) {
+      return res.status(404).json({ mensagem: "Usuário não encontrado" });
+    }
 
-    // Obter todos os registros para depois aplicar filtros
-    db.all(
-      "SELECT * FROM registros ORDER BY data_criacao DESC",
-      [],
-      (err, registros) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ message: "Erro ao obter registros", error: err.message });
-        }
+    // Obter todos os registros do banco de dados
+    const registros = await db.all("SELECT * FROM registros");
 
-        // Aplicar filtros se existirem
-        let registrosFiltrados = registros;
-        if (filtros && filtros.length > 0) {
-          registrosFiltrados = aplicarFiltros(registros, filtros);
-        }
+    // Aplicar filtros, se fornecidos
+    const filtrosReq = req.body.filtros || [];
+    const registrosFiltrados = aplicarFiltros(registros, filtrosReq);
 
-        // Transformar os dados para o formato CSV
-        const csvContent = gerarCSV(registrosFiltrados);
+    // Gerar conteúdo CSV a partir dos registros filtrados
+    const csvContent = gerarCSV(registrosFiltrados);
 
-        // Configurar headers para download
-        res.setHeader("Content-Type", "text/csv");
-        res.setHeader(
-          "Content-Disposition",
-          "attachment; filename=registros.csv"
-        );
-
-        // Enviar dados CSV
-        res.send(csvContent);
-
-        // Registrar atividade de exportação
-        registrarAtividade(
-          req.user.id,
-          req.user.nome || req.user.email,
-          "Exportação",
-          null,
-          "CSV",
-          `Exportação de ${registrosFiltrados.length} registros em CSV`
-        );
-      }
+    // Configurar headers para download do arquivo
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=registros_${
+        new Date().toISOString().split("T")[0]
+      }.csv`
     );
+
+    // Enviar o conteúdo CSV como resposta
+    res.send(csvContent);
+
+    // Registrar atividade de exportação
+    const atividade = new Atividade({
+      usuario: usuario.nome,
+      acao: "Exportação CSV",
+      detalhes: `Exportou ${registrosFiltrados.length} registros em formato CSV`,
+      data: new Date(),
+    });
+    await atividade.save();
   } catch (error) {
-    console.error("Erro na exportação CSV:", error);
+    console.error("Erro ao exportar registros para CSV:", error);
     res
       .status(500)
-      .json({ message: "Erro ao exportar registros", error: error.message });
+      .json({ mensagem: "Erro ao exportar registros", erro: error.message });
   }
 });
 
-// Rota para exportar registros em Excel
-app.post("/api/export/excel", authenticateToken, (req, res) => {
+// Rota para exportar registros no formato Excel
+app.post("/api/export/excel", authenticateToken, async (req, res) => {
   try {
-    const { filtros } = req.body;
+    // Obter o usuário logado para registrar a atividade
+    const usuarioId = req.user.id;
+    const usuario = await db.get("SELECT nome FROM usuarios WHERE id = ?", [
+      usuarioId,
+    ]);
+    if (!usuario) {
+      return res.status(404).json({ mensagem: "Usuário não encontrado" });
+    }
 
-    // Obter todos os registros para depois aplicar filtros
-    db.all(
-      "SELECT * FROM registros ORDER BY data_criacao DESC",
-      [],
-      (err, registros) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ message: "Erro ao obter registros", error: err.message });
-        }
+    // Obter todos os registros do banco de dados
+    const registros = await db.all("SELECT * FROM registros");
 
-        // Aplicar filtros se existirem
-        let registrosFiltrados = registros;
-        if (filtros && filtros.length > 0) {
-          registrosFiltrados = aplicarFiltros(registros, filtros);
-        }
+    // Aplicar filtros, se fornecidos
+    const filtrosReq = req.body.filtros || [];
+    const registrosFiltrados = aplicarFiltros(registros, filtrosReq);
 
-        // Criar workbook Excel
-        const wb = XLSX.utils.book_new();
+    // Preparar dados para Excel (converter ObjectId para string, etc.)
+    const dadosParaExcel = registrosFiltrados.map((reg) => {
+      // Converter registro para objeto plano
+      const registro = reg.toObject();
 
-        // Converter dados para formato adequado para o Excel
-        const ws = XLSX.utils.json_to_sheet(registrosFiltrados);
+      // Converter ObjectId para string
+      registro._id = registro._id.toString();
 
-        // Adicionar planilha ao workbook
-        XLSX.utils.book_append_sheet(wb, ws, "Registros");
+      // Formatar datas para string legível
+      if (registro.dataCriacao)
+        registro.dataCriacao = new Date(
+          registro.dataCriacao
+        ).toLocaleDateString("pt-BR");
+      if (registro.dataAtualizacao)
+        registro.dataAtualizacao = new Date(
+          registro.dataAtualizacao
+        ).toLocaleDateString("pt-BR");
 
-        // Converter para buffer
-        const excelBuffer = XLSX.write(wb, {
-          type: "buffer",
-          bookType: "xlsx",
+      return registro;
+    });
+
+    // Criar workbook e worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(dadosParaExcel);
+
+    // Adicionar worksheet ao workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Registros");
+
+    // Gerar arquivo Excel
+    const excelBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    // Configurar headers para download do arquivo
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=registros_${
+        new Date().toISOString().split("T")[0]
+      }.xlsx`
+    );
+
+    // Enviar o arquivo Excel como resposta
+    res.send(excelBuffer);
+
+    // Registrar atividade de exportação
+    const atividade = new Atividade({
+      usuario: usuario.nome,
+      acao: "Exportação Excel",
+      detalhes: `Exportou ${registrosFiltrados.length} registros em formato Excel`,
+      data: new Date(),
+    });
+    await atividade.save();
+  } catch (error) {
+    console.error("Erro ao exportar registros para Excel:", error);
+    res
+      .status(500)
+      .json({ mensagem: "Erro ao exportar registros", erro: error.message });
+  }
+});
+
+// Rota para importar registros de um arquivo Excel
+app.post(
+  "/api/importar-excel",
+  authenticateToken,
+  upload.single("excel"),
+  async (req, res) => {
+    try {
+      // Verificar se o arquivo foi enviado
+      if (!req.file) {
+        return res.status(400).json({ message: "Nenhum arquivo enviado" });
+      }
+
+      // Verificar se é um arquivo Excel
+      if (!req.file.originalname.match(/\.(xlsx|xls)$/)) {
+        // Remover o arquivo enviado
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({
+          message: "Apenas arquivos Excel (.xlsx ou .xls) são aceitos",
+        });
+      }
+
+      const limparDadosExistentes = req.body.limparDados === "true";
+
+      // Se solicitado, limpar os dados existentes
+      if (limparDadosExistentes) {
+        await new Promise((resolve, reject) => {
+          db.run("DELETE FROM registros", (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
         });
 
-        // Configurar headers para download
-        res.setHeader(
-          "Content-Type",
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
-        res.setHeader(
-          "Content-Disposition",
-          "attachment; filename=registros.xlsx"
-        );
-
-        // Enviar buffer do Excel
-        res.send(excelBuffer);
-
-        // Registrar atividade de exportação
+        // Registrar atividade de limpeza
         registrarAtividade(
           req.user.id,
           req.user.nome || req.user.email,
-          "Exportação",
+          "Exclusão",
           null,
-          "Excel",
-          `Exportação de ${registrosFiltrados.length} registros em Excel`
+          "Todos os registros",
+          "Limpeza de registros antes da importação"
         );
       }
-    );
-  } catch (error) {
-    console.error("Erro na exportação Excel:", error);
-    res
-      .status(500)
-      .json({ message: "Erro ao exportar registros", error: error.message });
+
+      // Ler o arquivo Excel
+      const workbook = XLSX.readFile(req.file.path);
+      const sheetNames = workbook.SheetNames;
+      const firstSheet = sheetNames[0];
+
+      // Converter para JSON
+      const worksheet = workbook.Sheets[firstSheet];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      // Mapeamento entre os cabeçalhos da planilha e os campos do banco de dados
+      const mapeamento = {
+        NUP: "nup",
+        "DT ENTRADA DIPLI": "dt_entrada_dipli",
+        "RESP. INSTRUÇÃO": "resp_instrucao",
+        "ÁREA DEMANDANTE": "area_demandante",
+        PREGOEIRO: "pregoeiro",
+        MODALIDADE: "modalidade",
+        TIPO: "tipo",
+        NÚMERO: "numero",
+        Nº: "numero", // Alternativa comum
+        ANO: "ano",
+        PRIORIDADE: "prioridade",
+        "ITEM PGC": "item_pgc",
+        "ESTIMADO PGC": "estimado_pgc",
+        "ANO PGC": "ano_pgc",
+        OBJETO: "objeto",
+        "QTD ITENS": "qtd_itens",
+        "VALOR ESTIMADO": "valor_estimado",
+        "DT ABERTURA": "dt_abertura",
+        SITUAÇÃO: "situacao",
+        ANDAMENTOS: "andamentos",
+        "VALOR HOMOLOGADO": "valor_homologado",
+        ECONOMIA: "economia",
+        "DT HOMOLOGAÇÃO": "dt_homologacao",
+      };
+
+      // Resultados e progresso
+      const result = {
+        totalProcessados: data.length,
+        sucessos: 0,
+        erros: 0,
+        detalhesErros: [],
+      };
+
+      // Função para converter valores monetários
+      function converterValorMonetario(valor) {
+        if (!valor) return null;
+
+        // Se for uma string, tenta converter para número
+        if (typeof valor === "string") {
+          // Remove caracteres não numéricos exceto o ponto ou vírgula
+          valor = valor.replace(/[^\d,.]/g, "");
+          // Substitui vírgula por ponto
+          valor = valor.replace(",", ".");
+        }
+
+        // Converte para número
+        const numero = parseFloat(valor);
+
+        // Retorna null se não for um número válido
+        return isNaN(numero) ? null : numero;
+      }
+
+      // Função para converter datas
+      function converterData(data) {
+        if (!data) return null;
+
+        // Se já for uma data no formato YYYY-MM-DD, retorna como está
+        if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+          return data;
+        }
+
+        // Se for uma data no formato DD/MM/YYYY
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(data)) {
+          const partes = data.split("/");
+          return `${partes[2]}-${partes[1]}-${partes[0]}`;
+        }
+
+        // Se for um número (formato Excel), tenta converter
+        if (typeof data === "number") {
+          try {
+            // Data no Excel: número de dias desde 1/1/1900
+            // 25569 é o número de dias entre 1/1/1900 e 1/1/1970 (epoch do JavaScript)
+            const dataJS = new Date((data - 25569) * 86400 * 1000);
+            return dataJS.toISOString().split("T")[0]; // Formato YYYY-MM-DD
+          } catch (e) {
+            console.log(`Erro ao converter data: ${data}`, e);
+            return null;
+          }
+        }
+
+        // Se não conseguir converter, retorna como está
+        return data;
+      }
+
+      // Filtrar registros válidos e mapear para os campos do banco
+      const validRecords = [];
+
+      data.forEach((row) => {
+        // Verificar se o registro tem pelo menos NUP ou OBJETO
+        if (row["NUP"] || row["OBJETO"]) {
+          const mappedRecord = {};
+
+          // Aplicar mapeamento de colunas para campos do banco
+          Object.entries(row).forEach(([coluna, valor]) => {
+            const campoBD = mapeamento[coluna];
+            if (campoBD) {
+              // Tratamentos específicos para tipos de campos
+              if (
+                valor === " -   " ||
+                valor === "-" ||
+                valor === "" ||
+                valor === undefined ||
+                valor === null
+              ) {
+                mappedRecord[campoBD] = null;
+              } else if (
+                campoBD === "valor_estimado" ||
+                campoBD === "valor_homologado" ||
+                campoBD === "economia"
+              ) {
+                mappedRecord[campoBD] = converterValorMonetario(valor);
+              } else if (
+                campoBD === "dt_entrada_dipli" ||
+                campoBD === "dt_abertura" ||
+                campoBD === "dt_homologacao"
+              ) {
+                mappedRecord[campoBD] = converterData(valor);
+              } else if (campoBD === "qtd_itens") {
+                mappedRecord[campoBD] = parseInt(valor) || null;
+              } else {
+                mappedRecord[campoBD] = valor;
+              }
+            }
+          });
+
+          // Verificar se o registro mapeado tem pelo menos um campo preenchido além do NUP/OBJETO
+          const temOutrosCampos = Object.values(mappedRecord).some(
+            (v) =>
+              v !== null &&
+              v !== undefined &&
+              v !== "" &&
+              !(typeof v === "string" && v.trim() === "")
+          );
+
+          if (Object.keys(mappedRecord).length > 0 && temOutrosCampos) {
+            validRecords.push(mappedRecord);
+          }
+        }
+      });
+
+      if (validRecords.length === 0) {
+        // Remover o arquivo enviado
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({
+          message:
+            "Nenhum registro válido encontrado na planilha. Verifique os nomes das colunas.",
+        });
+      }
+
+      // Preparar a query de inserção com os campos específicos da tabela registros
+      const insertSQL = `
+      INSERT INTO registros (
+        nup, dt_entrada_dipli, resp_instrucao, area_demandante, pregoeiro,
+        modalidade, tipo, numero, ano, prioridade, item_pgc, estimado_pgc,
+        ano_pgc, objeto, qtd_itens, valor_estimado, dt_abertura, situacao,
+        andamentos, valor_homologado, economia, dt_homologacao
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+      // Função para inserir um registro
+      const insertRecord = (record) => {
+        return new Promise((resolve, reject) => {
+          const values = [
+            record.nup || null,
+            record.dt_entrada_dipli || null,
+            record.resp_instrucao || null,
+            record.area_demandante || null,
+            record.pregoeiro || null,
+            record.modalidade || null,
+            record.tipo || null,
+            record.numero || null,
+            record.ano || null,
+            record.prioridade || null,
+            record.item_pgc || null,
+            record.estimado_pgc || null,
+            record.ano_pgc || null,
+            record.objeto || null,
+            record.qtd_itens || null,
+            record.valor_estimado || null,
+            record.dt_abertura || null,
+            record.situacao || null,
+            record.andamentos || null,
+            record.valor_homologado || null,
+            record.economia || null,
+            record.dt_homologacao || null,
+          ];
+
+          db.run(insertSQL, values, function (err) {
+            if (err) {
+              reject({ error: err, record });
+            } else {
+              resolve(this.lastID);
+            }
+          });
+        });
+      };
+
+      // Inserir registros em lotes para não sobrecarregar o banco de dados
+      const BATCH_SIZE = 50;
+      for (let i = 0; i < validRecords.length; i += BATCH_SIZE) {
+        const batch = validRecords.slice(i, i + BATCH_SIZE);
+
+        await Promise.allSettled(
+          batch.map((record) =>
+            insertRecord(record)
+              .then(() => {
+                result.sucessos++;
+              })
+              .catch((err) => {
+                result.erros++;
+                result.detalhesErros.push({
+                  message: err.error.message,
+                  record: JSON.stringify(err.record),
+                });
+              })
+          )
+        );
+      }
+
+      // Registrar atividade de importação
+      registrarAtividade(
+        req.user.id,
+        req.user.nome || req.user.email,
+        "Importação",
+        null,
+        `${result.sucessos} registros`,
+        `Importação de Excel: ${result.sucessos} sucessos, ${result.erros} falhas`
+      );
+
+      // Remover o arquivo enviado
+      fs.unlinkSync(req.file.path);
+
+      // Returnar resultado
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Erro na importação de Excel:", error);
+
+      // Tentar remover o arquivo em caso de erro
+      if (req.file && req.file.path) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (e) {
+          console.error("Erro ao remover arquivo temporário:", e);
+        }
+      }
+
+      return res.status(500).json({
+        message: "Erro ao processar a importação",
+        error: error.message,
+      });
+    }
   }
+);
+
+// Alterar a rota catch-all problemática
+app.get(
+  [
+    "/",
+    "/index.html",
+    "/dashboard",
+    "/registros",
+    "/usuarios",
+    "/novo-registro",
+  ],
+  (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+  }
+);
+
+// Iniciar o servidor
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
+
+// Criar diretório para uploads se não existir
+if (!fs.existsSync("./uploads")) {
+  fs.mkdirSync("./uploads");
+}
 
 // Função auxiliar para aplicar filtros aos registros
 function aplicarFiltros(registros, filtros) {
@@ -959,17 +1308,45 @@ function aplicarFiltros(registros, filtros) {
         const valorTexto = String(valor).toLowerCase();
         const filtroTexto = String(filtro.valor).toLowerCase();
 
-        switch (filtro.operador) {
-          case "igual":
-            return valorTexto === filtroTexto;
-          case "contem":
-            return valorTexto.includes(filtroTexto);
-          case "comeca":
-            return valorTexto.startsWith(filtroTexto);
-          case "termina":
-            return valorTexto.endsWith(filtroTexto);
-          default:
-            return false;
+        // Tratamento especial para o campo situação
+        if (filtro.campo === "situacao") {
+          switch (filtro.operador) {
+            case "igual":
+              // Se o filtro for "Homologado"
+              if (filtroTexto.includes("homologado")) {
+                return valorTexto.includes("homologado");
+              }
+              // Se o filtro for "Em Andamento"
+              else if (filtroTexto.includes("em andamento")) {
+                return valorTexto.includes("em andamento");
+              }
+              // Para outras situações, comportamento normal
+              else {
+                return valorTexto === filtroTexto;
+              }
+            case "contem":
+              return valorTexto.includes(filtroTexto);
+            case "comeca":
+              return valorTexto.startsWith(filtroTexto);
+            case "termina":
+              return valorTexto.endsWith(filtroTexto);
+            default:
+              return false;
+          }
+        } else {
+          // Para outros campos de texto, comportamento normal
+          switch (filtro.operador) {
+            case "igual":
+              return valorTexto === filtroTexto;
+            case "contem":
+              return valorTexto.includes(filtroTexto);
+            case "comeca":
+              return valorTexto.startsWith(filtroTexto);
+            case "termina":
+              return valorTexto.endsWith(filtroTexto);
+            default:
+              return false;
+          }
         }
       }
     });
@@ -1007,23 +1384,3 @@ function gerarCSV(registros) {
 
   return csvContent;
 }
-
-// Alterar a rota catch-all problemática
-app.get(
-  [
-    "/",
-    "/index.html",
-    "/dashboard",
-    "/registros",
-    "/usuarios",
-    "/novo-registro",
-  ],
-  (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
-  }
-);
-
-// Iniciar o servidor
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});

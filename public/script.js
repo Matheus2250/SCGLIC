@@ -57,12 +57,39 @@ document.addEventListener("DOMContentLoaded", function () {
   // Verificar se o usuário está logado
   function checkAuth() {
     if (token && currentUser) {
-      showMainApp();
-      // Verificar se é admin para exibir menu de usuários
-      if (currentUser.nivel_acesso === "admin" && adminMenu) {
-        adminMenu.classList.remove("d-none");
-      }
-      loadDashboard();
+      // Verificar se o token é válido fazendo uma requisição simples
+      fetch(`${API_URL}/registros`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            // Se o token expirou ou é inválido, fazer logout
+            if (response.status === 401 || response.status === 403) {
+              token = null;
+              currentUser = null;
+              localStorage.removeItem("token");
+              localStorage.removeItem("currentUser");
+              localStorage.removeItem("sidebarState");
+              showLoginPage();
+              return;
+            }
+            throw new Error("Erro ao validar autenticação");
+          }
+
+          // Token válido, mostrar a aplicação
+          showMainApp();
+          // Verificar se é admin para exibir menu de usuários
+          if (currentUser.nivel_acesso === "admin" && adminMenu) {
+            adminMenu.classList.remove("d-none");
+          }
+          loadDashboard();
+        })
+        .catch((error) => {
+          console.error("Erro na autenticação:", error);
+          showLoginPage();
+        });
     } else {
       showLoginPage();
     }
@@ -119,6 +146,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Toggle sidebar
   if (toggleSidebarBtn && sidebar && content) {
+    // Verificar o estado da barra lateral salvo no localStorage
+    const sidebarState = localStorage.getItem("sidebarState");
+
+    if (sidebarState === "collapsed") {
+      sidebar.classList.remove("expanded");
+      sidebar.classList.add("collapsed");
+      content.classList.remove("expanded");
+      content.classList.add("expanded");
+      toggleSidebarBtn.innerHTML = '<i class="bi bi-chevron-right"></i>';
+
+      // Esconder textos dos links
+      document.querySelectorAll(".nav-text").forEach((el) => {
+        el.classList.add("hidden");
+      });
+    }
+
     toggleSidebarBtn.addEventListener("click", function () {
       if (sidebar.classList.contains("expanded")) {
         sidebar.classList.remove("expanded");
@@ -126,6 +169,9 @@ document.addEventListener("DOMContentLoaded", function () {
         content.classList.remove("expanded");
         content.classList.add("expanded");
         this.innerHTML = '<i class="bi bi-chevron-right"></i>';
+
+        // Salvar estado no localStorage
+        localStorage.setItem("sidebarState", "collapsed");
 
         // Esconder textos dos links
         document.querySelectorAll(".nav-text").forEach((el) => {
@@ -136,6 +182,9 @@ document.addEventListener("DOMContentLoaded", function () {
         sidebar.classList.remove("collapsed");
         content.classList.remove("expanded");
         this.innerHTML = '<i class="bi bi-chevron-left"></i>';
+
+        // Salvar estado no localStorage
+        localStorage.setItem("sidebarState", "expanded");
 
         // Mostrar textos dos links
         document.querySelectorAll(".nav-text").forEach((el) => {
@@ -226,6 +275,7 @@ document.addEventListener("DOMContentLoaded", function () {
       currentUser = null;
       localStorage.removeItem("token");
       localStorage.removeItem("currentUser");
+      localStorage.removeItem("sidebarState");
       showLoginPage();
     });
   }

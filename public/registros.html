@@ -1,4 +1,42 @@
 <!-- Registros Page -->
+<style>
+  /* Estilos para a paginação */
+  .pagination {
+    margin-bottom: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pagination .page-item {
+    margin: 2px;
+  }
+
+  .pagination .page-link {
+    border-radius: 4px;
+    min-width: 38px;
+    text-align: center;
+  }
+
+  /* Área de informações de paginação */
+  #paginacao-info {
+    margin-right: 15px;
+  }
+
+  /* Versão mobile da paginação */
+  @media (max-width: 768px) {
+    .d-flex.justify-content-between.align-items-center.mt-3 {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #paginacao-info {
+      margin-bottom: 10px;
+      margin-right: 0;
+      text-align: center;
+    }
+  }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2>Lista de Registros</h2>
   <div>
@@ -107,6 +145,31 @@
         </thead>
         <tbody id="registros-table"></tbody>
       </table>
+
+      <!-- Adicionar informações de paginação -->
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <div id="paginacao-info" class="text-muted">
+          Mostrando 1 a 15 de 0 registros
+        </div>
+
+        <!-- Controles de paginação -->
+        <nav aria-label="Navegação de páginas" id="registros-paginacao" class="d-none">
+          <ul class="pagination">
+            <li class="page-item">
+              <a class="page-link" href="#" id="paginacao-anterior" aria-label="Anterior">
+                <span aria-hidden="true">&laquo;</span>
+              </a>
+            </li>
+            <!-- Os links de página serão inseridos aqui dinamicamente pelo JavaScript -->
+            <li class="page-item">
+              <a class="page-link" href="#" id="paginacao-proxima" aria-label="Próximo">
+                <span aria-hidden="true">&raquo;</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+
     </div>
     <div id="nenhum-registro" class="alert alert-info d-none">
       <i class="bi bi-info-circle me-2"></i> Nenhum registro encontrado.

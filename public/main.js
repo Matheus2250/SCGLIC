@@ -6,6 +6,11 @@ document.addEventListener("DOMContentLoaded", function () {
   let currentUser = JSON.parse(localStorage.getItem("currentUser"));
   let currentRegistroId = null;
 
+  // Variáveis globais para o sistema de paginação
+  let dadosRegistros = []; // Armazena todos os registros recuperados
+  let paginaAtual = 1; // Página atual
+  const registrosPorPagina = 15; // Quantidade de registros por página
+
   // Elementos do DOM
   const loginPage = document.getElementById("login-page");
   const registerPage = document.getElementById("register-page");
@@ -168,6 +173,7 @@ document.addEventListener("DOMContentLoaded", function () {
     currentUser = null;
     localStorage.removeItem("token");
     localStorage.removeItem("currentUser");
+    localStorage.removeItem("sidebarState");
     showLoginPage();
   }
 
@@ -214,6 +220,9 @@ document.addEventListener("DOMContentLoaded", function () {
         case "novo-registro":
           initNovoRegistro();
           break;
+        case "importar":
+          initImportar();
+          break;
         case "usuarios":
           initUsuarios();
           break;
@@ -242,6 +251,34 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // Verificar o estado da barra lateral ao carregar a página
+  const sidebarState = localStorage.getItem("sidebarState");
+
+  if (sidebarState === "collapsed") {
+    sidebar.classList.remove("expanded");
+    sidebar.classList.add("collapsed");
+    content.classList.remove("expanded");
+    content.classList.add("expanded");
+
+    // Esconder textos dos links
+    document.querySelectorAll(".nav-text:not(.logo-text)").forEach((el) => {
+      el.classList.add("hidden");
+    });
+
+    // Atualizar o texto do botão
+    const iconSpan = toggleSidebarBtn.querySelector("i");
+    if (iconSpan) {
+      iconSpan.classList.remove("bi-chevron-left");
+      iconSpan.classList.add("bi-chevron-right");
+    }
+
+    // Ocultar o texto "Recolher Menu"
+    const navText = toggleSidebarBtn.querySelector(".nav-text");
+    if (navText) {
+      navText.classList.add("hidden");
+    }
+  }
+
   // Toggle sidebar
   toggleSidebarBtn.addEventListener("click", function (e) {
     e.preventDefault();
@@ -251,6 +288,9 @@ document.addEventListener("DOMContentLoaded", function () {
       sidebar.classList.add("collapsed");
       content.classList.remove("expanded");
       content.classList.add("expanded");
+
+      // Salvar estado no localStorage
+      localStorage.setItem("sidebarState", "collapsed");
 
       // Esconder textos dos links
       document.querySelectorAll(".nav-text:not(.logo-text)").forEach((el) => {
@@ -268,6 +308,9 @@ document.addEventListener("DOMContentLoaded", function () {
       sidebar.classList.add("expanded");
       sidebar.classList.remove("collapsed");
       content.classList.remove("expanded");
+
+      // Salvar estado no localStorage
+      localStorage.setItem("sidebarState", "expanded");
 
       // Mostrar textos dos links
       document.querySelectorAll(".nav-text").forEach((el) => {
@@ -430,6 +473,7 @@ document.addEventListener("DOMContentLoaded", function () {
     currentUser = null;
     localStorage.removeItem("token");
     localStorage.removeItem("currentUser");
+    localStorage.removeItem("sidebarState");
     showLoginPage();
   });
 
@@ -454,19 +498,26 @@ document.addEventListener("DOMContentLoaded", function () {
   function getBadgeClass(situacao) {
     if (!situacao) return "bg-secondary";
 
-    switch (situacao) {
-      case "Homologado":
-        return "bg-success";
-      case "Em Andamento":
-        return "bg-warning text-dark";
-      case "Em Análise":
-        return "bg-info text-dark";
-      case "Fracassado":
-      case "Deserto":
-      case "Cancelado":
-        return "bg-danger";
-      default:
-        return "bg-secondary";
+    // Modificação: Normalizar a situação para comparação
+    const situacaoNormalizada = situacao.toUpperCase();
+
+    if (situacaoNormalizada.includes("HOMOLOGADO")) {
+      return "bg-success";
+    } else if (situacaoNormalizada.includes("EM ANDAMENTO")) {
+      return "bg-warning text-dark";
+    } else if (
+      situacaoNormalizada.includes("EM ANÁLISE") ||
+      situacaoNormalizada.includes("EM ANALISE")
+    ) {
+      return "bg-info text-dark";
+    } else if (
+      situacaoNormalizada.includes("FRACASSADO") ||
+      situacaoNormalizada.includes("DESERTO") ||
+      situacaoNormalizada.includes("CANCELADO")
+    ) {
+      return "bg-danger";
+    } else {
+      return "bg-secondary";
     }
   }
 
@@ -689,10 +740,18 @@ document.addEventListener("DOMContentLoaded", function () {
         // Estatísticas
         if (totalRegistros) totalRegistros.textContent = data.length;
 
-        const homologados = data.filter((r) => r.situacao === "Homologado");
+        // Modificação: Contar como homologado qualquer registro que contenha "HOMOLOGADO" na situação, independente de maiúsculas/minúsculas
+        const homologados = data.filter((r) => {
+          if (!r.situacao) return false;
+          return r.situacao.toUpperCase().includes("HOMOLOGADO");
+        });
         if (totalHomologados) totalHomologados.textContent = homologados.length;
 
-        const andamento = data.filter((r) => r.situacao === "Em Andamento");
+        // Modificação: Contar como em andamento qualquer registro que contenha "EM ANDAMENTO" na situação, independente de maiúsculas/minúsculas
+        const andamento = data.filter((r) => {
+          if (!r.situacao) return false;
+          return r.situacao.toUpperCase().includes("EM ANDAMENTO");
+        });
         if (totalAndamento) totalAndamento.textContent = andamento.length;
 
         let economia = 0;
@@ -974,17 +1033,45 @@ document.addEventListener("DOMContentLoaded", function () {
         const valorTexto = String(valor).toLowerCase();
         const filtroTexto = String(filtro.valor).toLowerCase();
 
-        switch (filtro.operador) {
-          case "igual":
-            return valorTexto === filtroTexto;
-          case "contem":
-            return valorTexto.includes(filtroTexto);
-          case "comeca":
-            return valorTexto.startsWith(filtroTexto);
-          case "termina":
-            return valorTexto.endsWith(filtroTexto);
-          default:
-            return false;
+        // Tratamento especial para o campo situação
+        if (filtro.campo === "situacao") {
+          switch (filtro.operador) {
+            case "igual":
+              // Se o filtro for "Homologado"
+              if (filtroTexto.includes("homologado")) {
+                return valorTexto.includes("homologado");
+              }
+              // Se o filtro for "Em Andamento"
+              else if (filtroTexto.includes("em andamento")) {
+                return valorTexto.includes("em andamento");
+              }
+              // Para outras situações, comportamento normal
+              else {
+                return valorTexto === filtroTexto;
+              }
+            case "contem":
+              return valorTexto.includes(filtroTexto);
+            case "comeca":
+              return valorTexto.startsWith(filtroTexto);
+            case "termina":
+              return valorTexto.endsWith(filtroTexto);
+            default:
+              return false;
+          }
+        } else {
+          // Para campos que não são situação, comportamento normal
+          switch (filtro.operador) {
+            case "igual":
+              return valorTexto === filtroTexto;
+            case "contem":
+              return valorTexto.includes(filtroTexto);
+            case "comeca":
+              return valorTexto.startsWith(filtroTexto);
+            case "termina":
+              return valorTexto.endsWith(filtroTexto);
+            default:
+              return false;
+          }
         }
       } catch (e) {
         console.error("Erro ao avaliar filtro de texto:", e);
@@ -1029,7 +1116,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         badge.innerHTML = `
           <span>${descricao}</span>
-          <button class="btn btn-<span>${descricao}</span>
           <button class="btn btn-sm btn-link text-danger p-0 ms-2 remover-filtro" data-id="${filtro.id}">
             <i class="bi bi-x-circle"></i>
           </button>
@@ -1118,6 +1204,16 @@ document.addEventListener("DOMContentLoaded", function () {
       option.textContent = texto;
       select.appendChild(option);
     },
+
+    // Obter todos os filtros ativos
+    obterTodos: function () {
+      return this.filtrosAtivos.map((filtro) => ({
+        campo: filtro.campo,
+        operador: filtro.operador,
+        valor: filtro.valor,
+        valor2: filtro.valor2,
+      }));
+    },
   };
 
   // Inicializar o sistema de filtros
@@ -1187,110 +1283,159 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    // Botão para exportar em CSV
+    // Adicionar Event Listeners para botões de exportação
     if (exportCSVBtn) {
-      exportCSVBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        exportarRegistros("csv");
-      });
+      exportCSVBtn.addEventListener("click", () => exportarRegistros("csv"));
     }
 
-    // Botão para exportar em Excel
     if (exportExcelBtn) {
-      exportExcelBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        exportarRegistros("excel");
-      });
+      exportExcelBtn.addEventListener("click", () =>
+        exportarRegistros("excel")
+      );
     }
 
     // Inicializar a UI de filtros
     SistemaFiltros.atualizarUI();
+
+    // Adicionar event listeners para os botões de paginação
+    const paginacaoAnterior = document.getElementById("paginacao-anterior");
+    const paginacaoProxima = document.getElementById("paginacao-proxima");
+
+    if (paginacaoAnterior) {
+      paginacaoAnterior.addEventListener("click", function (e) {
+        e.preventDefault();
+        paginaAnterior();
+      });
+    }
+
+    if (paginacaoProxima) {
+      paginacaoProxima.addEventListener("click", function (e) {
+        e.preventDefault();
+        paginaProxima();
+      });
+    }
   }
 
-  // Função para exportar registros com filtros
+  // Função para exportar registros com os filtros aplicados
   function exportarRegistros(formato) {
     // Mostrar indicador de carregamento
-    const loadingIndicator = document.createElement("div");
-    loadingIndicator.className =
-      "position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center";
-    loadingIndicator.style.backgroundColor = "rgba(0, 0, 0, 0.3)";
-    loadingIndicator.style.zIndex = "9999";
-    loadingIndicator.innerHTML = `
-      <div class="spinner-border text-light" role="status">
-        <span class="visually-hidden">Exportando...</span>
-      </div>
-    `;
-    document.body.appendChild(loadingIndicator);
+    const loadingElement = document.getElementById("loading");
+    if (loadingElement) loadingElement.style.display = "block";
 
-    // Preparar URL e tipo de conteúdo com base no formato
-    const url =
-      formato === "csv" ? `${API_URL}/export/csv` : `${API_URL}/export/excel`;
+    // Preparar URL com base no formato
+    const url = `/api/export/${formato}`;
 
-    // Criar um form data com os filtros atuais
-    const filtrosAtivos = SistemaFiltros.filtrosAtivos;
+    // Obter filtros ativos
+    const filtrosAtivos = obterFiltrosAtivos();
 
-    // Fazer requisição POST para o servidor
+    // Fazer requisição POST com os filtros ativos
     fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
       body: JSON.stringify({ filtros: filtrosAtivos }),
     })
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Falha ao exportar registros");
+          throw new Error(`Erro ao exportar: ${response.statusText}`);
         }
-
-        // Para CSV, o tipo é text/csv
-        if (formato === "csv") {
-          return response.text();
-        }
-
-        // Para Excel, o tipo é um arrayBuffer
-        return response.arrayBuffer();
+        return response.blob();
       })
-      .then((data) => {
-        // Remover indicador de carregamento
-        document.body.removeChild(loadingIndicator);
-
-        // Criar um blob com os dados obtidos
-        const blob =
-          formato === "csv"
-            ? new Blob([data], { type: "text/csv;charset=utf-8;" })
-            : new Blob([data], {
-                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-              });
+      .then((blob) => {
+        // Ocultar indicador de carregamento
+        if (loadingElement) loadingElement.style.display = "none";
 
         // Criar URL para o blob
         const url = window.URL.createObjectURL(blob);
 
-        // Criar elemento <a> para download
+        // Definir nome do arquivo
+        const dataAtual = new Date().toISOString().split("T")[0];
+        const extensao = formato === "csv" ? "csv" : "xlsx";
+        const nomeArquivo = `registros_${dataAtual}.${extensao}`;
+
+        // Criar link para download
         const a = document.createElement("a");
+        a.style.display = "none";
         a.href = url;
-        a.download = formato === "csv" ? "registros.csv" : "registros.xlsx";
+        a.download = nomeArquivo;
+
+        // Adicionar link ao documento, clicar nele e removê-lo
         document.body.appendChild(a);
-
-        // Simular clique para iniciar o download
         a.click();
-
-        // Limpar recursos
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        // Mostrar mensagem de sucesso
+        // Notificar usuário
         alert(`Exportação em ${formato.toUpperCase()} concluída com sucesso!`);
       })
       .catch((error) => {
-        // Remover indicador de carregamento em caso de erro
-        if (document.body.contains(loadingIndicator)) {
-          document.body.removeChild(loadingIndicator);
-        }
-
-        console.error(`Erro ao exportar em ${formato}:`, error);
-        alert(`Erro ao exportar registros: ${error.message}`);
+        console.error(`Erro ao exportar registros em ${formato}:`, error);
+        if (loadingElement) loadingElement.style.display = "none";
+        alert(`Erro ao exportar: ${error.message}`);
       });
+  }
+
+  /**
+   * Obtém os filtros ativos da interface
+   * @returns {Array} - Lista de filtros ativos
+   */
+  function obterFiltrosAtivos() {
+    const filtros = [];
+    const filtrosContainer = document.getElementById("filtros-container");
+
+    // Se não houver container de filtros, retornar array vazio
+    if (!filtrosContainer) return filtros;
+
+    // Obter todos os elementos de filtro
+    const elementosFiltro = filtrosContainer.querySelectorAll(".filtro");
+
+    elementosFiltro.forEach((filtroElement) => {
+      // Obter seletores de campo, operador e valor
+      const campoSelect = filtroElement.querySelector(".campo-filtro");
+      const operadorSelect = filtroElement.querySelector(".operador-filtro");
+      const valorInput = filtroElement.querySelector(".valor-filtro");
+      const valor2Input = filtroElement.querySelector(".valor2-filtro");
+
+      // Se algum dos elementos necessários não estiver presente ou o campo e operador não tiverem valores, pular
+      if (
+        !campoSelect ||
+        !operadorSelect ||
+        !valorInput ||
+        !campoSelect.value ||
+        !operadorSelect.value
+      ) {
+        return;
+      }
+
+      // Obter valores dos elementos
+      const campo = campoSelect.value;
+      const operador = operadorSelect.value;
+      let valor = valorInput.value;
+
+      // Se o valor estiver vazio, pular este filtro
+      if (!valor.trim()) {
+        return;
+      }
+
+      // Criar objeto de filtro
+      const filtro = {
+        campo,
+        operador,
+        valor,
+      };
+
+      // Se for operador "entre", adicionar segundo valor
+      if (operador === "entre" && valor2Input && valor2Input.value.trim()) {
+        filtro.valor2 = valor2Input.value;
+      }
+
+      // Adicionar filtro à lista
+      filtros.push(filtro);
+    });
+
+    return filtros;
   }
 
   // Aplicar filtros aos dados de registros
@@ -1298,11 +1443,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const registrosLoading = document.getElementById("registros-loading");
     const registrosContainer = document.getElementById("registros-container");
     const nenhumRegistro = document.getElementById("nenhum-registro");
+    const registrosPaginacao = document.getElementById("registros-paginacao");
 
-    // Mostrar loading
+    // Mostrar loading e ocultar outros elementos
     if (registrosLoading) registrosLoading.classList.remove("d-none");
     if (registrosContainer) registrosContainer.classList.add("d-none");
     if (nenhumRegistro) nenhumRegistro.classList.add("d-none");
+    if (registrosPaginacao) registrosPaginacao.classList.add("d-none");
 
     // Buscar todos os registros e aplicar filtros
     fetch(`${API_URL}/registros`, {
@@ -1312,29 +1459,63 @@ document.addEventListener("DOMContentLoaded", function () {
     })
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Falha ao carregar registros");
+          throw new Error(
+            `Falha ao carregar registros: ${response.status} ${response.statusText}`
+          );
         }
         return response.json();
       })
       .then((data) => {
+        // Ocultar indicador de carregamento
         if (registrosLoading) registrosLoading.classList.add("d-none");
 
         // Aplicar filtros aos dados
-        const dadosFiltrados = SistemaFiltros.aplicar(data);
+        dadosRegistros = SistemaFiltros.aplicar(data);
+        paginaAtual = 1; // Resetar para a primeira página ao aplicar filtros
 
         // Verificar se há resultados
-        if (dadosFiltrados.length === 0) {
-          if (nenhumRegistro) nenhumRegistro.classList.remove("d-none");
+        if (!dadosRegistros || dadosRegistros.length === 0) {
+          if (nenhumRegistro) {
+            nenhumRegistro.classList.remove("d-none");
+            nenhumRegistro.innerHTML = `
+                        <i class="bi bi-info-circle me-2"></i> 
+                        Nenhum registro encontrado com os filtros aplicados.
+                    `;
+          }
+          ocultarPaginacao();
           return;
         }
 
-        // Exibir resultados filtrados
-        exibirRegistros(dadosFiltrados);
+        // Exibir resultados filtrados (apenas a primeira página)
+        exibirRegistrosPaginados();
+
+        // Atualizar paginação apenas se houver registros suficientes
+        if (dadosRegistros.length > registrosPorPagina) {
+          atualizarControlesPaginacao();
+          if (registrosPaginacao) registrosPaginacao.classList.remove("d-none");
+        } else {
+          ocultarPaginacao();
+        }
       })
       .catch((error) => {
+        // Ocultar indicador de carregamento e mostrar mensagem de erro
         if (registrosLoading) registrosLoading.classList.add("d-none");
         console.error("Erro ao aplicar filtros:", error);
-        alert("Erro ao carregar registros: " + error.message);
+
+        // Exibir mensagem de erro ao usuário
+        alert(`Erro ao carregar registros: ${error.message}`);
+
+        // Garantir que o container de "nenhum registro" esteja visível
+        if (nenhumRegistro) {
+          nenhumRegistro.classList.remove("d-none");
+          nenhumRegistro.innerHTML = `
+                    <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>
+                    Ocorreu um erro ao aplicar os filtros. Tente novamente mais tarde.
+                `;
+        }
+
+        // Garantir que a paginação esteja oculta em caso de erro
+        ocultarPaginacao();
       });
   }
 
@@ -1343,10 +1524,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const registrosLoading = document.getElementById("registros-loading");
     const registrosContainer = document.getElementById("registros-container");
     const nenhumRegistro = document.getElementById("nenhum-registro");
+    const registrosPaginacao = document.getElementById("registros-paginacao");
 
+    // Mostrar indicador de carregamento e ocultar outros elementos
     if (registrosLoading) registrosLoading.classList.remove("d-none");
     if (registrosContainer) registrosContainer.classList.add("d-none");
     if (nenhumRegistro) nenhumRegistro.classList.add("d-none");
+    if (registrosPaginacao) registrosPaginacao.classList.add("d-none");
 
     fetch(`${API_URL}/registros`, {
       headers: {
@@ -1355,75 +1539,422 @@ document.addEventListener("DOMContentLoaded", function () {
     })
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Falha ao carregar registros");
+          throw new Error(
+            `Falha ao carregar registros: ${response.status} ${response.statusText}`
+          );
         }
         return response.json();
       })
       .then((data) => {
+        // Ocultar indicador de carregamento
         if (registrosLoading) registrosLoading.classList.add("d-none");
 
-        if (data.length === 0) {
+        // Verificar se há dados
+        if (!data || data.length === 0) {
           if (nenhumRegistro) nenhumRegistro.classList.remove("d-none");
+          ocultarPaginacao();
           return;
         }
 
-        exibirRegistros(data);
+        // Armazenar todos os registros e exibir apenas a primeira página
+        dadosRegistros = data;
+        paginaAtual = 1;
+        exibirRegistrosPaginados();
+
+        // Atualizar paginação apenas se houver registros suficientes
+        if (data.length > registrosPorPagina) {
+          atualizarControlesPaginacao();
+          if (registrosPaginacao) registrosPaginacao.classList.remove("d-none");
+        } else {
+          ocultarPaginacao();
+        }
       })
       .catch((error) => {
+        // Ocultar indicador de carregamento e mostrar mensagem de erro
         if (registrosLoading) registrosLoading.classList.add("d-none");
         console.error("Erro ao carregar registros:", error);
-        alert("Erro ao carregar registros: " + error.message);
+
+        // Exibir mensagem de erro ao usuário
+        alert(`Erro ao carregar registros: ${error.message}`);
+
+        // Garantir que o container de "nenhum registro" esteja visível
+        if (nenhumRegistro) {
+          nenhumRegistro.classList.remove("d-none");
+          nenhumRegistro.innerHTML = `
+                    <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>
+                    Ocorreu um erro ao carregar os registros. Tente novamente mais tarde.
+                `;
+        }
+
+        // Garantir que a paginação esteja oculta em caso de erro
+        ocultarPaginacao();
       });
+  }
+
+  // Função para exibir apenas os registros da página atual
+  function exibirRegistrosPaginados() {
+    // Calcular índices de início e fim para a página atual
+    const inicio = (paginaAtual - 1) * registrosPorPagina;
+    const fim = Math.min(inicio + registrosPorPagina, dadosRegistros.length);
+
+    // Obter apenas os registros da página atual
+    const registrosPagina = dadosRegistros.slice(inicio, fim);
+
+    // Exibir os registros desta página
+    exibirRegistros(registrosPagina);
+
+    // Exibir informações da paginação
+    const paginacaoInfo = document.getElementById("paginacao-info");
+    if (paginacaoInfo) {
+      paginacaoInfo.textContent = `Mostrando ${inicio + 1} a ${fim} de ${
+        dadosRegistros.length
+      } registros`;
+    }
+  }
+
+  // Função para atualizar os controles de paginação
+  function atualizarControlesPaginacao() {
+    const totalRegistros = dadosRegistros.length;
+    const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina);
+
+    // Verificar se o elemento de informação da paginação existe
+    const paginacaoInfo = document.getElementById("paginacao-info");
+    if (paginacaoInfo) {
+      paginacaoInfo.textContent = `Mostrando ${
+        (paginaAtual - 1) * registrosPorPagina + 1
+      } a ${Math.min(
+        paginaAtual * registrosPorPagina,
+        totalRegistros
+      )} de ${totalRegistros} registros`;
+    }
+
+    // Obter a lista de paginação
+    const paginacaoLista = document.querySelector("ul.pagination");
+    if (!paginacaoLista) {
+      console.error("Elemento de paginação não encontrado");
+      return;
+    }
+
+    // Mostrar o elemento de paginação
+    const registrosPaginacao = document.getElementById("registros-paginacao");
+    if (registrosPaginacao) {
+      registrosPaginacao.classList.remove("d-none");
+    }
+
+    // Obter os botões anterior e próximo
+    const btnAnterior = paginacaoLista.querySelector(".page-item:first-child");
+    const btnProximo = paginacaoLista.querySelector(".page-item:last-child");
+
+    // Verificar se os botões existem
+    if (!btnAnterior || !btnProximo) {
+      // Recriar a estrutura básica da paginação se os botões não existirem
+      paginacaoLista.innerHTML = `
+            <li class="page-item" id="btn-prev">
+                <a class="page-link" href="#" id="paginacao-anterior" aria-label="Anterior">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            <li class="page-item" id="btn-next">
+                <a class="page-link" href="#" id="paginacao-proxima" aria-label="Próximo">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        `;
+
+      // Adicionar os event listeners para os novos botões
+      const paginacaoAnterior = document.getElementById("paginacao-anterior");
+      const paginacaoProxima = document.getElementById("paginacao-proxima");
+
+      if (paginacaoAnterior) {
+        paginacaoAnterior.addEventListener("click", function (e) {
+          e.preventDefault();
+          paginaAnterior();
+        });
+      }
+
+      if (paginacaoProxima) {
+        paginacaoProxima.addEventListener("click", function (e) {
+          e.preventDefault();
+          paginaProxima();
+        });
+      }
+
+      // Atualizar as referências aos botões
+      const btnAnteriorNovo = paginacaoLista.querySelector(
+        ".page-item:first-child"
+      );
+      const btnProximoNovo = paginacaoLista.querySelector(
+        ".page-item:last-child"
+      );
+
+      if (btnAnteriorNovo) {
+        btnAnteriorNovo.classList.toggle("disabled", paginaAtual <= 1);
+      }
+
+      if (btnProximoNovo) {
+        btnProximoNovo.classList.toggle(
+          "disabled",
+          paginaAtual >= totalPaginas
+        );
+      }
+    } else {
+      // Atualizar estado dos botões anterior/próximo se eles existirem
+      btnAnterior.classList.toggle("disabled", paginaAtual <= 1);
+      btnProximo.classList.toggle("disabled", paginaAtual >= totalPaginas);
+
+      // Remover páginas existentes (mantendo apenas o primeiro e último item que são os botões Anterior e Próximo)
+      const itensParaRemover = [];
+      paginacaoLista.querySelectorAll(".page-item").forEach((item) => {
+        if (
+          !item.classList.contains("btn-prev") &&
+          !item.classList.contains("btn-next") &&
+          item !== btnAnterior &&
+          item !== btnProximo
+        ) {
+          itensParaRemover.push(item);
+        }
+      });
+
+      itensParaRemover.forEach((item) => {
+        if (item.parentNode === paginacaoLista) {
+          item.remove();
+        }
+      });
+    }
+
+    // Decidir quais páginas mostrar
+    const mostrarPaginas = [];
+
+    // Sempre mostrar a primeira página
+    mostrarPaginas.push(1);
+
+    // Lógica para mostrar páginas ao redor da página atual e reticências quando necessário
+    if (totalPaginas <= 7) {
+      // Se tivermos 7 ou menos páginas, mostrar todas
+      for (let i = 2; i < totalPaginas; i++) {
+        mostrarPaginas.push(i);
+      }
+    } else {
+      // Se tivermos mais de 7 páginas, mostrar lógica com reticências
+
+      // Se a página atual está próxima do início
+      if (paginaAtual <= 3) {
+        mostrarPaginas.push(2, 3, 4, "...", totalPaginas - 1);
+      }
+      // Se a página atual está próxima do final
+      else if (paginaAtual >= totalPaginas - 2) {
+        mostrarPaginas.push(
+          "...",
+          totalPaginas - 3,
+          totalPaginas - 2,
+          totalPaginas - 1
+        );
+      }
+      // Se a página atual está no meio
+      else {
+        mostrarPaginas.push(
+          "...",
+          paginaAtual - 1,
+          paginaAtual,
+          paginaAtual + 1,
+          "..."
+        );
+      }
+    }
+
+    // Sempre mostrar a última página, a menos que seja a única página
+    if (totalPaginas > 1) {
+      mostrarPaginas.push(totalPaginas);
+    }
+
+    // Obter referência atualizada ao botão próximo
+    const btnProximoRef = paginacaoLista.querySelector(".page-item:last-child");
+    if (!btnProximoRef) {
+      console.error("Botão 'Próximo' não encontrado após recriação");
+      return;
+    }
+
+    // Adicionar elementos de página à lista
+    mostrarPaginas.forEach((numeroPagina) => {
+      const novaPagina = document.createElement("li");
+      novaPagina.classList.add("page-item");
+
+      if (numeroPagina === "...") {
+        // Reticências
+        const span = document.createElement("span");
+        span.classList.add("page-link");
+        span.textContent = "...";
+        span.style.pointerEvents = "none";
+        novaPagina.classList.add("disabled");
+        novaPagina.appendChild(span);
+      } else {
+        // Botão de página numérica
+        const link = document.createElement("a");
+        link.classList.add("page-link");
+        link.href = "#";
+        link.textContent = numeroPagina;
+
+        if (numeroPagina === paginaAtual) {
+          novaPagina.classList.add("active");
+        }
+
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          irParaPagina(numeroPagina);
+        });
+
+        novaPagina.appendChild(link);
+      }
+
+      // Inserir antes do botão "Próximo"
+      try {
+        paginacaoLista.insertBefore(novaPagina, btnProximoRef);
+      } catch (error) {
+        console.error("Erro ao inserir item de paginação:", error);
+      }
+    });
+  }
+
+  // Função para ir para uma página específica
+  function irParaPagina(numeroPagina) {
+    // Converter para número caso seja uma string
+    numeroPagina = parseInt(numeroPagina);
+
+    if (isNaN(numeroPagina)) return;
+
+    const totalPaginas = Math.ceil(dadosRegistros.length / registrosPorPagina);
+
+    // Garantir que a página esteja dentro dos limites
+    if (numeroPagina < 1) {
+      numeroPagina = 1;
+    } else if (numeroPagina > totalPaginas) {
+      numeroPagina = totalPaginas;
+    }
+
+    // Atualizar a página atual e recarregar os dados
+    paginaAtual = numeroPagina;
+    exibirRegistrosTabela();
+    atualizarControlesPaginacao();
+
+    // Scroll para o topo da tabela
+    const tabela = document.getElementById("tabela-registros");
+    if (tabela) {
+      tabela.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+
+  // Função para ir para a página anterior
+  function paginaAnterior() {
+    irParaPagina(paginaAtual - 1);
+  }
+
+  // Função para ir para a próxima página
+  function paginaProxima() {
+    irParaPagina(paginaAtual + 1);
+  }
+
+  // Função para ocultar a paginação
+  function ocultarPaginacao() {
+    const paginacao = document.getElementById("registros-paginacao");
+    if (paginacao) {
+      paginacao.classList.add("d-none");
+    }
+
+    // Também ocultar o elemento de informação da paginação
+    const paginacaoInfo = document.getElementById("paginacao-info");
+    if (paginacaoInfo) {
+      paginacaoInfo.textContent = "";
+    }
+  }
+
+  // Função para mostrar a paginação
+  function mostrarPaginacao() {
+    const paginacao = document.getElementById("registros-paginacao");
+    if (paginacao) {
+      // Verificar se há mais de uma página para mostrar
+      if (dadosRegistros.length > registrosPorPagina) {
+        paginacao.classList.remove("d-none");
+        atualizarControlesPaginacao();
+      } else {
+        ocultarPaginacao();
+      }
+    }
   }
 
   // Exibir registros na tabela
   function exibirRegistros(data) {
     const registrosContainer = document.getElementById("registros-container");
     const registrosTable = document.getElementById("registros-table");
+    const nenhumRegistro = document.getElementById("nenhum-registro");
 
-    if (!registrosContainer || !registrosTable) return;
+    // Verificar se os elementos necessários foram encontrados
+    if (!registrosContainer || !registrosTable) {
+      console.error(
+        "Elementos essenciais para exibição de registros não encontrados"
+      );
+      return;
+    }
 
+    // Verificar se há dados para exibir
+    if (!data || data.length === 0) {
+      registrosContainer.classList.add("d-none");
+      if (nenhumRegistro) {
+        nenhumRegistro.classList.remove("d-none");
+      }
+      ocultarPaginacao();
+      return;
+    }
+
+    // Exibir container e limpar tabela
     registrosContainer.classList.remove("d-none");
     registrosTable.innerHTML = "";
 
+    if (nenhumRegistro) {
+      nenhumRegistro.classList.add("d-none");
+    }
+
+    // Mostrar controles de paginação se necessário
+    mostrarPaginacao();
+
+    // Adicionar cada registro à tabela
     data.forEach((registro) => {
       const row = document.createElement("tr");
       row.innerHTML = `
-        <td>${registro.nup || "-"}</td>
-        <td>${
-          registro.objeto
-            ? registro.objeto.length > 30
-              ? registro.objeto.substring(0, 30) + "..."
-              : registro.objeto
-            : "-"
-        }</td>
-        <td>${registro.modalidade || "-"}</td>
-        <td><span class="badge ${getBadgeClass(registro.situacao)}">${
+            <td>${registro.nup || "-"}</td>
+            <td>${
+              registro.objeto
+                ? registro.objeto.length > 30
+                  ? registro.objeto.substring(0, 30) + "..."
+                  : registro.objeto
+                : "-"
+            }</td>
+            <td>${registro.modalidade || "-"}</td>
+            <td><span class="badge ${getBadgeClass(registro.situacao)}">${
         registro.situacao || "-"
       }</span></td>
-        <td>${formatarMoeda(registro.valor_estimado)}</td>
-        <td>${formatarMoeda(registro.valor_homologado)}</td>
-        <td>${formatarMoeda(registro.economia)}</td>
-        <td>
-          <div class="btn-group">
-            <button class="btn btn-sm btn-info visualizar-btn" data-id="${
-              registro.id
-            }" title="Visualizar">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="btn btn-sm btn-primary editar-btn" data-id="${
-              registro.id
-            }" title="Editar">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-sm btn-danger excluir-btn" data-id="${
-              registro.id
-            }" title="Excluir">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
-        </td>
-      `;
+            <td>${formatarMoeda(registro.valor_estimado)}</td>
+            <td>${formatarMoeda(registro.valor_homologado)}</td>
+            <td>${formatarMoeda(registro.economia)}</td>
+            <td>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-info visualizar-btn" data-id="${
+                      registro.id
+                    }" title="Visualizar">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-primary editar-btn" data-id="${
+                      registro.id
+                    }" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger excluir-btn" data-id="${
+                      registro.id
+                    }" title="Excluir">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
       registrosTable.appendChild(row);
     });
 
@@ -1797,4 +2328,122 @@ document.addEventListener("DOMContentLoaded", function () {
         alert("Erro ao carregar lista de usuários: " + error.message);
       });
   }
+
+  // Função para inicializar a página de importação
+  function initImportar() {
+    const importarForm = document.getElementById("importar-form");
+    const resultadoImportacao = document.getElementById("resultado-importacao");
+    const loadingImportacao = document.getElementById("loading-importacao");
+    const resultadoSucesso = document.getElementById("resultado-sucesso");
+    const resultadoErro = document.getElementById("resultado-erro");
+    const acoesPosImportacao = document.getElementById("acoes-pos-importacao");
+    const mensagemSucesso = document.getElementById("mensagem-sucesso");
+    const mensagemErro = document.getElementById("mensagem-erro");
+    const detalhesErro = document.getElementById("detalhes-erro");
+    const totalProcessados = document.getElementById("total-processados");
+    const totalSucesso = document.getElementById("total-sucesso");
+    const totalErros = document.getElementById("total-erros");
+    const progressoImportacao = document.getElementById("progresso-importacao");
+    const statusImportacao = document.getElementById("status-importacao");
+    const novaImportacao = document.getElementById("nova-importacao");
+
+    if (importarForm) {
+      importarForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const excelFile = document.getElementById("excel-file").files[0];
+        if (!excelFile) {
+          alert("Por favor, selecione um arquivo Excel para importar.");
+          return;
+        }
+
+        const limparDados = document.getElementById("limpar-dados").checked;
+
+        // Mostrar indicador de progresso
+        resultadoImportacao.classList.remove("d-none");
+        loadingImportacao.classList.remove("d-none");
+        resultadoSucesso.classList.add("d-none");
+        resultadoErro.classList.add("d-none");
+        acoesPosImportacao.classList.add("d-none");
+
+        // Preparar formulário para envio
+        const formData = new FormData();
+        formData.append("excel", excelFile);
+        formData.append("limparDados", limparDados);
+
+        // Atualizar barra de progresso
+        progressoImportacao.style.width = "10%";
+        statusImportacao.textContent = "Enviando arquivo...";
+
+        // Enviar para o servidor
+        fetch(`${API_URL}/importar-excel`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        })
+          .then((response) => {
+            progressoImportacao.style.width = "70%";
+            statusImportacao.textContent = "Processando dados...";
+
+            if (!response.ok) {
+              return response.json().then((data) => {
+                throw new Error(data.message || "Erro ao importar arquivo");
+              });
+            }
+
+            return response.json();
+          })
+          .then((data) => {
+            // Atualizar progresso para concluído
+            progressoImportacao.style.width = "100%";
+            statusImportacao.textContent = "Concluído!";
+
+            // Exibir resultado de sucesso
+            setTimeout(() => {
+              loadingImportacao.classList.add("d-none");
+              resultadoSucesso.classList.remove("d-none");
+              acoesPosImportacao.classList.remove("d-none");
+
+              // Preencher detalhes
+              totalProcessados.textContent = data.totalProcessados;
+              totalSucesso.textContent = data.sucessos;
+              totalErros.textContent = data.erros;
+
+              if (data.erros > 0) {
+                mensagemSucesso.textContent = `Importação concluída com ${data.erros} erros.`;
+              } else {
+                mensagemSucesso.textContent =
+                  "Importação concluída com sucesso!";
+              }
+            }, 500);
+          })
+          .catch((error) => {
+            console.error("Erro na importação:", error);
+
+            // Exibir erro
+            loadingImportacao.classList.add("d-none");
+            resultadoErro.classList.remove("d-none");
+            acoesPosImportacao.classList.remove("d-none");
+
+            mensagemErro.textContent =
+              error.message || "Ocorreu um erro durante a importação.";
+            detalhesErro.textContent = JSON.stringify(error, null, 2);
+          });
+      });
+    }
+
+    // Botão para nova importação
+    if (novaImportacao) {
+      novaImportacao.addEventListener("click", function () {
+        importarForm.reset();
+        resultadoImportacao.classList.add("d-none");
+        progressoImportacao.style.width = "0%";
+      });
+    }
+  }
+
+  // Iniciar verificação de autenticação ao carregar a página
+  checkAuth();
 });
