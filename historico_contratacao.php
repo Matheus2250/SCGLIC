@@ -5,23 +5,27 @@ require_once 'functions.php';
 verificarLogin();
 
 if (!isset($_GET['numero'])) {
-    echo '<div class="erro">Número da contratação não fornecido</div>';
+    echo '<div class="erro">Número não fornecido</div>';
     exit;
 }
 
 $pdo = conectarDB();
-$numero_contratacao = $_GET['numero'];
+$numero_recebido = $_GET['numero'];
 
-// Buscar histórico
-$sql = "SELECT h.*, u.nome as usuario_nome, i.data_importacao 
-        FROM pca_historico h
-        LEFT JOIN usuarios u ON h.usuario_id = u.id
-        LEFT JOIN pca_importacoes i ON h.importacao_id = i.id
-        WHERE h.numero_contratacao = ?
-        ORDER BY h.data_mudanca DESC";
-$stmt = $pdo->prepare($sql);
-$stmt->execute([$numero_contratacao]);
-$historico = $stmt->fetchAll();
+// Buscar o número da contratação baseado no DFD
+$sql_busca = "SELECT DISTINCT numero_contratacao FROM pca_dados WHERE numero_dfd = ? LIMIT 1";
+$stmt_busca = $pdo->prepare($sql_busca);
+$stmt_busca->execute([$numero_recebido]);
+$resultado = $stmt_busca->fetch();
+
+if ($resultado) {
+    $numero_contratacao = $resultado['numero_contratacao'];
+} else {
+    // Se não encontrou pelo DFD, assume que já é número de contratação
+    $numero_contratacao = $numero_recebido;
+}
+
+// Resto permanece igual (consultas do histórico e estados)
 
 // Buscar tempo em cada estado
 $sql_estados = "SELECT * FROM pca_estados_tempo 
@@ -36,82 +40,86 @@ $estados = $stmt_estados->fetchAll();
     <h3>Histórico da Contratação <?php echo htmlspecialchars($numero_contratacao); ?></h3>
     
     <?php if (!empty($estados)): ?>
-    <h4 style="margin-top: 20px;">Tempo em cada Estado</h4>
-    <table style="width: 100%; font-size: 13px; margin-bottom: 20px;">
-        <thead>
-            <tr style="background: #f8f9fa;">
-                <th style="padding: 8px;">Situação</th>
-                <th style="padding: 8px;">Data Início</th>
-                <th style="padding: 8px;">Data Fim</th>
-                <th style="padding: 8px;">Dias no Estado</th>
-                <th style="padding: 8px;">Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($estados as $estado): ?>
-            <tr>
-                <td style="padding: 8px;"><?php echo htmlspecialchars($estado['situacao_execucao']); ?></td>
-                <td style="padding: 8px;"><?php echo formatarData($estado['data_inicio']); ?></td>
-                <td style="padding: 8px;"><?php echo $estado['data_fim'] ? formatarData($estado['data_fim']) : '-'; ?></td>
-                <td style="padding: 8px; font-weight: bold;">
-                    <?php 
-                    if ($estado['dias_no_estado']) {
-                        echo $estado['dias_no_estado'] . ' dias';
-                    } elseif ($estado['ativo']) {
-                        $dias = (new DateTime())->diff(new DateTime($estado['data_inicio']))->days;
-                        echo $dias . ' dias (em andamento)';
-                    } else {
-                        echo '-';
-                    }
-                    ?>
-                </td>
-                <td style="padding: 8px;">
-                    <?php if ($estado['ativo']): ?>
-                        <span style="color: #28a745;">Atual</span>
-                    <?php else: ?>
-                        <span style="color: #6c757d;">Finalizado</span>
-                    <?php endif; ?>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-    <?php endif; ?>
+<h4 style="margin-top: 20px;">⏱️ Tempo em cada Estado</h4>
+<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
     
+    <?php 
+    $total_dias = 0;
+    foreach ($estados as $index => $estado): 
+        $dias_no_estado = 0;
+        
+        if ($estado['ativo']) {
+            // Estado atual - calcular dias até hoje
+            $dias_no_estado = (new DateTime())->diff(new DateTime($estado['data_inicio']))->days;
+            $status_classe = 'atual';
+            $status_texto = 'Estado Atual';
+        } else {
+            // Estado finalizado
+            $dias_no_estado = $estado['dias_no_estado'];
+            $status_classe = 'finalizado';
+            $status_texto = 'Finalizado';
+            $total_dias += $dias_no_estado;
+        }
+    ?>
+    
+    <div style="display: flex; align-items: center; margin-bottom: 15px; padding: 15px; background: white; border-radius: 6px; border-left: 4px solid <?php echo $estado['ativo'] ? '#28a745' : '#6c757d'; ?>;">
+        
+        <div style="flex: 1;">
+            <h5 style="margin: 0; color: #2c3e50;">
+                <?php echo htmlspecialchars($estado['situacao_execucao']); ?>
+                <span style="font-size: 12px; color: <?php echo $estado['ativo'] ? '#28a745' : '#6c757d'; ?>; font-weight: normal;">
+                    (<?php echo $status_texto; ?>)
+                </span>
+            </h5>
+            <small style="color: #666;">
+                <strong>Início:</strong> <?php echo formatarData($estado['data_inicio']); ?>
+                <?php if (!$estado['ativo']): ?>
+                    | <strong>Fim:</strong> <?php echo formatarData($estado['data_fim']); ?>
+                <?php endif; ?>
+            </small>
+        </div>
+        
+        <div style="text-align: right;">
+            <span style="font-size: 24px; font-weight: bold; color: <?php echo $estado['ativo'] ? '#28a745' : '#2c3e50'; ?>;">
+                <?php echo $dias_no_estado; ?>
+            </span>
+            <br>
+            <small style="color: #666;">
+                <?php echo $dias_no_estado == 1 ? 'dia' : 'dias'; ?>
+                <?php echo $estado['ativo'] ? '(em andamento)' : ''; ?>
+            </small>
+        </div>
+        
+    </div>
+    <?php endforeach; ?>
+    
+    <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 2px solid #dee2e6;">
+        <span style="font-size: 18px; font-weight: bold; color: #2c3e50;">
+            Total de dias finalizados: <?php echo $total_dias; ?> dias
+        </span>
+    </div>
+    
+</div>
+<?php endif; ?>
+
+<h4>📋 Histórico de Mudanças</h4>
+<div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
     <?php if (!empty($historico)): ?>
-    <h4>Histórico de Mudanças</h4>
-    <table style="width: 100%; font-size: 13px;">
-        <thead>
-            <tr style="background: #f8f9fa;">
-                <th style="padding: 8px;">Data</th>
-                <th style="padding: 8px;">Campo</th>
-                <th style="padding: 8px;">Valor Anterior</th>
-                <th style="padding: 8px;">Valor Novo</th>
-                <th style="padding: 8px;">Usuário</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($historico as $item): ?>
-            <tr>
-                <td style="padding: 8px;"><?php echo date('d/m/Y H:i', strtotime($item['data_mudanca'])); ?></td>
-                <td style="padding: 8px;">
-                    <?php 
-                    $campos = [
-                        'situacao_execucao' => 'Situação',
-                        'valor_total_contratacao' => 'Valor Total',
-                        'status_contratacao' => 'Status'
-                    ];
-                    echo $campos[$item['campo_alterado']] ?? $item['campo_alterado'];
-                    ?>
-                </td>
-                <td style="padding: 8px;"><?php echo htmlspecialchars($item['valor_anterior']); ?></td>
-                <td style="padding: 8px; font-weight: bold;"><?php echo htmlspecialchars($item['valor_novo']); ?></td>
-                <td style="padding: 8px;"><?php echo htmlspecialchars($item['usuario_nome']); ?></td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+        <?php foreach ($historico as $item): ?>
+        <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #e9ecef;">
+            <div style="width: 120px; font-size: 12px; color: #666;">
+                <?php echo date('d/m/Y H:i', strtotime($item['data_mudanca'])); ?>
+            </div>
+            <div style="flex: 1; margin-left: 15px;">
+                <strong><?php echo htmlspecialchars($item['valor_anterior']); ?></strong>
+                <span style="color: #666; margin: 0 10px;">→</span>
+                <strong style="color: #28a745;"><?php echo htmlspecialchars($item['valor_novo']); ?></strong>
+            </div>
+        </div>
+        <?php endforeach; ?>
     <?php else: ?>
-    <p style="color: #6c757d;">Nenhuma mudança registrada ainda.</p>
+        <p style="text-align: center; color: #666; margin: 20px 0;">
+            Nenhuma mudança registrada ainda.
+        </p>
     <?php endif; ?>
 </div>

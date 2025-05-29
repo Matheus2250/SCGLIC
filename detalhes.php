@@ -37,14 +37,23 @@ $stmt_licitacao->execute($ids_array);
 $licitacao = $stmt_licitacao->fetch();
 ?>
 
-<div class="detalhes-container">
-    <!-- Abas -->
-    <div class="abas">
-        <button class="aba ativa" onclick="mostrarAba('pca')">Dados do PCA</button>
-        <?php if ($licitacao): ?>
-        <button class="aba" onclick="mostrarAba('licitacao')">Dados da Licitação</button>
-        <?php endif; ?>
-    </div>
+<!-- Abas -->
+<div class="abas">
+    <button class="aba ativa" onclick="
+        document.getElementById('aba-pca').style.display='block';
+        document.getElementById('aba-licitacao').style.display='none';
+        this.classList.add('ativa');
+        this.parentNode.querySelector('.aba:nth-child(2)').classList.remove('ativa');
+    ">Dados do PCA</button>
+    <?php if ($licitacao): ?>
+    <button class="aba" onclick="
+        document.getElementById('aba-pca').style.display='none';
+        document.getElementById('aba-licitacao').style.display='block';
+        this.classList.add('ativa');
+        this.parentNode.querySelector('.aba:nth-child(1)').classList.remove('ativa');
+    ">Dados da Licitação</button>
+    <?php endif; ?>
+</div>
     
     <!-- Conteúdo PCA -->
     <div id="aba-pca" class="conteudo-aba">
@@ -280,17 +289,23 @@ $licitacao = $stmt_licitacao->fetch();
 </div>
 
 <script>
-function mostrarAba(aba) {
+function trocarAba(aba, botao) {
     // Esconder todas as abas
-    document.querySelectorAll('.conteudo-aba').forEach(function(el) {
-        el.style.display = 'none';
-    });
-    document.querySelectorAll('.aba').forEach(function(el) {
-        el.classList.remove('ativa');
-    });
+    var conteudos = document.querySelectorAll('.conteudo-aba');
+    for(var i = 0; i < conteudos.length; i++) {
+        conteudos[i].style.display = 'none';
+    }
+    
+    // Remover classe ativa de todos os botões
+    var botoes = document.querySelectorAll('.aba');
+    for(var i = 0; i < botoes.length; i++) {
+        botoes[i].classList.remove('ativa');
+    }
     
     // Mostrar aba selecionada
     document.getElementById('aba-' + aba).style.display = 'block';
-    event.target.classList.add('ativa');
+    
+    // Ativar botão clicado
+    botao.classList.add('ativa');
 }
 </script>

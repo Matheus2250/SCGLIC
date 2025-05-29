@@ -1,6 +1,26 @@
 <?php
 require_once 'config.php';
 
+// Função para agrupar áreas
+function agruparArea($area) {
+    if (empty($area)) return 'SEM ÁREA';
+    
+    $area = trim($area);
+    
+    // Casos especiais - unificar variações
+    if (strpos($area, 'GM') === 0) {
+        return 'GM.';
+    }
+    
+    // Se tem ponto, pega a parte antes do ponto + ponto
+    if (strpos($area, '.') !== false) {
+        $partes = explode('.', $area);
+        return trim($partes[0]) . '.';
+    }
+    
+    return $area;
+}
+
 // Verificar se usuário está logado
 function verificarLogin() {
     if (!isset($_SESSION['usuario_id'])) {
@@ -122,6 +142,41 @@ function processarUpload($arquivo, $pasta = 'uploads/') {
         return ['sucesso' => true, 'arquivo' => $nomeArquivo, 'caminho' => $caminhoCompleto];
     } else {
         return ['sucesso' => false, 'mensagem' => 'Erro ao salvar arquivo'];
+    }
+}
+
+// Função para abreviar valores grandes
+function abreviarValor($valor) {
+    if ($valor >= 1000000000) {
+        return number_format($valor / 1000000000, 1, ',', '.') . 'B';
+    } elseif ($valor >= 1000000) {
+        return number_format($valor / 1000000, 1, ',', '.') . 'M';
+    } elseif ($valor >= 1000) {
+        return number_format($valor / 1000, 1, ',', '.') . 'K';
+    } else {
+        return number_format($valor, 0, ',', '.');
+    }
+}
+
+// Função para agrupar áreas
+if (!function_exists('agruparArea')) {
+    function agruparArea($area) {
+        if (empty($area)) return 'SEM ÁREA';
+        
+        $area = trim($area);
+        
+        // Casos especiais - unificar variações
+        if (strpos($area, 'GM') === 0) {
+            return 'GM.';
+        }
+        
+        // Se tem ponto, pega a parte antes do ponto + ponto
+        if (strpos($area, '.') !== false) {
+            $partes = explode('.', $area);
+            return trim($partes[0]) . '.';
+        }
+        
+        return $area;
     }
 }
 ?>

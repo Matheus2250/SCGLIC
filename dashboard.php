@@ -11,18 +11,35 @@ $limite = intval($_GET['limite'] ?? 20);
 $pagina = intval($_GET['pagina'] ?? 1);
 $offset = ($pagina - 1) * $limite;
 
+// Buscar áreas para o filtro (agrupadas)
+$areas_sql = "SELECT DISTINCT area_requisitante FROM pca_dados WHERE area_requisitante IS NOT NULL AND area_requisitante != '' ORDER BY area_requisitante";
+$areas_result = $pdo->query($areas_sql);
+$areas_agrupadas = [];
+
+while ($row = $areas_result->fetch()) {
+    $area_agrupada = agruparArea($row['area_requisitante']);
+    if (!in_array($area_agrupada, $areas_agrupadas)) {
+        $areas_agrupadas[] = $area_agrupada;
+    }
+}
+sort($areas_agrupadas);
+
 // Buscar dados com filtros
 $where = [];
 $params = [];
 
 if (!empty($_GET['numero_contratacao'])) {
-    $where[] = "p.numero_contratacao LIKE ?";
+    $where[] = "p.numero_dfd LIKE ?";
     $params[] = '%' . $_GET['numero_contratacao'] . '%';
 }
 
-if (!empty($_GET['status'])) {
-    $where[] = "p.status_contratacao = ?";
-    $params[] = $_GET['status'];
+if (!empty($_GET['situacao_execucao'])) {
+    if ($_GET['situacao_execucao'] === 'Não iniciado') {
+        $where[] = "(p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')";
+    } else {
+        $where[] = "p.situacao_execucao = ?";
+        $params[] = $_GET['situacao_execucao'];
+    }
 }
 
 if (!empty($_GET['categoria'])) {
@@ -31,14 +48,22 @@ if (!empty($_GET['categoria'])) {
 }
 
 if (!empty($_GET['area_requisitante'])) {
-    $where[] = "p.area_requisitante LIKE ?";
-    $params[] = '%' . $_GET['area_requisitante'] . '%';
+    $filtro_area = $_GET['area_requisitante'];
+    if ($filtro_area === 'GM.') {
+        $where[] = "(p.area_requisitante LIKE 'GM%' OR p.area_requisitante LIKE 'GM.%')";
+    } else {
+        $where[] = "p.area_requisitante LIKE ?";
+        $params[] = $filtro_area . '%';
+    }
 }
 
-$whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+$whereClause = '';
+if ($where) {
+    $whereClause = 'AND ' . implode(' AND ', $where);
+}
 
 // Query para contar total de registros
-$sqlCount = "SELECT COUNT(DISTINCT numero_contratacao) as total FROM pca_dados p $whereClause";
+$sqlCount = "SELECT COUNT(DISTINCT numero_dfd) as total FROM pca_dados p WHERE numero_dfd IS NOT NULL AND numero_dfd != '' $whereClause";
 $stmtCount = $pdo->prepare($sqlCount);
 $stmtCount->execute($params);
 $totalRegistros = $stmtCount->fetch()['total'];
@@ -46,7 +71,8 @@ $totalPaginas = ceil($totalRegistros / $limite);
 
 // Query principal agrupando por número de contratação
 $sql = "SELECT 
-        p.numero_contratacao,
+        MAX(p.numero_contratacao) as numero_contratacao,
+        p.numero_dfd,
         MAX(p.status_contratacao) as status_contratacao,
         MAX(p.titulo_contratacao) as titulo_contratacao,
         MAX(p.categoria_contratacao) as categoria_contratacao,
@@ -62,12 +88,13 @@ $sql = "SELECT
         GROUP_CONCAT(p.id) as ids,
         MAX(p.id) as id,
         MAX((SELECT COUNT(*) FROM licitacoes WHERE pca_dados_id IN (
-            SELECT id FROM pca_dados WHERE numero_contratacao = p.numero_contratacao
+            SELECT id FROM pca_dados WHERE numero_dfd = p.numero_dfd
         ))) as tem_licitacao
         FROM pca_dados p 
+        WHERE p.numero_dfd IS NOT NULL AND p.numero_dfd != ''
         $whereClause 
-        GROUP BY p.numero_contratacao
-        ORDER BY p.numero_contratacao DESC
+        GROUP BY p.numero_dfd
+        ORDER BY p.numero_dfd DESC
         LIMIT " . intval($limite) . " OFFSET " . intval($offset);
 
 $stmt = $pdo->prepare($sql);
@@ -75,7 +102,13 @@ $stmt->execute($params);
 $dados = $stmt->fetchAll();
 
 // Buscar listas únicas para os filtros
-$status_lista = $pdo->query("SELECT DISTINCT status_contratacao FROM pca_dados WHERE status_contratacao IS NOT NULL ORDER BY status_contratacao")->fetchAll(PDO::FETCH_COLUMN);
+$situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados WHERE situacao_execucao IS NOT NULL AND situacao_execucao != '' ORDER BY situacao_execucao")->fetchAll(PDO::FETCH_COLUMN);
+
+// Adicionar "Não iniciado" se não estiver na lista
+if (!in_array('Não iniciado', $situacao_lista)) {
+    array_unshift($situacao_lista, 'Não iniciado');
+}
+
 $categoria_lista = $pdo->query("SELECT DISTINCT categoria_contratacao FROM pca_dados WHERE categoria_contratacao IS NOT NULL ORDER BY categoria_contratacao")->fetchAll(PDO::FETCH_COLUMN);
 $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados WHERE situacao_execucao IS NOT NULL ORDER BY situacao_execucao")->fetchAll(PDO::FETCH_COLUMN);
 ?>
@@ -86,6 +119,30 @@ $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - <?php echo SITE_NAME; ?></title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+.lucide {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    color: currentColor;
+}
+
+.lucide-lg {
+    width: 20px;
+    height: 20px;
+}
+
+.lucide-xl {
+    width: 24px;
+    height: 24px;
+}
+
+.card-icon .lucide {
+    width: 32px;
+    height: 32px;
+}
+</style>
 </head>
 <body>
     <!-- Header -->
@@ -101,6 +158,84 @@ $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados 
 
     <div class="container">
         <?php echo getMensagem(); ?>
+
+        <?php
+
+// Buscar estatísticas para os cards
+$stats_sql = "SELECT 
+    COUNT(DISTINCT p.numero_dfd) as total_dfds,
+    COUNT(DISTINCT p.numero_contratacao) as total_contratacoes,
+    SUM(DISTINCT p.valor_total_contratacao) as valor_total,
+    COUNT(DISTINCT CASE WHEN l.situacao = 'HOMOLOGADO' THEN p.numero_contratacao END) as homologadas,
+    COUNT(DISTINCT CASE WHEN p.data_inicio_processo < CURDATE() AND p.situacao_execucao = 'Não iniciado' THEN p.numero_contratacao END) as atrasadas_inicio,
+    COUNT(DISTINCT CASE WHEN p.data_conclusao_processo < CURDATE() AND p.situacao_execucao != 'Concluído' THEN p.numero_contratacao END) as atrasadas_conclusao,
+    COUNT(DISTINCT CASE WHEN p.data_conclusao_processo BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN p.numero_contratacao END) as vencendo_30_dias,
+    COUNT(DISTINCT CASE WHEN l.situacao IN ('EM_ANDAMENTO') THEN p.numero_contratacao END) as em_andamento
+    FROM pca_dados p
+    LEFT JOIN licitacoes l ON l.pca_dados_id = p.id";
+
+$stats = $pdo->query($stats_sql)->fetch();
+$total_atrasadas = $stats['atrasadas_inicio'] + $stats['atrasadas_conclusao'];
+?>
+
+<!-- Cards de Estatísticas -->
+<div class="cards-container">
+    <div class="card card-info">
+        <div class="card-icon"><i data-lucide="bar-chart"></i></div>
+        <div class="card-content">
+            <h3><?php echo number_format($stats['total_dfds']); ?></h3>
+            <p>Total de DFDs</p>
+        </div>
+    </div>
+    
+    <div class="card card-primary">
+        <div class="card-icon"><i data-lucide="clipboard-list"></i></div>
+        <div class="card-content">
+            <h3><?php echo number_format($stats['total_contratacoes']); ?></h3>
+            <p>Total Contratações</p>
+        </div>
+    </div>
+    
+    <div class="card card-money">
+        <div class="card-icon"><i data-lucide="dollar-sign"></i></div>
+        <div class="card-content">
+            <h3><?php echo abreviarValor($stats['valor_total']); ?></h3>
+            <p>Valor Total (R$)</p>
+        </div>
+    </div>
+    
+    <div class="card card-success">
+        <div class="card-icon"><i data-lucide="check-circle"></i></div>
+        <div class="card-content">
+            <h3><?php echo $stats['homologadas']; ?></h3>
+            <p>Homologadas</p>
+        </div>
+    </div>
+    
+    <div class="card card-warning">
+        <div class="card-icon"><i data-lucide="clock"></i></div>
+        <div class="card-content">
+            <h3><?php echo $stats['vencendo_30_dias']; ?></h3>
+            <p>Vencendo em 30 dias</p>
+        </div>
+    </div>
+    
+    <div class="card card-danger">
+        <div class="card-icon"><i data-lucide="alert-circle"></i></div>
+        <div class="card-content">
+            <h3><?php echo $total_atrasadas; ?></h3>
+            <p>Atrasadas</p>
+        </div>
+    </div>
+    
+    <div class="card card-info">
+        <div class="card-icon"><i data-lucide="settings"></i></div>
+        <div class="card-content">
+            <h3><?php echo $stats['em_andamento']; ?></h3>
+            <p>Em Andamento</p>
+        </div>
+    </div>
+</div>
         
         <!-- Upload de Arquivo -->
         <div class="upload-area">
@@ -118,7 +253,7 @@ $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados 
         <!-- Botão de Alertas -->
         <div style="margin-bottom: 30px;">
             <a href="contratacoes_atrasadas.php" style="display: flex; align-items: center; gap: 15px; background:rgb(71, 71, 75); color: white; text-decoration: none; padding: 20px 25px; border-radius: 10px; box-shadow: 0 3px 10px rgba(139, 92, 246, 0.3); transition: all 0.3s ease;">
-                <span style="font-size: 28px; background: rgba(255, 255, 255, 0.2); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 8px;">⚠️</span>
+                <span style="font-size: 28px; background: rgba(255, 255, 255, 0.2); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 8px;"><i data-lucide="alert-triangle"></i></span>
                 <div style="flex: 1;">
                     <strong style="display: block; font-size: 18px; margin-bottom: 2px;">Contratações Atrasadas</strong>
                     <small style="font-size: 14px; opacity: 0.9;">Visualizar pendências e atrasos</small>
@@ -133,19 +268,19 @@ $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados 
             <form method="GET" class="filtros-form">
                 <input type="hidden" name="limite" value="<?php echo $limite; ?>">
                 <div>
-                    <input type="text" name="numero_contratacao" placeholder="Número da Contratação" 
+                    <input type="text" name="numero_contratacao" placeholder="Número do DFD"
                            value="<?php echo $_GET['numero_contratacao'] ?? ''; ?>">
                 </div>
                 <div>
-                    <select name="status">
-                        <option value="">Todos os Status</option>
-                        <?php foreach ($status_lista as $status): ?>
-                            <option value="<?php echo $status; ?>" 
-                                    <?php echo ($_GET['status'] ?? '') == $status ? 'selected' : ''; ?>>
-                                <?php echo $status; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <select name="situacao_execucao">
+    <option value="">Todas as Situações</option>
+    <?php foreach ($situacao_lista as $situacao): ?>
+        <option value="<?php echo htmlspecialchars($situacao); ?>" 
+                <?php echo ($_GET['situacao_execucao'] ?? '') == $situacao ? 'selected' : ''; ?>>
+            <?php echo htmlspecialchars($situacao); ?>
+        </option>
+    <?php endforeach; ?>
+</select>
                 </div>
                 <div>
                     <select name="categoria">
@@ -159,8 +294,15 @@ $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados 
                     </select>
                 </div>
                 <div>
-                    <input type="text" name="area_requisitante" placeholder="Área Requisitante" 
-                           value="<?php echo $_GET['area_requisitante'] ?? ''; ?>">
+                    <select name="area_requisitante" onchange="this.form.submit()">
+    <option value="">Todas as áreas</option>
+    <?php foreach ($areas_agrupadas as $area): ?>
+        <option value="<?php echo htmlspecialchars($area); ?>" 
+                <?php echo ($_GET['area_requisitante'] ?? '') == $area ? 'selected' : ''; ?>>
+            <?php echo htmlspecialchars($area); ?>
+        </option>
+    <?php endforeach; ?>
+</select>
                 </div>
                 <div>
                     <button type="submit" class="btn">Filtrar</button>
@@ -195,7 +337,7 @@ $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados 
             <table>
                 <thead>
                     <tr>
-                        <th>Nº Contratação</th>
+                        <th>Nº DFD</th>
                         <th>Situação</th>
                         <th>Título</th>
                         <th>Categoria</th>
@@ -219,14 +361,14 @@ $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados 
                             
                             if ($item['data_inicio_processo'] < date('Y-m-d') && $item['situacao_execucao'] == 'Não iniciado') {
                                 $classeSituacao = 'atrasado-inicio';
-                                $textoAdicional = ' ⚠️';
+
                             } elseif ($item['data_conclusao_processo'] < date('Y-m-d') && $item['situacao_execucao'] != 'Concluído') {
                                 $classeSituacao = 'atrasado-conclusao';
-                                $textoAdicional = ' 🚨';
+                                
                             }
                         ?>
                         <tr class="<?php echo $classeSituacao ? 'linha-' . $classeSituacao : ''; ?>">
-                            <td><strong><?php echo htmlspecialchars($item['numero_contratacao']); ?></strong></td>
+                            <td><strong><?php echo htmlspecialchars($item['numero_dfd']); ?></strong></td>
                             <td>
                                 <span class="situacao-badge <?php echo $classeSituacao; ?>">
                                     <?php echo htmlspecialchars($item['situacao_execucao']) . $textoAdicional; ?>
@@ -258,7 +400,7 @@ $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados 
                                             <circle cx="12" cy="12" r="3"></circle>
                                         </svg>
                                     </button>
-                                    <button onclick="verHistorico('<?php echo $item['numero_contratacao']; ?>')" 
+                                    <button onclick="verHistorico('<?php echo $item['numero_dfd']; ?>')"
                                             class="btn-acao btn-historico" title="Ver histórico">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <circle cx="12" cy="12" r="10"></circle>
@@ -519,5 +661,16 @@ $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados 
     </div>
     
     <script src="script.js"></script>
+
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+        console.log('✅ Ícones carregados!');
+    } else {
+        console.log('❌ Lucide não carregou');
+    }
+});
+</script>
 </body>
 </html>
