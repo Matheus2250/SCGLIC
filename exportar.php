@@ -42,7 +42,6 @@ if (!empty($_GET['area_requisitante'])) {
 $whereClause = 'WHERE ' . implode(' AND ', $where);
 
 // Query para buscar dados agrupados
-// Query para buscar dados agrupados
 $sql = "SELECT 
         MAX(p.numero_contratacao) as numero_contratacao,
         p.numero_dfd,
@@ -51,7 +50,7 @@ $sql = "SELECT
         MAX(p.titulo_contratacao) as titulo_contratacao,
         MAX(p.categoria_contratacao) as categoria_contratacao,
         MAX(p.uasg_atual) as uasg_atual,
-        SUM(p.valor_total_contratacao) as valor_total_contratacao,
+        MAX(p.valor_total_contratacao) as valor_total_contratacao,
         MAX(p.data_inicio_processo) as data_inicio_processo,
         MAX(p.data_conclusao_processo) as data_conclusao_processo,
         MAX(p.prazo_duracao_dias) as prazo_duracao_dias,

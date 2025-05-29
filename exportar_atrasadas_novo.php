@@ -6,26 +6,6 @@ verificarLogin();
 
 $pdo = conectarDB();
 
-// Função para agrupar áreas (igual da página)
-function agruparArea($area) {
-    if (empty($area)) return 'SEM ÁREA';
-    
-    $area = trim($area);
-    
-    // Casos especiais - unificar variações
-    if (strpos($area, 'GM') === 0) {
-        return 'GM.';
-    }
-    
-    // Se tem ponto, pega a parte antes do ponto + ponto
-    if (strpos($area, '.') !== false) {
-        $partes = explode('.', $area);
-        return trim($partes[0]) . '.';
-    }
-    
-    return $area;
-}
-
 // Filtros recebidos
 $tipo = $_GET['tipo'] ?? 'todos';
 $filtro_area = $_GET['area'] ?? '';
@@ -52,7 +32,7 @@ if ($tipo === 'vencidas') {
         MAX(data_inicio_processo) as data_inicio_processo,
         MAX(data_conclusao_processo) as data_conclusao_processo,
         MAX(situacao_execucao) as situacao_execucao,
-        SUM(valor_total_contratacao) as valor_total_contratacao,
+        MAX(valor_total_contratacao) as valor_total_contratacao,
         MAX(prioridade) as prioridade,
         DATEDIFF(CURDATE(), MAX(data_conclusao_processo)) as dias_atraso
         FROM pca_dados 

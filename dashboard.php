@@ -70,6 +70,7 @@ $totalRegistros = $stmtCount->fetch()['total'];
 $totalPaginas = ceil($totalRegistros / $limite);
 
 // Query principal agrupando por número de contratação
+// Query principal agrupando por número de contratação
 $sql = "SELECT 
         MAX(p.numero_contratacao) as numero_contratacao,
         p.numero_dfd,
@@ -77,7 +78,7 @@ $sql = "SELECT
         MAX(p.titulo_contratacao) as titulo_contratacao,
         MAX(p.categoria_contratacao) as categoria_contratacao,
         MAX(p.uasg_atual) as uasg_atual,
-        SUM(p.valor_total_contratacao) as valor_total_contratacao,
+        MAX(p.valor_total_contratacao) as valor_total_contratacao,
         MAX(p.area_requisitante) as area_requisitante,
         MAX(p.prioridade) as prioridade,
         MAX(p.situacao_execucao) as situacao_execucao,
@@ -148,7 +149,7 @@ $situacao_lista = $pdo->query("SELECT DISTINCT situacao_execucao FROM pca_dados 
     <!-- Header -->
     <div class="header">
         <div class="header-content">
-            <h1>Sistema de Informações CGLIC</h1>
+            <h1>Sistema de Informações CGLIC <i data-lucide="library-big" style="width: 32px; height: 32px;"></i></h1>
             <div class="nav-menu">
                 <span>Olá, <?php echo $_SESSION['usuario_nome']; ?></span>
                 <a href="logout.php">Sair</a>
@@ -212,22 +213,6 @@ $total_atrasadas = $stats['atrasadas_inicio'] + $stats['atrasadas_conclusao'];
         </div>
     </div>
     
-    <div class="card card-warning">
-        <div class="card-icon"><i data-lucide="clock"></i></div>
-        <div class="card-content">
-            <h3><?php echo $stats['vencendo_30_dias']; ?></h3>
-            <p>Vencendo em 30 dias</p>
-        </div>
-    </div>
-    
-    <div class="card card-danger">
-        <div class="card-icon"><i data-lucide="alert-circle"></i></div>
-        <div class="card-content">
-            <h3><?php echo $total_atrasadas; ?></h3>
-            <p>Atrasadas</p>
-        </div>
-    </div>
-    
     <div class="card card-info">
         <div class="card-icon"><i data-lucide="settings"></i></div>
         <div class="card-content">
@@ -237,6 +222,18 @@ $total_atrasadas = $stats['atrasadas_inicio'] + $stats['atrasadas_conclusao'];
     </div>
 </div>
         
+<!-- Botão de Alertas -->
+        <div style="margin-bottom: 30px;">
+            <a href="contratacoes_atrasadas.php" style="display: flex; align-items: center; gap: 15px; background:rgb(245, 162, 39); color: white; text-decoration: none; padding: 20px 25px; border-radius: 10px; box-shadow: 0 3px 10px rgba(139, 92, 246, 0.3); transition: all 0.3s ease;">
+                <span style="font-size: 28px; background: rgba(255, 255, 255, 0.2); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 8px;"><i data-lucide="alert-triangle" style="width: 32px; height: 32px;"></i></span>
+                <div style="flex: 1;">
+                    <strong style="display: block; font-size: 18px; margin-bottom: 2px;">Contratações Atrasadas</strong>
+                    <small style="font-size: 14px; opacity: 0.9;">Visualizar pendências e atrasos</small>
+                </div>
+                <span style="font-size: 24px; opacity: 0.8;">→</span>
+            </a>
+        </div>
+
         <!-- Upload de Arquivo -->
         <div class="upload-area">
             <h3>Importar Planilha PCA</h3>
@@ -248,18 +245,6 @@ $total_atrasadas = $stats['atrasadas_inicio'] + $stats['atrasadas_conclusao'];
                     <button type="submit" class="btn btn-sucesso mt-20">Importar Arquivo</button>
                 </div>
             </form>
-        </div>
-        
-        <!-- Botão de Alertas -->
-        <div style="margin-bottom: 30px;">
-            <a href="contratacoes_atrasadas.php" style="display: flex; align-items: center; gap: 15px; background:rgb(71, 71, 75); color: white; text-decoration: none; padding: 20px 25px; border-radius: 10px; box-shadow: 0 3px 10px rgba(139, 92, 246, 0.3); transition: all 0.3s ease;">
-                <span style="font-size: 28px; background: rgba(255, 255, 255, 0.2); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 8px;"><i data-lucide="alert-triangle"></i></span>
-                <div style="flex: 1;">
-                    <strong style="display: block; font-size: 18px; margin-bottom: 2px;">Contratações Atrasadas</strong>
-                    <small style="font-size: 14px; opacity: 0.9;">Visualizar pendências e atrasos</small>
-                </div>
-                <span style="font-size: 24px; opacity: 0.8;">→</span>
-            </a>
         </div>
         
         <!-- Filtros -->
@@ -323,14 +308,13 @@ $total_atrasadas = $stats['atrasadas_inicio'] + $stats['atrasadas_conclusao'];
                         <option value="50" <?php echo $limite == 50 ? 'selected' : ''; ?>>50 por página</option>
                         <option value="100" <?php echo $limite == 100 ? 'selected' : ''; ?>>100 por página</option>
                     </select>
-                    <a href="exportar.php?<?php echo http_build_query($_GET); ?>" class="btn-exportar">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        Exportar
-                    </a>
+                    <a href="exportar.php?<?php echo http_build_query($_GET); ?>" 
+   onclick="event.preventDefault(); window.location.href=this.href;" 
+   class="btn-exportar" 
+   style="background: #27ae60; color: white; padding: 3px 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+    
+    <i data-lucide="download" style="width: 32px; height: 32px; margin-right: 10px;"></i> Exportar para Excel
+</a>
                 </div>
             </div>
             

@@ -36,7 +36,6 @@ if (!empty($filtro_area)) {
     }
 }
 
-// CONTRATAÇÕES VENCIDAS (ultrapassaram data de conclusão)
 // CONTRATAÇÕES VENCIDAS (agrupadas por DFD)
 $sql_vencidas = "SELECT DISTINCT 
     numero_contratacao,
@@ -113,11 +112,10 @@ $contratacoes_nao_iniciadas = $stmt_nao_iniciadas->fetchAll();
 <body>
     <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; background: #2c3e50; color: white; padding: 20px; margin-bottom: 10px; border-radius: 8px;">
-        <h1 style="margin: 0;">📅 Contratações Atrasadas</h1>
+        <h1 style="margin: 0;"><i data-lucide="calendar" style="width: 32px; height: 32px; margin-right: 10px;"></i> Contratações Atrasadas</h1>
         <div style="display: flex; align-items: center; gap: 15px;">
             <span>Bem-vindo, <?php echo $_SESSION['usuario_nome']; ?></span>
-            <a href="dashboard.php" class="btn btn-secundario">← Voltar</a>
-            <a href="logout.php" class="btn btn-danger">Sair</a>
+            <a href="dashboard.php" class="btn btn-secundario">Voltar</a>
         </div>
     </div>
 
