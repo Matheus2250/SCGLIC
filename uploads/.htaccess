@@ -1,0 +1,19 @@
+# Desabilitar execução de scripts
+<FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|sh|cgi)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Permitir apenas arquivos específicos
+<FilesMatch "\.(csv|xls|xlsx|pdf|doc|docx)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+# Desabilitar listagem de diretório
+Options -Indexes
+
+# Adicionar tipos MIME corretos
+AddType application/vnd.ms-excel .xls
+AddType application/vnd.openxmlformats-officedocument.spreadsheetml.sheet .xlsx
+AddType text/csv .csv
