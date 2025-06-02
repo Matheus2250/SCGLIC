@@ -1,18 +1,3 @@
-// Abrir modal de licitação
-function abrirModalLicitacao(pcaDadosIds) {
-    document.getElementById('pca_dados_ids').value = pcaDadosIds;
-    document.getElementById('modalLicitacao').style.display = 'block';
-    
-    // Buscar dados do PCA para preencher alguns campos automaticamente
-    buscarDadosPCA(pcaDadosIds);
-}
-
-// Fechar modal
-function fecharModal() {
-    document.getElementById('modalLicitacao').style.display = 'none';
-    document.getElementById('formLicitacao').reset();
-}
-
 // Ver histórico
 function verHistorico(numero) {
     var modal = document.getElementById('modalDetalhes');
@@ -78,39 +63,6 @@ window.onclick = function(event) {
     } else if (event.target == modalDetalhes) {
         fecharModalDetalhes();
     }
-}
-
-// Buscar dados do PCA via AJAX
-function buscarDadosPCA(ids) {
-    // Pegar o primeiro ID para buscar dados principais
-    var primeiroId = ids.split(',')[0];
-    
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'get_pca_data.php?id=' + primeiroId, true);
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            try {
-                var data = JSON.parse(xhr.responseText);
-                // Preencher campos automaticamente
-                if (data.titulo_contratacao) {
-                    document.querySelector('[name="objeto"]').value = data.titulo_contratacao;
-                }
-                if (data.area_requisitante) {
-                    document.querySelector('[name="area_demandante"]').value = data.area_requisitante;
-                }
-                if (data.valor_total_contratacao) {
-                    document.querySelector('[name="valor_estimado"]').value = 
-                        formatarMoedaBR(data.valor_total_contratacao);
-                }
-                if (data.prioridade) {
-                    document.querySelector('[name="prioridade"]').value = data.prioridade;
-                }
-            } catch (e) {
-                console.error('Erro ao processar dados:', e);
-            }
-        }
-    };
-    xhr.send();
 }
 
 // Formatar moeda para exibição

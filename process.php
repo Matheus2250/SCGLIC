@@ -11,6 +11,83 @@ $acao = $_POST['acao'] ?? '';
 $pdo = conectarDB();
 
 switch ($acao) {
+
+    case 'editar_licitacao':
+    verificarLogin();
+    
+    header('Content-Type: application/json');
+    $response = ['success' => false, 'message' => ''];
+    
+    try {
+        // Validar ID
+        if (empty($_POST['id'])) {
+            throw new Exception('ID da licitação não fornecido');
+        }
+        
+        // Validar NUP
+        if (!validarNUP($_POST['nup'])) {
+            throw new Exception('Formato do NUP inválido! Use: xxxxx.xxxxxx/xxxx-xx');
+        }
+        
+        // Processar dados
+        $id = intval($_POST['id']);
+        $nup = limpar($_POST['nup']);
+        $data_entrada_dipli = formatarDataDB($_POST['data_entrada_dipli']);
+        $resp_instrucao = limpar($_POST['resp_instrucao']);
+        $area_demandante = limpar($_POST['area_demandante']);
+        $pregoeiro = limpar($_POST['pregoeiro']);
+        $modalidade = $_POST['modalidade'];
+        $tipo = $_POST['tipo'];
+        $numero = !empty($_POST['numero']) ? intval($_POST['numero']) : null;
+        $ano = !empty($_POST['ano']) ? intval($_POST['ano']) : null;
+        $valor_estimado = !empty($_POST['valor_estimado']) ? formatarValorDB($_POST['valor_estimado']) : null;
+        $data_abertura = formatarDataDB($_POST['data_abertura']);
+        $situacao = $_POST['situacao'];
+        $objeto = limpar($_POST['objeto']);
+        
+        // Campos de homologação
+        $data_homologacao = null;
+        $qtd_homol = null;
+        $valor_homologado = null;
+        $economia = null;
+        
+        if ($situacao === 'HOMOLOGADO') {
+            $data_homologacao = formatarDataDB($_POST['data_homologacao']);
+            $qtd_homol = !empty($_POST['qtd_homol']) ? intval($_POST['qtd_homol']) : null;
+            $valor_homologado = !empty($_POST['valor_homologado']) ? formatarValorDB($_POST['valor_homologado']) : null;
+            $economia = !empty($_POST['economia']) ? formatarValorDB($_POST['economia']) : null;
+        }
+        
+        // Atualizar no banco
+        $sql = "UPDATE licitacoes SET 
+                nup = ?, data_entrada_dipli = ?, resp_instrucao = ?, area_demandante = ?,
+                pregoeiro = ?, modalidade = ?, tipo = ?, numero = ?, ano = ?,
+                valor_estimado = ?, data_abertura = ?, situacao = ?, objeto = ?,
+                data_homologacao = ?, qtd_homol = ?, valor_homologado = ?, economia = ?
+                WHERE id = ?";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $nup, $data_entrada_dipli, $resp_instrucao, $area_demandante,
+            $pregoeiro, $modalidade, $tipo, $numero, $ano,
+            $valor_estimado, $data_abertura, $situacao, $objeto,
+            $data_homologacao, $qtd_homol, $valor_homologado, $economia,
+            $id
+        ]);
+        
+        registrarLog('EDITAR_LICITACAO', "Editou licitação ID: $id - NUP: $nup", 'licitacoes', $id);
+        
+        $response['success'] = true;
+        $response['message'] = 'Licitação atualizada com sucesso!';
+        
+    } catch (Exception $e) {
+        $response['success'] = false;
+        $response['message'] = $e->getMessage();
+    }
+    
+    echo json_encode($response);
+    break;
+    
     case 'login':
         $email = limpar($_POST['email']);
         $senha = $_POST['senha'];
@@ -27,7 +104,7 @@ switch ($acao) {
             $_SESSION['usuario_tipo'] = $usuario['tipo_usuario'];
             
             registrarLog('LOGIN', 'Usuário fez login no sistema');
-            header('Location: dashboard.php');
+            header('Location: selecao_modulos.php');
         } else {
             setMensagem('E-mail ou senha incorretos!', 'erro');
             header('Location: index.php');
@@ -186,13 +263,16 @@ switch ($acao) {
             $codigo_material = $linha[20];
             
             // Processar dados
-            $data_inicio = formatarDataDB($linha[7]);
-            $data_conclusao = formatarDataDB($linha[8]);
-            $data_conclusao_dfd = formatarDataDB($linha[14]);
-            $valor_total_contratacao = formatarValorDB($linha[6]);
-            $valor_unitario = formatarValorDB($linha[23]);
-            $valor_total = formatarValorDB($linha[25]);
-            $situacao_execucao = !empty(trim($linha[2])) ? trim($linha[2]) : 'Não iniciado';
+$pca_dados_ids = $_POST['pca_dados_ids'] ?? '0';
+$ids_array = explode(',', $pca_dados_ids);
+$primeiro_id = intval($ids_array[0]); // Usar o primeiro ID como referência
+
+/// Se não tem ID válido, criar um registro temporário ou pegar o primeiro ID disponível
+if ($primeiro_id == 0) {
+    $stmt_primeiro_id = $pdo->query("SELECT MIN(id) as primeiro_id FROM pca_dados WHERE id IS NOT NULL");
+    $result = $stmt_primeiro_id->fetch();
+    $primeiro_id = $result['primeiro_id'] ?? 1;
+}
             
             // Verificar se existe na última importação
             $dados_anteriores = null;
@@ -322,79 +402,85 @@ switch ($acao) {
         break;
         
     case 'criar_licitacao':
-        verificarLogin();
-        
-        // Validar NUP
-        if (!validarNUP($_POST['nup'])) {
-            setMensagem('Formato do NUP inválido! Use: xxxxx.xxxxxx/xxxx-xx', 'erro');
-            header('Location: dashboard.php');
-            exit;
-        }
-        
-        // Validar Item PGC
-        if (!empty($_POST['item_pgc']) && !validarItemPGC($_POST['item_pgc'])) {
-            setMensagem('Formato do Item PGC inválido! Use: xxxx/xxxx', 'erro');
-            header('Location: dashboard.php');
-            exit;
-        }
-        
-        // Processar dados
-        $pca_dados_ids = $_POST['pca_dados_ids']; // Agora são múltiplos IDs separados por vírgula
-        $ids_array = explode(',', $pca_dados_ids);
-        $primeiro_id = intval($ids_array[0]); // Usar o primeiro ID como referência
-        $nup = limpar($_POST['nup']);
-        $data_entrada_dipli = formatarDataDB($_POST['data_entrada_dipli']);
-        $resp_instrucao = limpar($_POST['resp_instrucao']);
-        $area_demandante = limpar($_POST['area_demandante']);
-        $pregoeiro = limpar($_POST['pregoeiro']);
-        $modalidade = $_POST['modalidade'];
-        $tipo = $_POST['tipo'];
-        $numero = intval($_POST['numero']);
-        $ano = intval($_POST['ano']);
-        $prioridade = limpar($_POST['prioridade']);
-        $item_pgc = limpar($_POST['item_pgc']);
-        $estimado_pgc = formatarValorDB($_POST['estimado_pgc']);
-        $ano_pgc = intval($_POST['ano_pgc']);
-        $objeto = limpar($_POST['objeto']);
-        $qtd_itens = intval($_POST['qtd_itens']);
-        $valor_estimado = formatarValorDB($_POST['valor_estimado']);
-        $data_abertura = formatarDataDB($_POST['data_abertura']);
-        $situacao = $_POST['situacao'];
-        $andamentos = limpar($_POST['andamentos']);
-        $impugnado = isset($_POST['impugnado']) ? 1 : 0;
-        $pertinente = isset($_POST['pertinente']) ? 1 : 0;
-        $motivo = limpar($_POST['motivo']);
-        
-        $sql = "INSERT INTO licitacoes (
-            pca_dados_id, nup, data_entrada_dipli, resp_instrucao, area_demandante,
-            pregoeiro, modalidade, tipo, numero, ano, prioridade, item_pgc,
-            estimado_pgc, ano_pgc, objeto, qtd_itens, valor_estimado,
-            data_abertura, situacao, andamentos, impugnado, pertinente, motivo,
-            usuario_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        $stmt = $pdo->prepare($sql);
-        $params = [
-            $primeiro_id, $nup, $data_entrada_dipli, $resp_instrucao, $area_demandante,
-            $pregoeiro, $modalidade, $tipo, $numero, $ano, $prioridade, $item_pgc,
-            $estimado_pgc, $ano_pgc, $objeto, $qtd_itens, $valor_estimado,
-            $data_abertura, $situacao, $andamentos, $impugnado, $pertinente, $motivo,
-            $_SESSION['usuario_id']
-        ];
-        
-        if ($stmt->execute($params)) {
-            $licitacao_id = $pdo->lastInsertId();
-            registrarLog('CRIAR_LICITACAO', "Criou licitação NUP: $nup", 'licitacoes', $licitacao_id);
-            setMensagem('Licitação criada com sucesso!');
-        } else {
-            setMensagem('Erro ao criar licitação!', 'erro');
-        }
-        
-        header('Location: dashboard.php');
-        break;
-        
-    default:
-        header('Location: index.php');
-        break;
+    verificarLogin();
+    
+    // Validar NUP
+    if (!validarNUP($_POST['nup'])) {
+        setMensagem('Formato do NUP inválido! Use: xxxxx.xxxxxx/xxxx-xx', 'erro');
+        header('Location: licitacao_dashboard.php');
+        exit;
+    }
+    
+    // Validar Item PGC
+    if (!empty($_POST['item_pgc']) && !validarItemPGC($_POST['item_pgc'])) {
+        setMensagem('Formato do Item PGC inválido! Use: xxxx/xxxx', 'erro');
+        header('Location: licitacao_dashboard.php');
+        exit;
+    }
+    
+    // Verificar se existe pelo menos um registro em pca_dados
+    $stmt_check = $pdo->query("SELECT MIN(id) as primeiro_id FROM pca_dados WHERE id IS NOT NULL");
+    $primeiro_registro = $stmt_check->fetch();
+    
+    if (!$primeiro_registro['primeiro_id']) {
+        // Criar registro temporário se não existir nenhum
+        $pdo->exec("INSERT INTO pca_dados (numero_contratacao, titulo_contratacao, categoria_contratacao, valor_total_contratacao, situacao_execucao) 
+                   VALUES ('TEMP-001', 'Registro temporário para licitações', 'OUTROS', 0, 'Temporário')");
+        $primeiro_id = $pdo->lastInsertId();
+    } else {
+        $primeiro_id = $primeiro_registro['primeiro_id'];
+    }
+    
+    // Processar dados do formulário
+    $nup = limpar($_POST['nup']);
+    $data_entrada_dipli = formatarDataDB($_POST['data_entrada_dipli']);
+    $resp_instrucao = limpar($_POST['resp_instrucao']);
+    $area_demandante = limpar($_POST['area_demandante']);
+    $pregoeiro = limpar($_POST['pregoeiro']);
+    $modalidade = $_POST['modalidade'];
+    $tipo = $_POST['tipo'];
+    $numero = intval($_POST['numero']);
+    $ano = intval($_POST['ano']);
+    $prioridade = limpar($_POST['prioridade']);
+    $item_pgc = limpar($_POST['item_pgc']);
+    $estimado_pgc = formatarValorDB($_POST['estimado_pgc']);
+    $ano_pgc = intval($_POST['ano_pgc']);
+    $objeto = limpar($_POST['objeto']);
+    $qtd_itens = intval($_POST['qtd_itens']);
+    $valor_estimado = formatarValorDB($_POST['valor_estimado']);
+    $data_abertura = formatarDataDB($_POST['data_abertura']);
+    $situacao = $_POST['situacao'];
+    $andamentos = limpar($_POST['andamentos']);
+    $impugnado = isset($_POST['impugnado']) ? 1 : 0;
+    $pertinente = isset($_POST['pertinente']) ? 1 : 0;
+    $motivo = limpar($_POST['motivo']);
+    
+    $sql = "INSERT INTO licitacoes (
+        pca_dados_id, nup, data_entrada_dipli, resp_instrucao, area_demandante,
+        pregoeiro, modalidade, tipo, numero, ano, prioridade, item_pgc,
+        estimado_pgc, ano_pgc, objeto, qtd_itens, valor_estimado,
+        data_abertura, situacao, andamentos, impugnado, pertinente, motivo,
+        usuario_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    
+    $stmt = $pdo->prepare($sql);
+    $params = [
+        $primeiro_id, $nup, $data_entrada_dipli, $resp_instrucao, $area_demandante,
+        $pregoeiro, $modalidade, $tipo, $numero, $ano, $prioridade, $item_pgc,
+        $estimado_pgc, $ano_pgc, $objeto, $qtd_itens, $valor_estimado,
+        $data_abertura, $situacao, $andamentos, $impugnado, $pertinente, $motivo,
+        $_SESSION['usuario_id']
+    ];
+    
+    if ($stmt->execute($params)) {
+        $licitacao_id = $pdo->lastInsertId();
+        registrarLog('CRIAR_LICITACAO', "Criou licitação NUP: $nup", 'licitacoes', $licitacao_id);
+        setMensagem('Licitação criada com sucesso!');
+    } else {
+        setMensagem('Erro ao criar licitação!', 'erro');
+    }
+    
+    header('Location: licitacao_dashboard.php');
+    break;
 }
 ?>
