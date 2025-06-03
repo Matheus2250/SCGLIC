@@ -1059,38 +1059,143 @@ $dados_mensal_pca = $pdo->query("
             </div>
 
             <!-- Relatórios Section -->
-            <div id="relatorios" class="content-section">
-                <div class="dashboard-header">
-                    <h1><i data-lucide="file-text"></i> Relatórios</h1>
-                    <p>Relatórios detalhados sobre o planejamento de contratações</p>
-                </div>
+<div id="relatorios" class="content-section">
+    <div class="dashboard-header">
+        <h1><i data-lucide="file-text"></i> Relatórios do PCA</h1>
+        <p>Relatórios detalhados sobre o planejamento de contratações</p>
+    </div>
 
-                <div class="stats-grid">
-                    <div class="upload-card">
-                        <h3>Relatório por Categoria</h3>
-                        <p style="color: #7f8c8d; margin-bottom: 20px;">Análise detalhada das contratações por categoria</p>
-                        <button class="btn-primary">Gerar Relatório</button>
-                    </div>
-                    
-                    <div class="upload-card">
-                        <h3>Relatório por Área</h3>
-                        <p style="color: #7f8c8d; margin-bottom: 20px;">Performance e distribuição por área requisitante</p>
-                        <button class="btn-primary">Gerar Relatório</button>
-                    </div>
-                    
-                    <div class="upload-card">
-                        <h3>Relatório de Prazos</h3>
-                        <p style="color: #7f8c8d; margin-bottom: 20px;">Análise de cumprimento de cronogramas</p>
-                        <button class="btn-primary">Gerar Relatório</button>
-                    </div>
-                    
-                    <div class="upload-card">
-                        <h3>Relatório Financeiro</h3>
-                        <p style="color: #7f8c8d; margin-bottom: 20px;">Valores planejados vs executados</p>
-                        <button class="btn-primary">Gerar Relatório</button>
+    <div class="stats-grid">
+        <div class="chart-card" style="cursor: pointer;" onclick="gerarRelatorioPCA('categoria')">
+            <h3 class="chart-title"><i data-lucide="layers"></i> Relatório por Categoria</h3>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">Análise detalhada das contratações por categoria com indicadores de performance</p>
+            <div style="text-align: center;">
+                <i data-lucide="pie-chart" style="width: 64px; height: 64px; color: #3498db; margin-bottom: 20px;"></i>
+                <button class="btn-primary">Gerar Relatório</button>
+            </div>
+        </div>
+        
+        <div class="chart-card" style="cursor: pointer;" onclick="gerarRelatorioPCA('area')">
+            <h3 class="chart-title"><i data-lucide="building"></i> Relatório por Área</h3>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">Performance e distribuição por área requisitante com métricas de eficiência</p>
+            <div style="text-align: center;">
+                <i data-lucide="users" style="width: 64px; height: 64px; color: #e74c3c; margin-bottom: 20px;"></i>
+                <button class="btn-primary">Gerar Relatório</button>
+            </div>
+        </div>
+        
+        <div class="chart-card" style="cursor: pointer;" onclick="gerarRelatorioPCA('prazos')">
+            <h3 class="chart-title"><i data-lucide="clock"></i> Relatório de Prazos</h3>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">Análise de cumprimento de cronogramas e identificação de gargalos</p>
+            <div style="text-align: center;">
+                <i data-lucide="calendar-check" style="width: 64px; height: 64px; color: #f39c12; margin-bottom: 20px;"></i>
+                <button class="btn-primary">Gerar Relatório</button>
+            </div>
+        </div>
+        
+        <div class="chart-card" style="cursor: pointer;" onclick="gerarRelatorioPCA('financeiro')">
+            <h3 class="chart-title"><i data-lucide="trending-up"></i> Relatório Financeiro</h3>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">Evolução temporal dos valores planejados e análise de investimentos</p>
+            <div style="text-align: center;">
+                <i data-lucide="dollar-sign" style="width: 64px; height: 64px; color: #16a085; margin-bottom: 20px;"></i>
+                <button class="btn-primary">Gerar Relatório</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Parâmetros do Relatório PCA -->
+<div id="modalRelatorioPCA" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="file-text"></i> <span id="tituloRelatorioPCA">Configurar Relatório</span>
+            </h3>
+            <span class="close" onclick="fecharModal('modalRelatorioPCA')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="formRelatorioPCA">
+                <input type="hidden" id="tipo_relatorio_pca" name="tipo">
+                
+                <div class="form-group">
+                    <label>Período de Análise</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label style="font-size: 12px; color: #6c757d;">Data Inicial</label>
+                            <input type="date" name="data_inicial" id="pca_data_inicial" value="<?php echo date('Y-01-01'); ?>">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #6c757d;">Data Final</label>
+                            <input type="date" name="data_final" id="pca_data_final" value="<?php echo date('Y-m-d'); ?>">
+                        </div>
                     </div>
                 </div>
-            </div>
+                
+                <div class="form-group" id="filtroCategoriaPCA">
+                    <label>Categoria</label>
+                    <select name="categoria" id="pca_categoria">
+                        <option value="">Todas as Categorias</option>
+                        <?php
+                        $categorias_pca = $pdo->query("SELECT DISTINCT categoria_contratacao FROM pca_dados WHERE categoria_contratacao IS NOT NULL ORDER BY categoria_contratacao")->fetchAll(PDO::FETCH_COLUMN);
+                        foreach ($categorias_pca as $cat): ?>
+                            <option value="<?php echo htmlspecialchars($cat); ?>"><?php echo htmlspecialchars($cat); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="filtroAreaPCA">
+                    <label>Área Requisitante</label>
+                    <select name="area" id="pca_area">
+                        <option value="">Todas as Áreas</option>
+                        <?php foreach ($areas_agrupadas as $area): ?>
+                            <option value="<?php echo htmlspecialchars($area); ?>"><?php echo htmlspecialchars($area); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="filtroSituacaoPCA">
+                    <label>Situação de Execução</label>
+                    <select name="situacao" id="pca_situacao">
+                        <option value="">Todas as Situações</option>
+                        <option value="Não iniciado">Não Iniciado</option>
+                        <option value="Em andamento">Em Andamento</option>
+                        <option value="Concluído">Concluído</option>
+                        <option value="Suspenso">Suspenso</option>
+                        <option value="Cancelado">Cancelado</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Formato de Saída</label>
+                    <select name="formato" id="pca_formato" required>
+                        <option value="html">Visualizar (HTML)</option>
+                        <option value="pdf">PDF</option>
+                        <option value="excel">Excel (CSV)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" name="incluir_graficos" id="pca_graficos" checked>
+                        <span>Incluir gráficos e visualizações no relatório</span>
+                    </label>
+                    <small style="color: #6c757d; margin-top: 5px; display: block;">
+                        Recomendado para relatórios HTML. Gráficos não são incluídos em exportações CSV.
+                    </small>
+                </div>
+                
+                <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: flex-end;">
+                    <button type="button" onclick="fecharModal('modalRelatorioPCA')" class="btn-secondary">
+                        <i data-lucide="x"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <i data-lucide="file-text"></i> Gerar Relatório
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
             <!-- Exportar Section -->
             <div id="exportar" class="content-section">
@@ -1323,6 +1428,94 @@ $dados_mensal_pca = $pdo->query("
                 initCharts();
             }
         });
+
+        // Função para abrir modal de relatório PCA
+function gerarRelatorioPCA(tipo) {
+    const modal = document.getElementById('modalRelatorioPCA');
+    const titulo = document.getElementById('tituloRelatorioPCA');
+    document.getElementById('tipo_relatorio_pca').value = tipo;
+    
+    // Resetar formulário
+    document.getElementById('formRelatorioPCA').reset();
+    document.getElementById('pca_data_inicial').value = '<?php echo date('Y-01-01'); ?>';
+    document.getElementById('pca_data_final').value = '<?php echo date('Y-m-d'); ?>';
+    document.getElementById('pca_graficos').checked = true;
+    
+    // Configurar título e visibilidade dos campos
+    switch(tipo) {
+        case 'categoria':
+            titulo.textContent = 'Relatório por Categoria';
+            document.getElementById('filtroCategoriaPCA').style.display = 'block';
+            document.getElementById('filtroAreaPCA').style.display = 'block';
+            document.getElementById('filtroSituacaoPCA').style.display = 'block';
+            break;
+            
+        case 'area':
+            titulo.textContent = 'Relatório por Área Requisitante';
+            document.getElementById('filtroCategoriaPCA').style.display = 'block';
+            document.getElementById('filtroAreaPCA').style.display = 'block';
+            document.getElementById('filtroSituacaoPCA').style.display = 'block';
+            break;
+            
+        case 'prazos':
+            titulo.textContent = 'Relatório de Análise de Prazos';
+            document.getElementById('filtroCategoriaPCA').style.display = 'block';
+            document.getElementById('filtroAreaPCA').style.display = 'block';
+            document.getElementById('filtroSituacaoPCA').style.display = 'none';
+            break;
+            
+        case 'financeiro':
+            titulo.textContent = 'Relatório Financeiro do PCA';
+            document.getElementById('filtroCategoriaPCA').style.display = 'block';
+            document.getElementById('filtroAreaPCA').style.display = 'block';
+            document.getElementById('filtroSituacaoPCA').style.display = 'block';
+            break;
+    }
+    
+    modal.style.display = 'block';
+}
+
+// Submit do formulário de relatório PCA
+document.getElementById('formRelatorioPCA').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const params = new URLSearchParams();
+    
+    for (const [key, value] of formData) {
+        if (value) params.append(key, value);
+    }
+    
+    const formato = formData.get('formato');
+    const url = 'gerar_relatorio_planejamento.php?' + params.toString();
+    
+    if (formato === 'html') {
+        // Abrir em nova aba
+        window.open(url, '_blank');
+    } else {
+        // Download direto
+        window.location.href = url;
+    }
+    
+    fecharModal('modalRelatorioPCA');
+});
+
+// Função genérica para fechar modais (adicionar se não existir)
+function fecharModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+// Fechar modal ao clicar fora (adicionar se não existir)
+window.onclick = function(event) {
+    const modalPCA = document.getElementById('modalRelatorioPCA');
+    const modalDetalhes = document.getElementById('modalDetalhes');
+    
+    if (event.target == modalPCA) {
+        fecharModal('modalRelatorioPCA');
+    } else if (event.target == modalDetalhes) {
+        fecharModalDetalhes();
+    }
+}
     </script>
 </body>
 </html>
