@@ -11,6 +11,366 @@ $acao = $_POST['acao'] ?? '';
 $pdo = conectarDB();
 
 switch ($acao) {
+    case 'importar_pca':
+        verificarLogin();
+        
+        if (!isset($_FILES['arquivo_pca'])) {
+            setMensagem('Nenhum arquivo selecionado!', 'erro');
+            header('Location: dashboard.php');
+            exit;
+        }
+        
+        $resultado = processarUpload($_FILES['arquivo_pca']);
+        
+        if (!$resultado['sucesso']) {
+            setMensagem($resultado['mensagem'], 'erro');
+            header('Location: dashboard.php');
+            exit;
+        }
+        
+        // Processar o arquivo CSV
+        $arquivo = $resultado['caminho'];
+        $handle = fopen($arquivo, 'r');
+        
+        if (!$handle) {
+            setMensagem('Erro ao abrir arquivo!', 'erro');
+            header('Location: dashboard.php');
+            exit;
+        }
+        
+        // Detectar e converter encoding se necessário
+        $primeiraLinha = fgets($handle);
+        rewind($handle);
+        
+        // Detectar se precisa conversão de encoding
+        if (!mb_detect_encoding($primeiraLinha, 'UTF-8', true)) {
+            stream_filter_append($handle, 'convert.iconv.ISO-8859-1/UTF-8');
+        }
+        
+        // Criar registro de importação
+        $sql = "INSERT INTO pca_importacoes (nome_arquivo, usuario_id) VALUES (?, ?)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$resultado['arquivo'], $_SESSION['usuario_id']]);
+        $importacao_id = $pdo->lastInsertId();
+        
+        // Ler cabeçalho
+        $header = fgetcsv($handle, 0, ';');
+        
+        // Processar linhas
+        $linhas_processadas = 0;
+        $linhas_novas = 0;
+        $linhas_atualizadas = 0;
+        $linhas_ignoradas = 0;
+        $erros = [];
+        
+        // Buscar última importação para comparação
+        $sql_ultima_importacao = "SELECT MAX(id) as ultima_id FROM pca_importacoes WHERE id < ?";
+        $stmt_ultima = $pdo->prepare($sql_ultima_importacao);
+        $stmt_ultima->execute([$importacao_id]);
+        $ultima_importacao_id = $stmt_ultima->fetch()['ultima_id'];
+        
+        // Preparar statements
+        $sql_verifica = "SELECT * FROM pca_dados 
+                        WHERE numero_contratacao = ? 
+                        AND codigo_material_servico = ?
+                        AND importacao_id = ?";
+        $stmt_verifica = $pdo->prepare($sql_verifica);
+        
+        $sql = "INSERT INTO pca_dados (
+            importacao_id, numero_contratacao, status_contratacao, situacao_execucao,
+            titulo_contratacao, categoria_contratacao, uasg_atual, valor_total_contratacao,
+            data_inicio_processo, data_conclusao_processo, prazo_duracao_dias,
+            area_requisitante, numero_dfd, prioridade, numero_item_dfd,
+            data_conclusao_dfd, classificacao_contratacao, codigo_classe_grupo,
+            nome_classe_grupo, codigo_pdm_material, nome_pdm_material,
+            codigo_material_servico, descricao_material_servico, unidade_fornecimento,
+            valor_unitario, quantidade, valor_total
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $pdo->prepare($sql);
+        
+        // Histórico
+        $sql_historico = "INSERT INTO pca_historico (numero_contratacao, campo_alterado, valor_anterior, valor_novo, importacao_id, usuario_id) VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt_historico = $pdo->prepare($sql_historico);
+        
+        // Estados
+        $sql_estado = "INSERT INTO pca_estados_tempo (numero_contratacao, situacao_execucao, data_inicio) VALUES (?, ?, CURDATE())";
+        $stmt_estado = $pdo->prepare($sql_estado);
+        
+        $sql_update_estado = "UPDATE pca_estados_tempo SET data_fim = CURDATE(), dias_no_estado = DATEDIFF(CURDATE(), data_inicio), ativo = FALSE WHERE numero_contratacao = ? AND ativo = TRUE";
+        $stmt_update_estado = $pdo->prepare($sql_update_estado);
+        
+        while (($linha = fgetcsv($handle, 0, ';')) !== FALSE) {
+            // Pular linhas vazias
+            if (empty($linha[0])) continue;
+            
+            $linhas_processadas++;
+            
+            try {
+                // Mapear dados das colunas com validação
+                $numero_contratacao = trim($linha[0] ?? '');
+                $status_contratacao = trim($linha[1] ?? '');
+                $situacao_execucao = trim($linha[2] ?? '') ?: 'Não iniciado';
+                $titulo_contratacao = trim($linha[3] ?? '');
+                $categoria_contratacao = trim($linha[4] ?? '');
+                $uasg_atual = trim($linha[5] ?? '');
+                
+                // CORREÇÃO: Processar valor_total_contratacao (coluna 6)
+                $valor_total_contratacao = processarValorMonetario($linha[6] ?? '');
+                
+                // CORREÇÃO: Processar datas (colunas 7 e 8)
+                $data_inicio = processarData($linha[7] ?? '');
+                $data_conclusao = processarData($linha[8] ?? '');
+                
+                $prazo_duracao_dias = !empty($linha[9]) ? intval($linha[9]) : null;
+                $area_requisitante = trim($linha[10] ?? '');
+                $numero_dfd = trim($linha[11] ?? '');
+                $prioridade = trim($linha[12] ?? '');
+                $numero_item_dfd = trim($linha[13] ?? '');
+                
+                // CORREÇÃO: Processar data_conclusao_dfd (coluna 14)
+                $data_conclusao_dfd = processarData($linha[14] ?? '');
+                
+                $classificacao_contratacao = trim($linha[15] ?? '');
+                $codigo_classe_grupo = trim($linha[16] ?? '');
+                $nome_classe_grupo = trim($linha[17] ?? '');
+                $codigo_pdm_material = trim($linha[18] ?? '');
+                $nome_pdm_material = trim($linha[19] ?? '');
+                $codigo_material_servico = trim($linha[20] ?? '');
+                $descricao_material_servico = trim($linha[21] ?? '');
+                $unidade_fornecimento = trim($linha[22] ?? '');
+                
+                // CORREÇÃO: Processar valor_unitario (coluna 23)
+                $valor_unitario = processarValorMonetario($linha[23] ?? '');
+                
+                $quantidade = !empty($linha[24]) ? intval($linha[24]) : null;
+                
+                // CORREÇÃO: Processar valor_total (coluna 25)
+                $valor_total = processarValorMonetario($linha[25] ?? '');
+                
+                // Verificar se existe na última importação
+                $dados_anteriores = null;
+                if ($ultima_importacao_id && !empty($codigo_material_servico)) {
+                    $stmt_verifica->execute([$numero_contratacao, $codigo_material_servico, $ultima_importacao_id]);
+                    $dados_anteriores = $stmt_verifica->fetch();
+                }
+                
+                $deve_inserir = false;
+                $mudancas = [];
+                
+                if (!$dados_anteriores) {
+                    // É uma contratação nova
+                    $deve_inserir = true;
+                    $linhas_novas++;
+                    
+                    // Iniciar estado para nova contratação
+                    if (!empty($numero_contratacao)) {
+                        $stmt_estado->execute([$numero_contratacao, $situacao_execucao]);
+                    }
+                } else {
+                    // Verificar o que mudou
+                    $campos_verificar = [
+                        'situacao_execucao' => ['atual' => $situacao_execucao, 'nome' => 'Situação'],
+                        'status_contratacao' => ['atual' => $status_contratacao, 'nome' => 'Status'],
+                        'valor_total_contratacao' => ['atual' => $valor_total_contratacao, 'nome' => 'Valor Total'],
+                        'titulo_contratacao' => ['atual' => $titulo_contratacao, 'nome' => 'Título'],
+                        'prioridade' => ['atual' => $prioridade, 'nome' => 'Prioridade'],
+                        'data_inicio_processo' => ['atual' => $data_inicio, 'nome' => 'Data Início'],
+                        'data_conclusao_processo' => ['atual' => $data_conclusao, 'nome' => 'Data Conclusão']
+                    ];
+                    
+                    foreach ($campos_verificar as $campo => $info) {
+                        if ($dados_anteriores[$campo] != $info['atual']) {
+                            $mudancas[] = [
+                                'campo' => $campo,
+                                'nome' => $info['nome'],
+                                'anterior' => $dados_anteriores[$campo],
+                                'novo' => $info['atual']
+                            ];
+                            $deve_inserir = true;
+                        }
+                    }
+                    
+                    if ($deve_inserir) {
+                        $linhas_atualizadas++;
+                        
+                        // Registrar mudanças no histórico
+                        foreach ($mudancas as $mudanca) {
+                            $stmt_historico->execute([
+                                $numero_contratacao,
+                                $mudanca['campo'],
+                                $mudanca['anterior'],
+                                $mudanca['novo'],
+                                $importacao_id,
+                                $_SESSION['usuario_id']
+                            ]);
+                            
+                            // Se mudou situação, atualizar estados
+                            if ($mudanca['campo'] == 'situacao_execucao') {
+                                $stmt_update_estado->execute([$numero_contratacao]);
+                                $stmt_estado->execute([$numero_contratacao, $mudanca['novo']]);
+                            }
+                        }
+                    } else {
+                        $linhas_ignoradas++;
+                    }
+                }
+                
+                // Inserir apenas se necessário
+                if ($deve_inserir) {
+                    $params = [
+                        $importacao_id,
+                        $numero_contratacao,
+                        $status_contratacao,
+                        $situacao_execucao,
+                        $titulo_contratacao,
+                        $categoria_contratacao,
+                        $uasg_atual,
+                        $valor_total_contratacao,
+                        $data_inicio,
+                        $data_conclusao,
+                        $prazo_duracao_dias,
+                        $area_requisitante,
+                        $numero_dfd,
+                        $prioridade,
+                        $numero_item_dfd,
+                        $data_conclusao_dfd,
+                        $classificacao_contratacao,
+                        $codigo_classe_grupo,
+                        $nome_classe_grupo,
+                        $codigo_pdm_material,
+                        $nome_pdm_material,
+                        $codigo_material_servico,
+                        $descricao_material_servico,
+                        $unidade_fornecimento,
+                        $valor_unitario,
+                        $quantidade,
+                        $valor_total
+                    ];
+                    
+                    if (!$stmt->execute($params)) {
+                        $erros[] = "Linha $linhas_processadas: Erro ao inserir registro";
+                    }
+                }
+                
+            } catch (Exception $e) {
+                $erros[] = "Linha $linhas_processadas: " . $e->getMessage();
+                continue;
+            }
+        }
+        
+        fclose($handle);
+        
+        // Mensagem detalhada
+        $mensagem = "Importação concluída! ";
+        $mensagem .= "Processadas: $linhas_processadas | ";
+        $mensagem .= "Novas: $linhas_novas | ";
+        $mensagem .= "Atualizadas: $linhas_atualizadas | ";
+        $mensagem .= "Sem alterações: $linhas_ignoradas";
+        
+        if (!empty($erros)) {
+            $mensagem .= " | Erros: " . count($erros);
+            // Log dos erros
+            foreach (array_slice($erros, 0, 5) as $erro) {
+                error_log("Importação PCA - $erro");
+            }
+        }
+        
+        registrarLog('IMPORTACAO_PCA', $mensagem, 'pca_importacoes', $importacao_id);
+        setMensagem($mensagem);
+        
+        header('Location: dashboard.php');
+        break;
+        
+    // ... outros cases permanecem iguais
+}
+
+/**
+ * Função para processar valores monetários
+ */
+function processarValorMonetario($valor) {
+    if (empty($valor)) {
+        return null;
+    }
+    
+    // Remover caracteres não numéricos exceto vírgula e ponto
+    $valor = preg_replace('/[^\d,.]/', '', $valor);
+    
+    // Se vazio após limpeza, retorna null
+    if (empty($valor)) {
+        return null;
+    }
+    
+    // Se tem vírgula e ponto, assumir formato brasileiro (1.234,56)
+    if (strpos($valor, ',') !== false && strpos($valor, '.') !== false) {
+        // Formato brasileiro: 1.234.567,89
+        $valor = str_replace('.', '', $valor); // Remove pontos de milhares
+        $valor = str_replace(',', '.', $valor); // Converte vírgula para ponto decimal
+    } elseif (strpos($valor, ',') !== false) {
+        // Só tem vírgula - pode ser decimal brasileiro ou separador de milhares
+        $partes = explode(',', $valor);
+        if (count($partes) == 2 && strlen(end($partes)) <= 2) {
+            // Última parte tem 2 dígitos ou menos - é decimal brasileiro
+            $valor = str_replace(',', '.', $valor);
+        } else {
+            // É separador de milhares - remove
+            $valor = str_replace(',', '', $valor);
+        }
+    }
+    
+    // Converter para float
+    $valor_float = floatval($valor);
+    
+    // Validar se é um valor válido
+    if ($valor_float < 0) {
+        return null;
+    }
+    
+    return $valor_float;
+}
+
+/**
+ * Função para processar datas
+ */
+function processarData($data) {
+    if (empty($data)) {
+        return null;
+    }
+    
+    // Limpar a string
+    $data = trim($data);
+    
+    // Tentar diferentes formatos de data
+    $formatos = [
+        'd/m/Y',     // 31/12/2024
+        'd-m-Y',     // 31-12-2024
+        'Y-m-d',     // 2024-12-31
+        'd/m/y',     // 31/12/24
+        'd-m-y',     // 31-12-24
+        'm/d/Y',     // 12/31/2024 (formato americano)
+        'Y/m/d',     // 2024/12/31
+    ];
+    
+    foreach ($formatos as $formato) {
+        $dateTime = DateTime::createFromFormat($formato, $data);
+        if ($dateTime && $dateTime->format($formato) === $data) {
+            return $dateTime->format('Y-m-d');
+        }
+    }
+    
+    // Tentar usar strtotime como último recurso
+    $timestamp = strtotime($data);
+    if ($timestamp !== false) {
+        return date('Y-m-d', $timestamp);
+    }
+    
+    // Se nenhum formato funcionou, retornar null
+    return null;
+}
+
+$acao = $_POST['acao'] ?? '';
+$pdo = conectarDB();
+
+switch ($acao) {
 
     case 'editar_licitacao':
     verificarLogin();
