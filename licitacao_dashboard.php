@@ -52,6 +52,20 @@ $licitacoes_recentes = $pdo->query("
     LEFT JOIN usuarios u ON l.usuario_id = u.id
     ORDER BY l.criado_em DESC
 ")->fetchAll();
+
+// Buscar contratações disponíveis do PCA para o dropdown - COM ENCODING CORRETO
+// Buscar contratações disponíveis do PCA para o dropdown - APENAS NÚMEROS
+$contratacoes_pca = $pdo->query("
+    SELECT DISTINCT 
+        numero_contratacao, 
+        numero_dfd,
+        'Contratação' as titulo_contratacao
+    FROM pca_dados 
+    WHERE numero_contratacao IS NOT NULL 
+    AND numero_contratacao != ''
+    ORDER BY numero_contratacao DESC
+    LIMIT 500
+")->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -1118,196 +1132,227 @@ td:first-child {
             </div>
 
             <!-- Criar Licitação Section -->
-            <div id="criar-licitacao" class="content-section">
-                <div class="dashboard-header">
-                    <h1><i data-lucide="plus-circle"></i> Criar Nova Licitação</h1>
-                    <p>Preencha os dados para criar uma nova licitação</p>
-                </div>
+<div id="criar-licitacao" class="content-section">
+    <div class="dashboard-header">
+        <h1><i data-lucide="plus-circle"></i> Criar Nova Licitação</h1>
+        <p>Preencha os dados para criar uma nova licitação</p>
+    </div>
 
-                <div class="table-container">
-                    <form action="process.php" method="POST">
-                        <input type="hidden" name="acao" value="criar_licitacao">
-                        <input type="hidden" name="pca_dados_ids" value="0">
-                        
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>NUP *</label>
-                                <input type="text" name="nup" required placeholder="xxxxx.xxxxxx/xxxx-xx">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Data Entrada DIPLI</label>
-                                <input type="date" name="data_entrada_dipli">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Responsável Instrução</label>
-                                <input type="text" name="resp_instrucao">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Área Demandante</label>
-                                <input type="text" name="area_demandante">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Pregoeiro</label>
-                                <input type="text" name="pregoeiro">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Modalidade *</label>
-                                <select name="modalidade" required>
-                                    <option value="">Selecione</option>
-                                    <option value="DISPENSA">DISPENSA</option>
-                                    <option value="PREGAO">PREGÃO</option>
-                                    <option value="RDC">RDC</option>
-                                    <option value="INEXIBILIDADE">INEXIBILIDADE</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Tipo *</label>
-                                <select name="tipo" required>
-                                    <option value="">Selecione</option>
-                                    <option value="TRADICIONAL">TRADICIONAL</option>
-                                    <option value="COTACAO">COTAÇÃO</option>
-                                    <option value="SRP">SRP</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Número</label>
-                                <input type="number" name="numero">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Ano</label>
-                                <input type="number" name="ano" value="<?php echo date('Y'); ?>">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Valor Estimado (R$)</label>
-                                <input type="text" name="valor_estimado" placeholder="0,00">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Data Abertura</label>
-                                <input type="date" name="data_abertura">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Situação *</label>
-                                <select name="situacao" required>
-                                    <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
-                                    <option value="REVOGADO">REVOGADO</option>
-                                    <option value="FRACASSADO">FRACASSADO</option>
-                                    <option value="HOMOLOGADO">HOMOLOGADO</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group form-full">
-                                <label>Objeto *</label>
-                                <textarea name="objeto" required rows="3"></textarea>
-                            </div>
-                        </div>
-                        
-                        <div style="text-align: center; margin-top: 30px;">
-                            <button type="submit" class="btn-primary">
-                                <i data-lucide="check"></i> Criar Licitação
-                            </button>
-                            <button type="reset" class="btn-secondary">
-                                <i data-lucide="x"></i> Limpar Formulário
-                            </button>
-                        </div>
-                    </form>
+    <div class="table-container">
+        <form action="process.php" method="POST">
+            <input type="hidden" name="acao" value="criar_licitacao">
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>NUP *</label>
+                    <input type="text" name="nup" id="nup_criar" required placeholder="xxxxx.xxxxxx/xxxx-xx" maxlength="20">
+                </div>
+                
+                <div class="form-group">
+                    <label>Data Entrada DIPLI</label>
+                    <input type="date" name="data_entrada_dipli">
+                </div>
+                
+                <div class="form-group">
+                    <label>Responsável Instrução</label>
+                    <input type="text" name="resp_instrucao">
+                </div>
+                
+                <div class="form-group">
+                    <label>Área Demandante</label>
+                    <input type="text" name="area_demandante" id="area_demandante_criar">
+                </div>
+                
+                <div class="form-group">
+                    <label>Pregoeiro</label>
+                    <input type="text" name="pregoeiro">
+                </div>
+                
+                <div class="form-group">
+                    <label>Modalidade *</label>
+                    <select name="modalidade" required>
+                        <option value="">Selecione</option>
+                        <option value="DISPENSA">DISPENSA</option>
+                        <option value="PREGAO">PREGÃO</option>
+                        <option value="RDC">RDC</option>
+                        <option value="INEXIBILIDADE">INEXIBILIDADE</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Tipo *</label>
+                    <select name="tipo" required>
+                        <option value="">Selecione</option>
+                        <option value="TRADICIONAL">TRADICIONAL</option>
+                        <option value="COTACAO">COTAÇÃO</option>
+                        <option value="SRP">SRP</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Número da Contratação *</label>
+                    <select name="numero_contratacao" id="select_contratacao" required onchange="preencherDadosPCA()">
+                        <option value="">Selecione uma contratação do PCA...</option>
+                        <?php foreach ($contratacoes_pca as $contratacao): ?>
+                            <option value="<?php echo htmlspecialchars($contratacao['numero_contratacao'], ENT_QUOTES, 'UTF-8'); ?>" data-dfd="<?php echo htmlspecialchars($contratacao['numero_dfd']); ?>">
+                                <?php 
+                                // Limpar caracteres especiais problemáticos
+                                $titulo = preg_replace('/[^\p{L}\p{N}\s\-\.\/]/u', '', $contratacao['titulo_contratacao']);
+                                echo htmlspecialchars($contratacao['numero_contratacao'] . ' - ' . $titulo, ENT_QUOTES, 'UTF-8'); 
+                                ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Ano</label>
+                    <input type="number" name="ano" value="<?php echo date('Y'); ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label>Valor Estimado (R$)</label>
+                    <input type="text" name="valor_estimado" id="valor_estimado_criar" placeholder="0,00">
+                </div>
+                
+                <div class="form-group">
+                    <label>Data Abertura</label>
+                    <input type="date" name="data_abertura">
+                </div>
+                
+                <div class="form-group">
+                    <label>Data Homologação</label>
+                    <input type="date" name="data_homologacao" id="data_homologacao_criar">
+                </div>
+                
+                <div class="form-group">
+                    <label>Valor Homologado (R$)</label>
+                    <input type="text" name="valor_homologado" id="valor_homologado_criar" placeholder="0,00">
+                </div>
+                
+                <div class="form-group">
+                    <label>Economia (R$)</label>
+                    <input type="text" name="economia" id="economia_criar" placeholder="0,00" readonly style="background: #f8f9fa;">
+                </div>
+                
+                <div class="form-group">
+                    <label>Link</label>
+                    <input type="url" name="link" placeholder="https://...">
+                </div>
+                
+                <div class="form-group">
+                    <label>Situação *</label>
+                    <select name="situacao" required>
+                        <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
+                        <option value="REVOGADO">REVOGADO</option>
+                        <option value="FRACASSADO">FRACASSADO</option>
+                        <option value="HOMOLOGADO">HOMOLOGADO</option>
+                    </select>
+                </div>
+                
+                <div class="form-group form-full">
+                    <label>Objeto *</label>
+                    <textarea name="objeto" id="objeto_textarea" required rows="3" placeholder="Descreva o objeto da licitação..."></textarea>
                 </div>
             </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <button type="submit" class="btn-primary">
+                    <i data-lucide="check"></i> Criar Licitação
+                </button>
+                <button type="reset" class="btn-secondary">
+                    <i data-lucide="x"></i> Limpar Formulário
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
             <!-- Lista de Licitações Section -->
-            <div id="lista-licitacoes" class="content-section">
-                <div class="dashboard-header">
-                    <h1><i data-lucide="list"></i> Lista de Licitações</h1>
-                    <p>Visualize e gerencie todas as licitações cadastradas</p>
-                </div>
+<div id="lista-licitacoes" class="content-section">
+    <div class="dashboard-header">
+        <h1><i data-lucide="list"></i> Lista de Licitações</h1>
+        <p>Visualize e gerencie todas as licitações cadastradas</p>
+    </div>
 
-                <div class="table-container">
-                    <div class="table-header">
-                        <h3 class="table-title">Todas as Licitações</h3>
-                        <div class="table-filters">
-                            <select onchange="filtrarLicitacoes(this.value)">
-                                <option value="">Todas as Situações</option>
-                                <option value="EM_ANDAMENTO">Em Andamento</option>
-                                <option value="HOMOLOGADO">Homologadas</option>
-                                <option value="FRACASSADO">Fracassadas</option>
-                                <option value="REVOGADO">Revogadas</option>
-                            </select>
-                            <button onclick="exportarLicitacoes()" class="btn-primary">
-                                <i data-lucide="download"></i> Exportar
-                            </button>
-                        </div>
-                    </div>
-
-                    <?php if (empty($licitacoes_recentes)): ?>
-                        <div style="text-align: center; padding: 60px; color: #7f8c8d;">
-                            <i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px;"></i>
-                            <h3 style="margin: 0 0 10px 0;">Nenhuma licitação encontrada</h3>
-                            <p style="margin: 0;">Comece criando sua primeira licitação.</p>
-                        </div>
-                    <?php else: ?>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>NUP</th>
-                                    <th>Modalidade</th>
-                                    <th>Número/Ano</th>
-                                    <th>Objeto</th>
-                                    <th>Valor Estimado</th>
-                                    <th>Situação</th>
-                                    <th>Pregoeiro</th>
-                                    <th>Data Abertura</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($licitacoes_recentes as $licitacao): ?>
-                                <tr>
-                                    <td><strong><?php echo htmlspecialchars($licitacao['nup']); ?></strong></td>
-                                    <td><span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;"><?php echo htmlspecialchars($licitacao['modalidade']); ?></span></td>
-                                    <td><?php echo htmlspecialchars($licitacao['numero']); ?>/<?php echo $licitacao['ano']; ?></td>
-                                    <td title="<?php echo htmlspecialchars($licitacao['objeto']); ?>">
-                                        <?php echo htmlspecialchars(substr($licitacao['objeto'], 0, 80)) . '...'; ?>
-                                    </td>
-                                    <td style="font-weight: 600; color: #27ae60;"><?php echo formatarMoeda($licitacao['valor_estimado']); ?></td>
-                                    <td>
-                                        <span class="status-badge status-<?php echo strtolower(str_replace('_', '-', $licitacao['situacao'])); ?>">
-                                            <?php echo str_replace('_', ' ', $licitacao['situacao']); ?>
-                                        </span>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($licitacao['pregoeiro'] ?: '-'); ?></td>
-                                    <td><?php echo $licitacao['data_abertura'] ? formatarData($licitacao['data_abertura']) : '-'; ?></td>
-                                    <td>
-                                        <div style="display: flex; gap: 5px;">
-                                            <button onclick="verDetalhes(<?php echo $licitacao['id']; ?>)" title="Ver detalhes" style="background: #3498db; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">
-                                                <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
-                                            </button>
-                                            <button onclick="editarLicitacao(<?php echo $licitacao['id']; ?>)" title="Editar" style="background: #f39c12; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">
-                                                <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-
-                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e9ecef; color: #7f8c8d; font-size: 14px;">
-                            Total: <?php echo count($licitacoes_recentes); ?> licitações | 
-                            Valor total estimado: <?php echo formatarMoeda(array_sum(array_column($licitacoes_recentes, 'valor_estimado'))); ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
+    <div class="table-container">
+        <div class="table-header">
+            <h3 class="table-title">Todas as Licitações</h3>
+            <div class="table-filters">
+                <select onchange="filtrarLicitacoes(this.value)">
+                    <option value="">Todas as Situações</option>
+                    <option value="EM_ANDAMENTO">Em Andamento</option>
+                    <option value="HOMOLOGADO">Homologadas</option>
+                    <option value="FRACASSADO">Fracassadas</option>
+                    <option value="REVOGADO">Revogadas</option>
+                </select>
+                <button onclick="exportarLicitacoes()" class="btn-primary">
+                    <i data-lucide="download"></i> Exportar
+                </button>
             </div>
+        </div>
+
+        <?php if (empty($licitacoes_recentes)): ?>
+            <div style="text-align: center; padding: 60px; color: #7f8c8d;">
+                <i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px;"></i>
+                <h3 style="margin: 0 0 10px 0;">Nenhuma licitação encontrada</h3>
+                <p style="margin: 0;">Comece criando sua primeira licitação.</p>
+            </div>
+        <?php else: ?>
+            <table>
+                <thead>
+                    <tr>
+                        <th>NUP</th>
+                        <th>Modalidade</th>
+                        <th>Objeto</th>
+                        <th>Valor Estimado</th>
+                        <th>Situação</th>
+                        <th>Pregoeiro</th>
+                        <th>Data Abertura</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($licitacoes_recentes as $licitacao): ?>
+                    <tr>
+                        <td><strong><?php echo htmlspecialchars($licitacao['nup']); ?></strong></td>
+                        <td><span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;"><?php echo htmlspecialchars($licitacao['modalidade']); ?></span></td>
+                        <td title="<?php echo htmlspecialchars($licitacao['objeto'] ?? ''); ?>">
+                            <?php 
+                            $objeto = $licitacao['objeto'] ?? '';
+                            echo htmlspecialchars(strlen($objeto) > 80 ? substr($objeto, 0, 80) . '...' : $objeto); 
+                            ?>
+                        </td>
+                        <td style="font-weight: 600; color: #27ae60;"><?php echo formatarMoeda($licitacao['valor_estimado'] ?? 0); ?></td>
+                        <td>
+                            <span class="status-badge status-<?php echo strtolower(str_replace('_', '-', $licitacao['situacao'])); ?>">
+                                <?php echo str_replace('_', ' ', $licitacao['situacao']); ?>
+                            </span>
+                        </td>
+                        <td><?php echo htmlspecialchars($licitacao['pregoeiro'] ?: '-'); ?></td>
+                        <td><?php echo $licitacao['data_abertura'] ? formatarData($licitacao['data_abertura']) : '-'; ?></td>
+                        <td>
+                            <div style="display: flex; gap: 5px;">
+                                <button onclick="verDetalhes(<?php echo $licitacao['id']; ?>)" title="Ver detalhes" style="background: #3498db; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">
+                                    <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                <button onclick="editarLicitacao(<?php echo $licitacao['id']; ?>)" title="Editar" style="background: #f39c12; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">
+                                    <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e9ecef; color: #7f8c8d; font-size: 14px;">
+                Total: <?php echo count($licitacoes_recentes); ?> licitações | 
+                Valor total estimado: <?php echo formatarMoeda(array_sum(array_column($licitacoes_recentes, 'valor_estimado'))); ?>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
 
             <!-- Relatórios Section -->
 <div id="relatorios" class="content-section">
@@ -2233,6 +2278,105 @@ window.onclick = function(event) {
     }
 }
 
+// Função para carregar dados do PCA
+function carregarDadosPCA(numeroContratacao) {
+    if (!numeroContratacao) {
+        document.getElementById('area_demandante_criar').value = '';
+        document.getElementById('valor_estimado_criar').value = '';
+        return;
+    }
+    
+    // Buscar dados via AJAX
+    fetch('get_pca_data.php?numero_contratacao=' + encodeURIComponent(numeroContratacao))
+        .then(response => response.json())
+        .then(data => {
+            if (!data.erro) {
+                // Preencher campos automaticamente
+                document.getElementById('area_demandante_criar').value = data.area_requisitante || '';
+                
+                // Formatar valor estimado
+                if (data.valor_total_contratacao) {
+                    const valor = parseFloat(data.valor_total_contratacao);
+                    document.getElementById('valor_estimado_criar').value = valor.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                } else {
+                    document.getElementById('valor_estimado_criar').value = '';
+                }
+            }
+        })
+        .catch(error => {
+            console.log('Erro ao buscar dados do PCA:', error);
+        });
+}
+
+// Função para formatar NUP
+function formatarNUP(input) {
+    let value = input.value.replace(/\D/g, '');
+    if (value.length > 0) {
+        value = value.substring(0, 17);
+        let formatted = '';
+        
+        if (value.length > 0) {
+            formatted = value.substring(0, 5);
+        }
+        if (value.length > 5) {
+            formatted += '.' + value.substring(5, 11);
+        }
+        if (value.length > 11) {
+            formatted += '/' + value.substring(11, 15);
+        }
+        if (value.length > 15) {
+            formatted += '-' + value.substring(15, 17);
+        }
+        
+        input.value = formatted;
+    }
+}
+
+// Função para formatar valores monetários
+function formatarValorMonetario(input) {
+    let value = input.value.replace(/\D/g, '');
+    if (value.length > 0) {
+        value = (parseInt(value) / 100);
+        input.value = value.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        
+        // Calcular economia após formatar o valor
+        calcularEconomia();
+    }
+}
+
+// Função para calcular economia
+function calcularEconomia() {
+    const valorEstimadoField = document.getElementById('valor_estimado_criar');
+    const valorHomologadoField = document.getElementById('valor_homologado_criar');
+    const economiaField = document.getElementById('economia_criar');
+    
+    if (!valorEstimadoField || !valorHomologadoField || !economiaField) {
+        return;
+    }
+    
+    // Converter valores para números
+    const valorEstimadoStr = valorEstimadoField.value.replace(/\./g, '').replace(',', '.');
+    const valorHomologadoStr = valorHomologadoField.value.replace(/\./g, '').replace(',', '.');
+    
+    const valorEstimado = parseFloat(valorEstimadoStr) || 0;
+    const valorHomologado = parseFloat(valorHomologadoStr) || 0;
+    
+    if (valorEstimado > 0 && valorHomologado > 0) {
+        const economia = valorEstimado - valorHomologado;
+        economiaField.value = economia.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    } else {
+        economiaField.value = '';
+    }
+}
 
         // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
@@ -2244,7 +2388,66 @@ window.onclick = function(event) {
             if (typeof Chart !== 'undefined') {
                 initCharts();
             }
+
+            // Máscaras e formatação para formulário de criação
+const nupInput = document.getElementById('nup_criar');
+if (nupInput) {
+    nupInput.addEventListener('input', function() {
+        formatarNUP(this);
+    });
+}
+
+const valorEstimadoInput = document.getElementById('valor_estimado_criar');
+if (valorEstimadoInput) {
+    valorEstimadoInput.addEventListener('input', function() {
+        formatarValorMonetario(this);
+    });
+    
+    valorEstimadoInput.addEventListener('blur', function() {
+        calcularEconomia();
+    });
+}
+
+const valorHomologadoInput = document.getElementById('valor_homologado_criar');
+if (valorHomologadoInput) {
+    valorHomologadoInput.addEventListener('input', function() {
+        formatarValorMonetario(this);
+    });
+    
+    valorHomologadoInput.addEventListener('blur', function() {
+        calcularEconomia();
+    });
+}
         });
+
+document.getElementById('nup_criar').addEventListener('input', function (e) {
+    let v = e.target.value.replace(/\D/g, ''); // Remove tudo que não for número
+
+    if (v.length > 17) v = v.slice(0, 17); // Limita a 17 dígitos
+
+    // Aplica a máscara
+    let formatado = '';
+    if (v.length > 0) formatado += v.slice(0, 5);
+    if (v.length > 5) formatado += '.' + v.slice(5, 11);
+    if (v.length > 11) formatado += '/' + v.slice(11, 15);
+    if (v.length > 15) formatado += '-' + v.slice(15, 17);
+
+    e.target.value = formatado;
+});
+
+// Função para preencher dados do PCA selecionado
+function preencherDadosPCA() {
+    const select = document.getElementById('select_contratacao');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption.value && selectedOption.getAttribute('data-titulo')) {
+        // Preencher o objeto com o título da contratação
+        document.getElementById('objeto_textarea').value = selectedOption.getAttribute('data-titulo');
+    } else {
+        document.getElementById('objeto_textarea').value = '';
+    }
+}
+
     </script>
 </body>
 </html>

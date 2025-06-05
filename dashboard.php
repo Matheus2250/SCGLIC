@@ -27,6 +27,7 @@ sort($areas_agrupadas);
 // Buscar dados com filtros
 $where = [];
 $params = [];
+$secao_ativa = $_GET['secao'] ?? 'dashboard';
 
 if (!empty($_GET['numero_contratacao'])) {
     $where[] = "p.numero_dfd LIKE ?";
@@ -744,6 +745,34 @@ $dados_mensal_pca = $pdo->query("
     width: 100%;
     margin: 0 auto;
 }
+
+.btn-secondary {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    color: white;
+    padding: 8px 16px; /* Reduzido de 14px 28px */
+    border: none;
+    border-radius: 8px; /* Reduzido de 10px */
+    cursor: pointer;
+    font-weight: 500; /* Reduzido de 600 */
+    font-size: 14px; /* Reduzido de 16px */
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px; /* Reduzido de 10px */
+    box-shadow: 0 2px 10px rgba(149, 165, 166, 0.2); /* Reduzido */
+    margin-left: auto; /* Para ficar à direita */
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
+    transform: translateY(-1px); /* Reduzido de -2px */
+    box-shadow: 0 4px 15px rgba(149, 165, 166, 0.3); /* Reduzido */
+}
+
+.btn-secondary {
+    float: right;
+}
     </style>
 </head>
 <body>
@@ -757,17 +786,17 @@ $dados_mensal_pca = $pdo->query("
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Visão Geral</div>
-                    <button class="nav-item active" onclick="showSection('dashboard')">
+                    <button class="nav-item <?php echo $secao_ativa === 'dashboard' ? 'active' : ''; ?>" onclick="showSection('dashboard')">
                         <i data-lucide="bar-chart-3"></i> Dashboard
                     </button>
                 </div>
                 
                 <div class="nav-section">
                     <div class="nav-section-title">Gerenciar</div>
-                    <button class="nav-item" onclick="showSection('importar-pca')">
+                    <button class="nav-item <?php echo $secao_ativa === 'importar-pca' ? 'active' : ''; ?>" onclick="showSection('importar-pca')">
                         <i data-lucide="upload"></i> Importar PCA
                     </button>
-                    <button class="nav-item" onclick="showSection('lista-contratacoes')">
+                    <button class="nav-item <?php echo $secao_ativa === 'lista-contratacoes' ? 'active' : ''; ?>" onclick="showSection('lista-contratacoes')">
                         <i data-lucide="list"></i> Lista de Contratações
                     </button>
                     <a href="contratacoes_atrasadas.php" class="nav-item">
@@ -817,7 +846,7 @@ $dados_mensal_pca = $pdo->query("
             <?php echo getMensagem(); ?>
 
             <!-- Dashboard Section -->
-            <div id="dashboard" class="content-section active">
+            <div id="dashboard" class="content-section <?php echo $secao_ativa === 'dashboard' ? 'active' : ''; ?>">
                 <div class="dashboard-header">
                     <h1><i data-lucide="bar-chart-3"></i> Dashboard de Planejamento</h1>
                     <p>Visão geral do Plano de Contratações Anual (PCA) e indicadores de desempenho</p>
@@ -871,7 +900,7 @@ $dados_mensal_pca = $pdo->query("
             </div>
 
             <!-- Importar PCA Section -->
-            <div id="importar-pca" class="content-section">
+            <div id="importar-pca" class="content-section <?php echo $secao_ativa === 'importar-pca' ? 'active' : ''; ?>">
                 <div class="dashboard-header">
                     <h1><i data-lucide="upload"></i> Importar Planilha PCA</h1>
                     <p>Faça upload da planilha do Plano de Contratações Anual</p>
@@ -893,7 +922,7 @@ $dados_mensal_pca = $pdo->query("
             </div>
 
             <!-- Lista de Contratações Section -->
-            <div id="lista-contratacoes" class="content-section">
+            <div id="lista-contratacoes" class="content-section <?php echo $secao_ativa === 'lista-contratacoes' ? 'active' : ''; ?>">
                 <div class="dashboard-header">
                     <h1><i data-lucide="list"></i> Lista de Contratações</h1>
                     <p>Visualize e gerencie todas as contratações do PCA</p>
@@ -904,6 +933,7 @@ $dados_mensal_pca = $pdo->query("
                     <h3 style="margin: 0 0 20px 0; color: #2c3e50;">Filtros</h3>
                     <form method="GET" class="filtros-form">
                         <input type="hidden" name="limite" value="<?php echo $limite; ?>">
+                        <input type="hidden" name="secao" value="lista-contratacoes">
                         <div>
                             <input type="text" name="numero_contratacao" placeholder="Número do DFD"
                                    value="<?php echo $_GET['numero_contratacao'] ?? ''; ?>">
@@ -943,6 +973,9 @@ $dados_mensal_pca = $pdo->query("
                         </div>
                         <div>
                             <button type="submit" class="btn-primary">Filtrar</button>
+                            <a href="?secao=lista-contratacoes" class="btn-secondary" style="margin-left: 10px;">
+        <i data-lucide="x"></i> Limpar Filtros
+    </a>
                         </div>
                     </form>
                 </div>
@@ -953,7 +986,7 @@ $dados_mensal_pca = $pdo->query("
                         <h3 class="table-title">Dados do PCA</h3>
                         <div class="table-actions">
                             <span style="color: #7f8c8d;">Total: <?php echo $totalRegistros; ?> contratações</span>
-                            <select onchange="window.location.href='?limite='+this.value+'&<?php echo http_build_query(array_diff_key($_GET, ['limite' => '', 'pagina' => ''])); ?>'" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;">
+                            <select onchange="filtrarPorLimite(this.value)">
                                 <option value="10" <?php echo $limite == 10 ? 'selected' : ''; ?>>10 por página</option>
                                 <option value="20" <?php echo $limite == 20 ? 'selected' : ''; ?>>20 por página</option>
                                 <option value="50" <?php echo $limite == 50 ? 'selected' : ''; ?>>50 por página</option>
@@ -1515,6 +1548,13 @@ window.onclick = function(event) {
     } else if (event.target == modalDetalhes) {
         fecharModalDetalhes();
     }
+}
+
+function filtrarPorLimite(limite) {
+    const url = new URL(window.location);
+    url.searchParams.set('limite', limite);
+    url.searchParams.set('secao', 'lista-contratacoes');
+    window.location.href = url.toString();
 }
     </script>
 </body>

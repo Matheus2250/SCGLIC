@@ -21,6 +21,24 @@ function agruparArea($area) {
     return $area;
 }
 
+// Função para limpar encoding de strings
+function limparEncoding($texto) {
+    if (!is_string($texto)) return $texto;
+    
+    // Remove BOM UTF-8
+    $texto = str_replace("\xEF\xBB\xBF", '', $texto);
+    
+    // Remove caracteres de controle
+    $texto = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $texto);
+    
+    // Garante UTF-8 válido
+    if (!mb_check_encoding($texto, 'UTF-8')) {
+        $texto = mb_convert_encoding($texto, 'UTF-8', 'UTF-8//IGNORE');
+    }
+    
+    return trim($texto);
+}
+
 // Verificar se usuário está logado
 function verificarLogin() {
     if (!isset($_SESSION['usuario_id'])) {
@@ -267,52 +285,6 @@ function processarValorMonetario($valor) {
 }
 
 /**
- * Função específica para processar datas da importação
- */
-function processarData($data) {
-    if (empty($data)) {
-        return null;
-    }
-    
-    // Limpar a string
-    $data = trim($data);
-    
-    // Se já está no formato do banco (Y-m-d)
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
-        return $data;
-    }
-    
-    // Tentar diferentes formatos de data
-    $formatos = [
-        'd/m/Y',     // 31/12/2024
-        'd-m-Y',     // 31-12-2024
-        'Y-m-d',     // 2024-12-31
-        'd/m/y',     // 31/12/24
-        'd-m-y',     // 31-12-24
-        'm/d/Y',     // 12/31/2024 (formato americano)
-        'Y/m/d',     // 2024/12/31
-        'd.m.Y',     // 31.12.2024
-        'Y.m.d',     // 2024.12.31
-    ];
-    
-    foreach ($formatos as $formato) {
-        $dateTime = DateTime::createFromFormat($formato, $data);
-        if ($dateTime && $dateTime->format($formato) === $data) {
-            return $dateTime->format('Y-m-d');
-        }
-    }
-    
-    // Tentar usar strtotime como último recurso
-    $timestamp = strtotime($data);
-    if ($timestamp !== false) {
-        return date('Y-m-d', $timestamp);
-    }
-    
-    // Se nenhum formato funcionou, retornar null
-    return null;
-}
-
-/**
  * Função para detectar separador de CSV
  */
 function detectarSeparadorCSV($arquivo) {
@@ -372,7 +344,7 @@ function processarEncodingArquivo($caminhoArquivo) {
 function debugImportacao($linha, $numeroLinha, $dados) {
     // Definir a constante se não existir
     if (!defined('DEBUG_IMPORTACAO')) {
-        define('DEBUG_IMPORTACAO', false); // Mude para true para ativar debug
+        define('DEBUG_IMPORTACAO', true); // Mude para true para ativar debug
     }
     
     if (DEBUG_IMPORTACAO) {
@@ -384,4 +356,3 @@ function debugImportacao($linha, $numeroLinha, $dados) {
         error_log('DEBUG IMPORTACAO: ' . json_encode($debug));
     }
 }
-?>

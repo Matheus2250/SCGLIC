@@ -68,25 +68,60 @@ switch ($tipo) {
 }
 
 // Função: Relatório por Categoria
+// Função: Relatório por Categoria
 function gerarRelatorioCategoria($pdo, $where, $params, $formato, $incluir_graficos) {
-    $sql = "SELECT 
+    $sql = "WITH dfd_categorias AS (
+        SELECT 
+            numero_dfd,
             categoria_contratacao,
-            COUNT(DISTINCT numero_dfd) as total_dfds,
-            COUNT(DISTINCT numero_contratacao) as total_contratacoes,
-            SUM(valor_total_contratacao) as valor_total,
-            COUNT(DISTINCT CASE WHEN situacao_execucao = 'Concluído' THEN numero_dfd END) as concluidas,
-            COUNT(DISTINCT CASE WHEN (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao = 'Não iniciado') THEN numero_dfd END) as nao_iniciadas,
-            COUNT(DISTINCT CASE WHEN situacao_execucao = 'Em andamento' THEN numero_dfd END) as em_andamento,
-            COUNT(DISTINCT CASE WHEN data_conclusao_processo < CURDATE() AND (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao != 'Concluído') THEN numero_dfd END) as atrasadas,
-            AVG(valor_total_contratacao) as valor_medio,
-            MAX(valor_total_contratacao) as maior_valor,
-            MIN(valor_total_contratacao) as menor_valor,
-            AVG(DATEDIFF(data_conclusao_processo, data_inicio_processo)) as prazo_medio_dias,
-            COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM licitacoes l WHERE l.pca_dados_id = p.id) THEN numero_dfd END) as com_licitacao
-            FROM pca_dados p
-            WHERE $where AND categoria_contratacao IS NOT NULL
-            GROUP BY categoria_contratacao
-            ORDER BY valor_total DESC";
+            SUM(valor_total_contratacao) as valor_categoria,
+            MAX(titulo_contratacao) as titulo_contratacao,
+            MAX(area_requisitante) as area_requisitante,
+            MAX(situacao_execucao) as situacao_execucao,
+            MAX(data_inicio_processo) as data_inicio_processo,
+            MAX(data_conclusao_processo) as data_conclusao_processo,
+            ROW_NUMBER() OVER (
+                PARTITION BY numero_dfd 
+                ORDER BY SUM(valor_total_contratacao) DESC, categoria_contratacao
+            ) as rn
+        FROM pca_dados p
+        WHERE $where AND categoria_contratacao IS NOT NULL AND numero_dfd IS NOT NULL
+        GROUP BY numero_dfd, categoria_contratacao
+    ),
+    dfd_principais AS (
+        SELECT 
+            numero_dfd,
+            categoria_contratacao,
+            valor_categoria as valor_total_dfd,
+            titulo_contratacao,
+            area_requisitante,
+            situacao_execucao,
+            data_inicio_processo,
+            data_conclusao_processo
+        FROM dfd_categorias 
+        WHERE rn = 1
+    )
+    SELECT 
+        categoria_contratacao,
+        COUNT(DISTINCT numero_dfd) as total_dfds,
+        COUNT(DISTINCT numero_dfd) as total_contratacoes,
+        SUM(valor_total_dfd) as valor_total,
+        COUNT(DISTINCT CASE WHEN situacao_execucao = 'Concluído' THEN numero_dfd END) as concluidas,
+        COUNT(DISTINCT CASE WHEN (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao = 'Não iniciado') THEN numero_dfd END) as nao_iniciadas,
+        COUNT(DISTINCT CASE WHEN situacao_execucao = 'Em andamento' THEN numero_dfd END) as em_andamento,
+        COUNT(DISTINCT CASE WHEN data_conclusao_processo < CURDATE() AND (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao != 'Concluído') THEN numero_dfd END) as atrasadas,
+        AVG(valor_total_dfd) as valor_medio,
+        MAX(valor_total_dfd) as maior_valor,
+        MIN(valor_total_dfd) as menor_valor,
+        AVG(DATEDIFF(data_conclusao_processo, data_inicio_processo)) as prazo_medio_dias,
+        COUNT(DISTINCT CASE WHEN EXISTS(
+            SELECT 1 FROM licitacoes l 
+            JOIN pca_dados pd ON l.pca_dados_id = pd.id 
+            WHERE pd.numero_dfd = dfd_principais.numero_dfd
+        ) THEN numero_dfd END) as com_licitacao
+        FROM dfd_principais
+        GROUP BY categoria_contratacao
+        ORDER BY valor_total DESC";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -102,24 +137,58 @@ function gerarRelatorioCategoria($pdo, $where, $params, $formato, $incluir_grafi
 }
 
 // Função: Relatório por Área
+// Função: Relatório por Área
 function gerarRelatorioArea($pdo, $where, $params, $formato, $incluir_graficos) {
-    $sql = "SELECT 
+    $sql = "WITH dfd_areas AS (
+        SELECT 
+            numero_dfd,
             area_requisitante,
-            COUNT(DISTINCT numero_dfd) as total_dfds,
-            COUNT(DISTINCT numero_contratacao) as total_contratacoes,
-            SUM(valor_total_contratacao) as valor_total,
-            COUNT(DISTINCT CASE WHEN situacao_execucao = 'Concluído' THEN numero_dfd END) as concluidas,
-            COUNT(DISTINCT CASE WHEN (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao = 'Não iniciado') THEN numero_dfd END) as nao_iniciadas,
-            COUNT(DISTINCT CASE WHEN situacao_execucao = 'Em andamento' THEN numero_dfd END) as em_andamento,
-            COUNT(DISTINCT CASE WHEN data_conclusao_processo < CURDATE() AND (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao != 'Concluído') THEN numero_dfd END) as atrasadas,
-            AVG(DATEDIFF(data_conclusao_processo, data_inicio_processo)) as prazo_medio_dias,
-            COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM licitacoes l WHERE l.pca_dados_id = p.id) THEN numero_dfd END) as com_licitacao,
-            ROUND(COUNT(DISTINCT CASE WHEN situacao_execucao = 'Concluído' THEN numero_dfd END) * 100.0 / COUNT(DISTINCT numero_dfd), 2) as taxa_conclusao,
-            COUNT(DISTINCT categoria_contratacao) as categorias_utilizadas
-            FROM pca_dados p
-            WHERE $where AND area_requisitante IS NOT NULL
-            GROUP BY area_requisitante
-            ORDER BY valor_total DESC";
+            SUM(valor_total_contratacao) as valor_area,
+            MAX(titulo_contratacao) as titulo_contratacao,
+            MAX(categoria_contratacao) as categoria_contratacao,
+            MAX(situacao_execucao) as situacao_execucao,
+            MAX(data_inicio_processo) as data_inicio_processo,
+            MAX(data_conclusao_processo) as data_conclusao_processo,
+            ROW_NUMBER() OVER (
+                PARTITION BY numero_dfd 
+                ORDER BY SUM(valor_total_contratacao) DESC, area_requisitante
+            ) as rn
+        FROM pca_dados p
+        WHERE $where AND area_requisitante IS NOT NULL AND numero_dfd IS NOT NULL
+        GROUP BY numero_dfd, area_requisitante
+    ),
+    dfd_principais AS (
+        SELECT 
+            numero_dfd,
+            area_requisitante,
+            valor_area as valor_total_dfd,
+            categoria_contratacao,
+            situacao_execucao,
+            data_inicio_processo,
+            data_conclusao_processo
+        FROM dfd_areas 
+        WHERE rn = 1
+    )
+    SELECT 
+        area_requisitante,
+        COUNT(DISTINCT numero_dfd) as total_dfds,
+        COUNT(DISTINCT numero_dfd) as total_contratacoes,
+        SUM(valor_total_dfd) as valor_total,
+        COUNT(DISTINCT CASE WHEN situacao_execucao = 'Concluído' THEN numero_dfd END) as concluidas,
+        COUNT(DISTINCT CASE WHEN (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao = 'Não iniciado') THEN numero_dfd END) as nao_iniciadas,
+        COUNT(DISTINCT CASE WHEN situacao_execucao = 'Em andamento' THEN numero_dfd END) as em_andamento,
+        COUNT(DISTINCT CASE WHEN data_conclusao_processo < CURDATE() AND (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao != 'Concluído') THEN numero_dfd END) as atrasadas,
+        AVG(DATEDIFF(data_conclusao_processo, data_inicio_processo)) as prazo_medio_dias,
+        COUNT(DISTINCT CASE WHEN EXISTS(
+            SELECT 1 FROM licitacoes l 
+            JOIN pca_dados pd ON l.pca_dados_id = pd.id 
+            WHERE pd.numero_dfd = dfd_principais.numero_dfd
+        ) THEN numero_dfd END) as com_licitacao,
+        ROUND(COUNT(DISTINCT CASE WHEN situacao_execucao = 'Concluído' THEN numero_dfd END) * 100.0 / COUNT(DISTINCT numero_dfd), 2) as taxa_conclusao,
+        COUNT(DISTINCT categoria_contratacao) as categorias_utilizadas
+        FROM dfd_principais
+        GROUP BY area_requisitante
+        ORDER BY valor_total DESC";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -135,22 +204,48 @@ function gerarRelatorioArea($pdo, $where, $params, $formato, $incluir_graficos) 
 }
 
 // Função: Relatório de Prazos
+// Função: Relatório de Prazos
 function gerarRelatorioPrazos($pdo, $where, $params, $formato, $incluir_graficos) {
-    $sql = "SELECT 
+    $sql = "WITH dfd_categorias AS (
+        SELECT 
+            numero_dfd,
             categoria_contratacao,
-            COUNT(DISTINCT numero_dfd) as total_dfds,
-            AVG(DATEDIFF(data_conclusao_processo, data_inicio_processo)) as prazo_medio_planejado,
-            MIN(DATEDIFF(data_conclusao_processo, data_inicio_processo)) as prazo_minimo,
-            MAX(DATEDIFF(data_conclusao_processo, data_inicio_processo)) as prazo_maximo,
-            COUNT(DISTINCT CASE WHEN data_conclusao_processo < CURDATE() AND (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao != 'Concluído') THEN numero_dfd END) as atrasadas,
-            COUNT(DISTINCT CASE WHEN data_conclusao_processo BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN numero_dfd END) as vencendo_30_dias,
-            COUNT(DISTINCT CASE WHEN data_inicio_processo < CURDATE() AND (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao = 'Não iniciado') THEN numero_dfd END) as atrasadas_inicio,
-            AVG(CASE WHEN situacao_execucao = 'Concluído' THEN DATEDIFF(CURDATE(), data_inicio_processo) END) as tempo_medio_execucao,
-            ROUND(COUNT(DISTINCT CASE WHEN data_conclusao_processo >= CURDATE() OR situacao_execucao = 'Concluído' THEN numero_dfd END) * 100.0 / COUNT(DISTINCT numero_dfd), 2) as percentual_no_prazo
-            FROM pca_dados p
-            WHERE $where AND categoria_contratacao IS NOT NULL
-            GROUP BY categoria_contratacao
-            ORDER BY atrasadas DESC, prazo_medio_planejado DESC";
+            SUM(valor_total_contratacao) as valor_categoria,
+            MAX(situacao_execucao) as situacao_execucao,
+            MAX(data_inicio_processo) as data_inicio_processo,
+            MAX(data_conclusao_processo) as data_conclusao_processo,
+            ROW_NUMBER() OVER (
+                PARTITION BY numero_dfd 
+                ORDER BY SUM(valor_total_contratacao) DESC, categoria_contratacao
+            ) as rn
+        FROM pca_dados p
+        WHERE $where AND categoria_contratacao IS NOT NULL AND numero_dfd IS NOT NULL
+        GROUP BY numero_dfd, categoria_contratacao
+    ),
+    dfd_principais AS (
+        SELECT 
+            numero_dfd,
+            categoria_contratacao,
+            situacao_execucao,
+            data_inicio_processo,
+            data_conclusao_processo
+        FROM dfd_categorias 
+        WHERE rn = 1
+    )
+    SELECT 
+        categoria_contratacao,
+        COUNT(DISTINCT numero_dfd) as total_dfds,
+        AVG(DATEDIFF(data_conclusao_processo, data_inicio_processo)) as prazo_medio_planejado,
+        MIN(DATEDIFF(data_conclusao_processo, data_inicio_processo)) as prazo_minimo,
+        MAX(DATEDIFF(data_conclusao_processo, data_inicio_processo)) as prazo_maximo,
+        COUNT(DISTINCT CASE WHEN data_conclusao_processo < CURDATE() AND (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao != 'Concluído') THEN numero_dfd END) as atrasadas,
+        COUNT(DISTINCT CASE WHEN data_conclusao_processo BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN numero_dfd END) as vencendo_30_dias,
+        COUNT(DISTINCT CASE WHEN data_inicio_processo < CURDATE() AND (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao = 'Não iniciado') THEN numero_dfd END) as atrasadas_inicio,
+        AVG(CASE WHEN situacao_execucao = 'Concluído' THEN DATEDIFF(CURDATE(), data_inicio_processo) END) as tempo_medio_execucao,
+        ROUND(COUNT(DISTINCT CASE WHEN data_conclusao_processo >= CURDATE() OR situacao_execucao = 'Concluído' THEN numero_dfd END) * 100.0 / COUNT(DISTINCT numero_dfd), 2) as percentual_no_prazo
+        FROM dfd_principais
+        GROUP BY categoria_contratacao
+        ORDER BY atrasadas DESC, prazo_medio_planejado DESC";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -166,21 +261,33 @@ function gerarRelatorioPrazos($pdo, $where, $params, $formato, $incluir_graficos
 }
 
 // Função: Relatório Financeiro
+// Função: Relatório Financeiro
 function gerarRelatorioFinanceiro($pdo, $where, $params, $formato, $incluir_graficos) {
-    $sql = "SELECT 
+    $sql = "WITH dfd_mensal AS (
+        SELECT 
+            numero_dfd,
             DATE_FORMAT(data_inicio_processo, '%Y-%m') as mes,
-            COUNT(DISTINCT numero_dfd) as total_dfds,
-            SUM(valor_total_contratacao) as valor_planejado_total,
-            AVG(valor_total_contratacao) as valor_medio_dfd,
-            COUNT(DISTINCT CASE WHEN situacao_execucao = 'Concluído' THEN numero_dfd END) as dfds_concluidos,
-            SUM(CASE WHEN situacao_execucao = 'Concluído' THEN valor_total_contratacao ELSE 0 END) as valor_concluido,
-            COUNT(DISTINCT categoria_contratacao) as categorias_ativas,
-            COUNT(DISTINCT area_requisitante) as areas_ativas,
-            ROUND(COUNT(DISTINCT CASE WHEN situacao_execucao = 'Concluído' THEN numero_dfd END) * 100.0 / COUNT(DISTINCT numero_dfd), 2) as percentual_execucao
-            FROM pca_dados p
-            WHERE $where
-            GROUP BY DATE_FORMAT(data_inicio_processo, '%Y-%m')
-            ORDER BY mes DESC";
+            SUM(valor_total_contratacao) as valor_total_dfd,
+            MAX(situacao_execucao) as situacao_execucao,
+            MAX(categoria_contratacao) as categoria_contratacao,
+            MAX(area_requisitante) as area_requisitante
+        FROM pca_dados p
+        WHERE $where AND numero_dfd IS NOT NULL
+        GROUP BY numero_dfd, DATE_FORMAT(data_inicio_processo, '%Y-%m')
+    )
+    SELECT 
+        mes,
+        COUNT(DISTINCT numero_dfd) as total_dfds,
+        SUM(valor_total_dfd) as valor_planejado_total,
+        AVG(valor_total_dfd) as valor_medio_dfd,
+        COUNT(DISTINCT CASE WHEN situacao_execucao = 'Concluído' THEN numero_dfd END) as dfds_concluidos,
+        SUM(CASE WHEN situacao_execucao = 'Concluído' THEN valor_total_dfd ELSE 0 END) as valor_concluido,
+        COUNT(DISTINCT categoria_contratacao) as categorias_ativas,
+        COUNT(DISTINCT area_requisitante) as areas_ativas,
+        ROUND(COUNT(DISTINCT CASE WHEN situacao_execucao = 'Concluído' THEN numero_dfd END) * 100.0 / COUNT(DISTINCT numero_dfd), 2) as percentual_execucao
+        FROM dfd_mensal
+        GROUP BY mes
+        ORDER BY mes DESC";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -508,7 +615,7 @@ function gerarHTMLArea($dados, $incluir_graficos, $params) {
                         $performance_texto = $row['taxa_conclusao'] > 80 ? 'Excelente' : ($row['taxa_conclusao'] > 50 ? 'Bom' : 'Precisa Melhorar');
                     ?>
                     <tr>
-                        <td><strong><?php echo htmlspecialchars(agruparArea($row['area_requisitante'])); ?></strong></td>
+                        <td><strong><?php echo htmlspecialchars($row['area_agrupada']); ?></strong></td>
                         <td style="text-align: center;"><?php echo $row['total_dfds']; ?></td>
                         <td style="text-align: center;"><?php echo $row['concluidas']; ?></td>
                         <td style="text-align: center;"><?php echo $row['em_andamento']; ?></td>
@@ -1103,7 +1210,7 @@ function gerarExcelArea($dados) {
     
     foreach ($dados as $row) {
         $linha = [
-            agruparArea($row['area_requisitante']),
+            $row['area_agrupada'],
             $row['total_dfds'],
             $row['total_contratacoes'],
             $row['concluidas'],

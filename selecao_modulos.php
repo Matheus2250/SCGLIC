@@ -10,7 +10,7 @@ $pdo = conectarDB();
 $stats_planejamento = $pdo->query("
     SELECT 
         COUNT(DISTINCT numero_dfd) as total_dfds,
-        SUM(valor_total_contratacao) as valor_total,
+        MAX(valor_total_contratacao) as valor_total,
         COUNT(DISTINCT CASE WHEN situacao_execucao = 'Não iniciado' THEN numero_dfd END) as pendentes
     FROM pca_dados 
     WHERE numero_dfd IS NOT NULL
@@ -30,7 +30,7 @@ $stats_licitacao = $pdo->query("
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema CGLIC - Seleção de Módulos</title>
+    <title>Sistema de Informações CGLIC - Seleção de Módulos</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
@@ -272,8 +272,8 @@ $stats_licitacao = $pdo->query("
         <div class="selecao-content">
             <!-- Header -->
             <div class="header-selecao">
-                <h1><i data-lucide="library-big"></i> Sistema CGLIC</h1>
-                <p>Coordenação Geral de Licitações - Selecione o módulo desejado</p>
+                <h1><i data-lucide="library-big"></i> Sistema de Informações CGLIC</h1>
+                <p>Coordenação Geral de Licitações e Contratos Administrativos - Selecione o módulo desejado</p>
             </div>
 
             <!-- Módulos -->
