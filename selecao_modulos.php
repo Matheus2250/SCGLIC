@@ -131,7 +131,7 @@ $stats_licitacao = $pdo->query("
         }
 
         .modulo-licitacao::before {
-            background: linear-gradient(90deg, #667eea, #764ba2);
+            background: linear-gradient(90deg, #10b981, #059669);
         }
 
         .modulo-icon {
@@ -156,9 +156,9 @@ $stats_licitacao = $pdo->query("
         }
 
         .modulo-licitacao .modulo-icon {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #10b981, #059669);
             box-shadow: 
-                0 10px 25px rgba(102, 126, 234, 0.3),
+                0 10px 25px rgba(16, 185, 129, 0.3),
                 0 0 0 4px rgba(255, 255, 255, 0.1),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }

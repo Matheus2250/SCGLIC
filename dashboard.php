@@ -189,21 +189,16 @@ if (isAnoHistorico($ano_selecionado)) {
         ")->fetchColumn(),
         
         'valor_total' => $pdo->query("
-            SELECT COALESCE(SUM(valor_maximo), 0) 
-            FROM (
-                SELECT numero_dfd, MAX(valor_total_contratacao) as valor_maximo
-                FROM $tabela_pca 
-                WHERE numero_dfd IS NOT NULL 
-                AND numero_dfd != ''
-                GROUP BY numero_dfd
-            ) as valores_por_dfd
+            SELECT COALESCE(SUM(valor_total_contratacao), 0) 
+            FROM $tabela_pca 
+            WHERE numero_dfd IS NOT NULL 
+            AND numero_dfd != ''
         ")->fetchColumn(),
         
         'homologadas' => $pdo->query("
             SELECT COUNT(DISTINCT numero_dfd) 
             FROM $tabela_pca 
-            WHERE ano = $ano_selecionado 
-            AND numero_dfd IS NOT NULL 
+            WHERE numero_dfd IS NOT NULL 
             AND numero_dfd != ''
             AND situacao_execucao = 'Concluído'
         ")->fetchColumn(),
@@ -216,8 +211,7 @@ if (isAnoHistorico($ano_selecionado)) {
     $dados_categoria = $pdo->query("
         SELECT categoria_contratacao as categoria, COUNT(DISTINCT numero_dfd) as total 
         FROM $tabela_pca 
-        WHERE ano = $ano_selecionado 
-        AND categoria_contratacao IS NOT NULL 
+        WHERE categoria_contratacao IS NOT NULL 
         AND numero_dfd IS NOT NULL 
         AND numero_dfd != ''
         GROUP BY categoria_contratacao 
@@ -227,8 +221,7 @@ if (isAnoHistorico($ano_selecionado)) {
     $dados_area = $pdo->query("
         SELECT area_requisitante as area, COUNT(DISTINCT numero_dfd) as total 
         FROM $tabela_pca 
-        WHERE ano = $ano_selecionado 
-        AND area_requisitante IS NOT NULL 
+        WHERE area_requisitante IS NOT NULL 
         AND numero_dfd IS NOT NULL 
         AND numero_dfd != ''
         GROUP BY area_requisitante 
@@ -262,15 +255,11 @@ if (isAnoHistorico($ano_selecionado)) {
             ")->fetchColumn(),
             
             'valor_total' => $pdo->query("
-                SELECT COALESCE(SUM(valor_maximo), 0) 
-                FROM (
-                    SELECT numero_dfd, MAX(valor_total) as valor_maximo
-                    FROM $tabela_pca 
-                    WHERE $where_stats 
-                    AND numero_dfd IS NOT NULL 
-                    AND numero_dfd != ''
-                    GROUP BY numero_dfd
-                ) as valores_por_dfd
+                SELECT COALESCE(SUM(valor_total_contratacao), 0) 
+                FROM $tabela_pca 
+                WHERE $where_stats 
+                AND numero_dfd IS NOT NULL 
+                AND numero_dfd != ''
             ")->fetchColumn(),
             
             'homologadas' => $pdo->query("
