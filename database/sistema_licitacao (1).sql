@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 14/06/2025 às 06:03
+-- Tempo de geração: 15/06/2025 às 20:51
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.2.12
 
@@ -127,6 +127,117 @@ CREATE TABLE `logs_sistema` (
   `user_agent` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Logs de operações e auditoria do sistema';
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `pca_2022`
+--
+
+CREATE TABLE `pca_2022` (
+  `id` int(11) NOT NULL,
+  `numero_contratacao` varchar(50) DEFAULT NULL,
+  `status_contratacao` varchar(100) DEFAULT NULL,
+  `situacao_execucao` varchar(100) DEFAULT 'Não iniciado',
+  `titulo_contratacao` varchar(500) DEFAULT NULL,
+  `categoria_contratacao` varchar(200) DEFAULT NULL,
+  `uasg_atual` varchar(100) DEFAULT NULL,
+  `valor_total_contratacao` decimal(15,2) DEFAULT NULL,
+  `data_inicio_processo` date DEFAULT NULL,
+  `data_conclusao_processo` date DEFAULT NULL,
+  `prazo_duracao_dias` int(11) DEFAULT NULL,
+  `area_requisitante` varchar(200) DEFAULT NULL,
+  `numero_dfd` varchar(50) DEFAULT NULL,
+  `prioridade` varchar(50) DEFAULT NULL,
+  `numero_item_dfd` varchar(50) DEFAULT NULL,
+  `data_conclusao_dfd` date DEFAULT NULL,
+  `classificacao_contratacao` varchar(200) DEFAULT NULL,
+  `codigo_classe_grupo` varchar(50) DEFAULT NULL,
+  `nome_classe_grupo` varchar(200) DEFAULT NULL,
+  `codigo_pdm_material` varchar(50) DEFAULT NULL,
+  `nome_pdm_material` varchar(200) DEFAULT NULL,
+  `codigo_material_servico` varchar(100) DEFAULT NULL,
+  `descricao_material_servico` varchar(1000) DEFAULT NULL,
+  `unidade_fornecimento` varchar(50) DEFAULT NULL,
+  `valor_unitario` decimal(15,2) DEFAULT NULL,
+  `quantidade` int(11) DEFAULT NULL,
+  `valor_total` decimal(15,2) DEFAULT NULL,
+  `criado_em` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `pca_2023`
+--
+
+CREATE TABLE `pca_2023` (
+  `id` int(11) NOT NULL,
+  `numero_contratacao` varchar(50) DEFAULT NULL,
+  `status_contratacao` varchar(100) DEFAULT NULL,
+  `situacao_execucao` varchar(100) DEFAULT 'Não iniciado',
+  `titulo_contratacao` varchar(500) DEFAULT NULL,
+  `categoria_contratacao` varchar(200) DEFAULT NULL,
+  `uasg_atual` varchar(100) DEFAULT NULL,
+  `valor_total_contratacao` decimal(15,2) DEFAULT NULL,
+  `data_inicio_processo` date DEFAULT NULL,
+  `data_conclusao_processo` date DEFAULT NULL,
+  `prazo_duracao_dias` int(11) DEFAULT NULL,
+  `area_requisitante` varchar(200) DEFAULT NULL,
+  `numero_dfd` varchar(50) DEFAULT NULL,
+  `prioridade` varchar(50) DEFAULT NULL,
+  `numero_item_dfd` varchar(50) DEFAULT NULL,
+  `data_conclusao_dfd` date DEFAULT NULL,
+  `classificacao_contratacao` varchar(200) DEFAULT NULL,
+  `codigo_classe_grupo` varchar(50) DEFAULT NULL,
+  `nome_classe_grupo` varchar(200) DEFAULT NULL,
+  `codigo_pdm_material` varchar(50) DEFAULT NULL,
+  `nome_pdm_material` varchar(200) DEFAULT NULL,
+  `codigo_material_servico` varchar(100) DEFAULT NULL,
+  `descricao_material_servico` varchar(1000) DEFAULT NULL,
+  `unidade_fornecimento` varchar(50) DEFAULT NULL,
+  `valor_unitario` decimal(15,2) DEFAULT NULL,
+  `quantidade` int(11) DEFAULT NULL,
+  `valor_total` decimal(15,2) DEFAULT NULL,
+  `criado_em` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `pca_2024`
+--
+
+CREATE TABLE `pca_2024` (
+  `id` int(11) NOT NULL,
+  `numero_contratacao` varchar(50) DEFAULT NULL,
+  `status_contratacao` varchar(100) DEFAULT NULL,
+  `situacao_execucao` varchar(100) DEFAULT 'Não iniciado',
+  `titulo_contratacao` varchar(500) DEFAULT NULL,
+  `categoria_contratacao` varchar(200) DEFAULT NULL,
+  `uasg_atual` varchar(100) DEFAULT NULL,
+  `valor_total_contratacao` decimal(15,2) DEFAULT NULL,
+  `data_inicio_processo` date DEFAULT NULL,
+  `data_conclusao_processo` date DEFAULT NULL,
+  `prazo_duracao_dias` int(11) DEFAULT NULL,
+  `area_requisitante` varchar(200) DEFAULT NULL,
+  `numero_dfd` varchar(50) DEFAULT NULL,
+  `prioridade` varchar(50) DEFAULT NULL,
+  `numero_item_dfd` varchar(50) DEFAULT NULL,
+  `data_conclusao_dfd` date DEFAULT NULL,
+  `classificacao_contratacao` varchar(200) DEFAULT NULL,
+  `codigo_classe_grupo` varchar(50) DEFAULT NULL,
+  `nome_classe_grupo` varchar(200) DEFAULT NULL,
+  `codigo_pdm_material` varchar(50) DEFAULT NULL,
+  `nome_pdm_material` varchar(200) DEFAULT NULL,
+  `codigo_material_servico` varchar(100) DEFAULT NULL,
+  `descricao_material_servico` varchar(1000) DEFAULT NULL,
+  `unidade_fornecimento` varchar(50) DEFAULT NULL,
+  `valor_unitario` decimal(15,2) DEFAULT NULL,
+  `quantidade` int(11) DEFAULT NULL,
+  `valor_total` decimal(15,2) DEFAULT NULL,
+  `criado_em` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -378,6 +489,24 @@ CREATE TABLE `view_pca_resumo_anos` (
 -- --------------------------------------------------------
 
 --
+-- Estrutura stand-in para view `v_estatisticas_pca_anos`
+-- (Veja abaixo para a visão atual)
+--
+CREATE TABLE `v_estatisticas_pca_anos` (
+);
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura stand-in para view `v_pca_historico_completo`
+-- (Veja abaixo para a visão atual)
+--
+CREATE TABLE `v_pca_historico_completo` (
+);
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para view `view_contratacoes_licitacoes`
 --
 DROP TABLE IF EXISTS `view_contratacoes_licitacoes`;
@@ -401,6 +530,24 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `view_pca_resumo_anos`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_pca_resumo_anos`  AS SELECT 'historico' AS `tipo`, `pca_historico_anos`.`ano` AS `ano`, count(distinct `pca_historico_anos`.`numero_dfd`) AS `total_dfds`, count(0) AS `total_contratacoes`, coalesce(sum(`pca_historico_anos`.`valor_total_contratacao`),0) AS `valor_total`, count(case when `pca_historico_anos`.`situacao_execucao` = 'Concluído' then 1 end) AS `concluidas` FROM `pca_historico_anos` GROUP BY `pca_historico_anos`.`ano`union all select 'atual' AS `tipo`,`pi`.`ano_pca` AS `ano`,count(distinct `pd`.`numero_dfd`) AS `total_dfds`,count(`pd`.`id`) AS `total_contratacoes`,coalesce(sum(`pd`.`valor_total_contratacao`),0) AS `valor_total`,count(case when `pd`.`situacao_execucao` = 'Concluído' then 1 end) AS `concluidas` from (`pca_importacoes` `pi` left join `pca_dados` `pd` on(`pd`.`importacao_id` = `pi`.`id`)) group by `pi`.`ano_pca` order by `ano` desc  ;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para view `v_estatisticas_pca_anos`
+--
+DROP TABLE IF EXISTS `v_estatisticas_pca_anos`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_estatisticas_pca_anos`  AS SELECT `v_pca_historico_completo`.`ano` AS `ano`, count(0) AS `total_contratacoes`, sum(`v_pca_historico_completo`.`valor_total_contratacao`) AS `valor_total_ano`, count(distinct `v_pca_historico_completo`.`area_requisitante`) AS `areas_distintas`, count(distinct `v_pca_historico_completo`.`numero_dfd`) AS `dfds_distintos`, avg(`v_pca_historico_completo`.`valor_total_contratacao`) AS `valor_medio_contratacao` FROM `v_pca_historico_completo` GROUP BY `v_pca_historico_completo`.`ano` ;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para view `v_pca_historico_completo`
+--
+DROP TABLE IF EXISTS `v_pca_historico_completo`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_pca_historico_completo`  AS SELECT 2022 AS `ano`, `pca_2022`.`id` AS `id`, `pca_2022`.`numero_contratacao` AS `numero_contratacao`, `pca_2022`.`status_contratacao` AS `status_contratacao`, `pca_2022`.`situacao_execucao` AS `situacao_execucao`, `pca_2022`.`titulo_contratacao` AS `titulo_contratacao`, `pca_2022`.`categoria_contratacao` AS `categoria_contratacao`, `pca_2022`.`uasg_atual` AS `uasg_atual`, `pca_2022`.`valor_total_contratacao` AS `valor_total_contratacao`, `pca_2022`.`data_inicio_processo` AS `data_inicio_processo`, `pca_2022`.`data_conclusao_processo` AS `data_conclusao_processo`, `pca_2022`.`prazo_duracao_dias` AS `prazo_duracao_dias`, `pca_2022`.`area_requisitante` AS `area_requisitante`, `pca_2022`.`numero_dfd` AS `numero_dfd`, `pca_2022`.`prioridade` AS `prioridade`, `pca_2022`.`numero_item_dfd` AS `numero_item_dfd`, `pca_2022`.`data_conclusao_dfd` AS `data_conclusao_dfd`, `pca_2022`.`classificacao_contratacao` AS `classificacao_contratacao`, `pca_2022`.`codigo_classe_grupo` AS `codigo_classe_grupo`, `pca_2022`.`nome_classe_grupo` AS `nome_classe_grupo`, `pca_2022`.`codigo_pdm_material` AS `codigo_pdm_material`, `pca_2022`.`nome_pdm_material` AS `nome_pdm_material`, `pca_2022`.`codigo_material_servico` AS `codigo_material_servico`, `pca_2022`.`descricao_material_servico` AS `descricao_material_servico`, `pca_2022`.`unidade_fornecimento` AS `unidade_fornecimento`, `pca_2022`.`valor_unitario` AS `valor_unitario`, `pca_2022`.`quantidade` AS `quantidade`, `pca_2022`.`valor_total` AS `valor_total`, `pca_2022`.`importado_em` AS `criado_em` FROM `pca_2022`union all select 2023 AS `ano`,`pca_2023`.`id` AS `id`,`pca_2023`.`numero_contratacao` AS `numero_contratacao`,`pca_2023`.`status_contratacao` AS `status_contratacao`,`pca_2023`.`situacao_execucao` AS `situacao_execucao`,`pca_2023`.`titulo_contratacao` AS `titulo_contratacao`,`pca_2023`.`categoria_contratacao` AS `categoria_contratacao`,`pca_2023`.`uasg_atual` AS `uasg_atual`,`pca_2023`.`valor_total_contratacao` AS `valor_total_contratacao`,`pca_2023`.`data_inicio_processo` AS `data_inicio_processo`,`pca_2023`.`data_conclusao_processo` AS `data_conclusao_processo`,`pca_2023`.`prazo_duracao_dias` AS `prazo_duracao_dias`,`pca_2023`.`area_requisitante` AS `area_requisitante`,`pca_2023`.`numero_dfd` AS `numero_dfd`,`pca_2023`.`prioridade` AS `prioridade`,`pca_2023`.`numero_item_dfd` AS `numero_item_dfd`,`pca_2023`.`data_conclusao_dfd` AS `data_conclusao_dfd`,`pca_2023`.`classificacao_contratacao` AS `classificacao_contratacao`,`pca_2023`.`codigo_classe_grupo` AS `codigo_classe_grupo`,`pca_2023`.`nome_classe_grupo` AS `nome_classe_grupo`,`pca_2023`.`codigo_pdm_material` AS `codigo_pdm_material`,`pca_2023`.`nome_pdm_material` AS `nome_pdm_material`,`pca_2023`.`codigo_material_servico` AS `codigo_material_servico`,`pca_2023`.`descricao_material_servico` AS `descricao_material_servico`,`pca_2023`.`unidade_fornecimento` AS `unidade_fornecimento`,`pca_2023`.`valor_unitario` AS `valor_unitario`,`pca_2023`.`quantidade` AS `quantidade`,`pca_2023`.`valor_total` AS `valor_total`,`pca_2023`.`importado_em` AS `criado_em` from `pca_2023` union all select 2024 AS `ano`,`pca_2024`.`id` AS `id`,`pca_2024`.`numero_contratacao` AS `numero_contratacao`,`pca_2024`.`status_contratacao` AS `status_contratacao`,`pca_2024`.`situacao_execucao` AS `situacao_execucao`,`pca_2024`.`titulo_contratacao` AS `titulo_contratacao`,`pca_2024`.`categoria_contratacao` AS `categoria_contratacao`,`pca_2024`.`uasg_atual` AS `uasg_atual`,`pca_2024`.`valor_total_contratacao` AS `valor_total_contratacao`,`pca_2024`.`data_inicio_processo` AS `data_inicio_processo`,`pca_2024`.`data_conclusao_processo` AS `data_conclusao_processo`,`pca_2024`.`prazo_duracao_dias` AS `prazo_duracao_dias`,`pca_2024`.`area_requisitante` AS `area_requisitante`,`pca_2024`.`numero_dfd` AS `numero_dfd`,`pca_2024`.`prioridade` AS `prioridade`,`pca_2024`.`numero_item_dfd` AS `numero_item_dfd`,`pca_2024`.`data_conclusao_dfd` AS `data_conclusao_dfd`,`pca_2024`.`classificacao_contratacao` AS `classificacao_contratacao`,`pca_2024`.`codigo_classe_grupo` AS `codigo_classe_grupo`,`pca_2024`.`nome_classe_grupo` AS `nome_classe_grupo`,`pca_2024`.`codigo_pdm_material` AS `codigo_pdm_material`,`pca_2024`.`nome_pdm_material` AS `nome_pdm_material`,`pca_2024`.`codigo_material_servico` AS `codigo_material_servico`,`pca_2024`.`descricao_material_servico` AS `descricao_material_servico`,`pca_2024`.`unidade_fornecimento` AS `unidade_fornecimento`,`pca_2024`.`valor_unitario` AS `valor_unitario`,`pca_2024`.`quantidade` AS `quantidade`,`pca_2024`.`valor_total` AS `valor_total`,`pca_2024`.`importado_em` AS `criado_em` from `pca_2024`  ;
 
 --
 -- Índices para tabelas despejadas
@@ -448,6 +595,33 @@ ALTER TABLE `logs_sistema`
   ADD KEY `idx_created_at` (`created_at`),
   ADD KEY `idx_logs_sistema_acao` (`acao`),
   ADD KEY `idx_logs_sistema_modulo` (`modulo`);
+
+--
+-- Índices de tabela `pca_2022`
+--
+ALTER TABLE `pca_2022`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_numero_contratacao` (`numero_contratacao`),
+  ADD KEY `idx_area_requisitante` (`area_requisitante`),
+  ADD KEY `idx_numero_dfd` (`numero_dfd`);
+
+--
+-- Índices de tabela `pca_2023`
+--
+ALTER TABLE `pca_2023`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_numero_contratacao` (`numero_contratacao`),
+  ADD KEY `idx_area_requisitante` (`area_requisitante`),
+  ADD KEY `idx_numero_dfd` (`numero_dfd`);
+
+--
+-- Índices de tabela `pca_2024`
+--
+ALTER TABLE `pca_2024`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_numero_contratacao` (`numero_contratacao`),
+  ADD KEY `idx_area_requisitante` (`area_requisitante`),
+  ADD KEY `idx_numero_dfd` (`numero_dfd`);
 
 --
 -- Índices de tabela `pca_dados`
@@ -562,6 +736,24 @@ ALTER TABLE `licitacoes`
 -- AUTO_INCREMENT de tabela `logs_sistema`
 --
 ALTER TABLE `logs_sistema`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `pca_2022`
+--
+ALTER TABLE `pca_2022`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `pca_2023`
+--
+ALTER TABLE `pca_2023`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de tabela `pca_2024`
+--
+ALTER TABLE `pca_2024`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
