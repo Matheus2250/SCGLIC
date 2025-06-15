@@ -878,7 +878,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
             <?php endif; ?>
 
             <!-- Relatórios Section -->
-            <?php if (temPermissao('relatorio_visualizar')): ?>
+            <?php if (temPermissao('pca_relatorios')): ?>
             <div id="relatorios" class="content-section">
     <div class="dashboard-header">
         <h1><i data-lucide="file-text"></i> Relatórios do PCA</h1>

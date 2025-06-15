@@ -85,14 +85,39 @@ C:\xampp\htdocs\sistema_licitacao\
 | Nível | Nome | Descrição |
 |-------|------|-----------|
 | **1** | **Coordenador** | Acesso total - pode gerenciar usuários, executar backups, todos os módulos |
-| **2** | **DIPLAN** | Planejamento - pode importar PCA, gerar relatórios, visualizar licitações |
-| **3** | **DIPLI** | Licitações - pode criar/gerenciar licitações, visualizar PCA, relatórios básicos |
+| **2** | **DIPLAN** | Planejamento - pode importar/editar PCA, apenas VISUALIZAR licitações |
+| **3** | **DIPLI** | Licitações - pode criar/editar licitações, apenas VISUALIZAR PCA |
 | **4** | **Visitante** | Somente leitura - pode visualizar dados, gerar relatórios, exportar informações |
 
 ### **Gestão de Usuários**
 - **Interface:** `gerenciar_usuarios.php`
 - **Funcionalidades:** Busca, filtros, paginação (10 por página)
 - **Filtros:** Nome/email, nível, departamento
+
+### **⚠️ IMPORTANTE: Sistema de Permissões por Módulo**
+
+#### **🔒 Regras de Acesso por Nível:**
+
+| Módulo | Coordenador (1) | DIPLAN (2) | DIPLI (3) | Visitante (4) |
+|--------|----------------|------------|-----------|---------------|
+| **📊 Planejamento** | ✅ Total | ✅ Edição | 👁️ Visualização | 👁️ Visualização |
+| **⚖️ Licitações** | ✅ Total | 👁️ Visualização | ✅ Edição | 👁️ Visualização |
+| **👥 Usuários** | ✅ Gestão | ❌ Bloqueado | ❌ Bloqueado | ❌ Bloqueado |
+
+#### **📝 Detalhamento das Permissões:**
+
+**DIPLAN (Nível 2) - Especialista em Planejamento:**
+- ✅ **PCA**: Importar, editar, relatórios, exportar
+- 👁️ **Licitações**: Apenas visualizar, relatórios, exportar
+- 👁️ **Riscos**: Apenas visualizar, exportar
+
+**DIPLI (Nível 3) - Especialista em Licitações:**
+- ✅ **Licitações**: Criar, editar, relatórios, exportar
+- 👁️ **PCA**: Apenas visualizar, relatórios, exportar  
+- ✅ **Riscos**: Criar, editar, visualizar
+
+**Visitante (Nível 4) - Consulta:**
+- 👁️ **Todos os módulos**: Apenas visualização, relatórios, exportação
 
 ---
 

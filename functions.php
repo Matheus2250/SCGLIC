@@ -465,17 +465,18 @@ function registrarTentativaLogin($email, $sucesso = false, $motivo = '') {
 function temPermissao($permissao, $usuario_id = null) {
     $nivel = $_SESSION['usuario_nivel'] ?? 1;
     
-    // Permissões por nível
+    // Permissões por nível - ATUALIZADO
     $permissoes = [
         1 => ['*'], // Coordenador - acesso total
-        2 => [ // DIPLAN
-            'pca_importar', 'pca_visualizar', 'pca_relatorios', 'pca_exportar',
+        2 => [ // DIPLAN - Apenas edição em PLANEJAMENTO, visualização em licitações
+            'pca_importar', 'pca_visualizar', 'pca_relatorios', 'pca_exportar', 'pca_editar',
             'licitacao_visualizar', 'licitacao_exportar', 'licitacao_relatorios',
             'risco_visualizar', 'risco_exportar'
         ],
-        3 => [ // DIPLI
-            'licitacao_criar', 'licitacao_editar', 'licitacao_visualizar', 'licitacao_exportar',
-            'pca_visualizar', 'risco_visualizar', 'risco_criar', 'risco_editar'
+        3 => [ // DIPLI - Apenas edição em LICITAÇÕES, visualização em planejamento
+            'licitacao_criar', 'licitacao_editar', 'licitacao_visualizar', 'licitacao_exportar', 'licitacao_relatorios',
+            'pca_visualizar', 'pca_exportar', 'pca_relatorios',
+            'risco_visualizar', 'risco_criar', 'risco_editar'
         ],
         4 => [ // Visitante - apenas visualização e exportação
             'pca_visualizar', 'pca_exportar', 'pca_relatorios',
