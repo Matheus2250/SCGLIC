@@ -13,25 +13,36 @@ function verificarECorrigirAutoIncrement($tabela) {
         $stmt->execute([$tabela]);
         $result = $stmt->fetch();
         
-        if ($result && $result['AUTO_INCREMENT'] <= 0) {
-            error_log("AUTO_INCREMENT da tabela $tabela está em valor inválido: " . $result['AUTO_INCREMENT']);
-            
-            // Obter o maior ID atual
-            $sql_max = "SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM $tabela";
-            $stmt_max = $pdo->prepare($sql_max);
-            $stmt_max->execute();
-            $max_result = $stmt_max->fetch();
-            $next_id = $max_result['next_id'];
+        $auto_increment_atual = $result ? $result['AUTO_INCREMENT'] : 0;
+        error_log("AUTO_INCREMENT atual da tabela $tabela: $auto_increment_atual");
+        
+        // Obter o maior ID atual
+        $sql_max = "SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM $tabela";
+        $stmt_max = $pdo->prepare($sql_max);
+        $stmt_max->execute();
+        $max_result = $stmt_max->fetch();
+        $next_id = $max_result['next_id'];
+        
+        error_log("Próximo ID calculado para tabela $tabela: $next_id");
+        
+        // Sempre corrigir se o AUTO_INCREMENT for <= próximo ID necessário
+        if ($auto_increment_atual <= 0 || $auto_increment_atual < $next_id) {
+            error_log("Corrigindo AUTO_INCREMENT da tabela $tabela de $auto_increment_atual para $next_id");
             
             // Corrigir AUTO_INCREMENT
             $sql_fix = "ALTER TABLE $tabela AUTO_INCREMENT = $next_id";
             $pdo->exec($sql_fix);
             
-            error_log("AUTO_INCREMENT da tabela $tabela corrigido para: $next_id");
-            return $next_id;
+            // Verificar se a correção funcionou
+            $stmt->execute([$tabela]);
+            $verificacao = $stmt->fetch();
+            $novo_auto_increment = $verificacao ? $verificacao['AUTO_INCREMENT'] : 0;
+            
+            error_log("AUTO_INCREMENT da tabela $tabela após correção: $novo_auto_increment");
+            return $novo_auto_increment;
         }
         
-        return $result ? $result['AUTO_INCREMENT'] : 1;
+        return $auto_increment_atual;
         
     } catch (Exception $e) {
         error_log("Erro ao verificar AUTO_INCREMENT da tabela $tabela: " . $e->getMessage());

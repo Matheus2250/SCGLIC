@@ -17,7 +17,11 @@
       "Bash(/mnt/c/xampp/php/php.exe debug_db_structure.php)",
       "Bash(curl:*)",
       "Bash(/mnt/c/xampp/php/php execute_migration.php)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }

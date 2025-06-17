@@ -179,19 +179,39 @@ switch ($acao) {
         }
 
         // Verificar e corrigir AUTO_INCREMENT antes da importação
-        verificarECorrigirAutoIncrement('pca_importacoes');
+        $auto_increment_corrigido = verificarECorrigirAutoIncrement('pca_importacoes');
+        error_log("AUTO_INCREMENT verificado/corrigido: " . ($auto_increment_corrigido ? $auto_increment_corrigido : 'falhou'));
         
         // Criar registro de importação
         try {
             $sql = "INSERT INTO pca_importacoes (nome_arquivo, usuario_id, ano_pca) VALUES (?, ?, ?)";
             $stmt = $pdo->prepare($sql);
+            
+            // Log dos dados que serão inseridos
+            error_log("Inserindo importação - Arquivo: " . $resultado['arquivo'] . ", Usuário: " . $_SESSION['usuario_id'] . ", Ano: " . $ano_pca);
+            
             $stmt->execute([$resultado['arquivo'], $_SESSION['usuario_id'], $ano_pca]);
             $importacao_id = $pdo->lastInsertId();
+            
+            // Log do resultado
+            error_log("Resultado do INSERT - lastInsertId(): " . $importacao_id . ", rowCount(): " . $stmt->rowCount());
             
             // Verificar se o ID é válido
             if ($importacao_id <= 0) {
                 error_log("LastInsertId retornou valor inválido: $importacao_id");
-                throw new Exception('Erro ao obter ID da importação');
+                
+                // Tentar recuperar o ID manualmente
+                $sql_recuperar = "SELECT id FROM pca_importacoes WHERE nome_arquivo = ? AND usuario_id = ? AND ano_pca = ? ORDER BY criado_em DESC LIMIT 1";
+                $stmt_recuperar = $pdo->prepare($sql_recuperar);
+                $stmt_recuperar->execute([$resultado['arquivo'], $_SESSION['usuario_id'], $ano_pca]);
+                $registro_recuperado = $stmt_recuperar->fetch();
+                
+                if ($registro_recuperado) {
+                    $importacao_id = $registro_recuperado['id'];
+                    error_log("ID recuperado manualmente: $importacao_id");
+                } else {
+                    throw new Exception('Erro ao obter ID da importação - não foi possível recuperar');
+                }
             }
             
             error_log("Registro de importação criado com ID: $importacao_id");
