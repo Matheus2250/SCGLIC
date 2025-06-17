@@ -28,7 +28,10 @@
       "Bash(sudo mysql:*)",
       "Bash(sudo systemctl:*)",
       "Bash(sudo service:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(sudo chmod:*)",
+      "Bash(head:*)",
+      "Bash(wc:*)"
     ],
     "deny": []
   }
