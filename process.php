@@ -237,7 +237,22 @@ switch ($acao) {
                     
                 } catch (Exception $e2) {
                     error_log("Falha definitiva ao corrigir AUTO_INCREMENT: " . $e2->getMessage());
-                    setMensagem('Erro no banco de dados. Contate o administrador.', 'erro');
+                    error_log("Stack trace da falha: " . $e2->getTraceAsString());
+                    
+                    // Verificar se o problema é mesmo de AUTO_INCREMENT
+                    try {
+                        $check_sql = "SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pca_importacoes'";
+                        $check_result = $pdo->query($check_sql)->fetch();
+                        error_log("AUTO_INCREMENT atual após falha: " . ($check_result ? $check_result['AUTO_INCREMENT'] : 'NULL'));
+                        
+                        $max_sql = "SELECT MAX(id) as max_id, COUNT(*) as total FROM pca_importacoes";
+                        $max_result = $pdo->query($max_sql)->fetch();
+                        error_log("Estado da tabela - MAX(id): " . $max_result['max_id'] . ", Total registros: " . $max_result['total']);
+                    } catch (Exception $e3) {
+                        error_log("Erro ao verificar estado da tabela: " . $e3->getMessage());
+                    }
+                    
+                    setMensagem('Erro crítico no banco de dados: ' . $e2->getMessage() . ' (verifique logs)', 'erro');
                     header('Location: dashboard.php');
                     exit;
                 }
