@@ -27,7 +27,8 @@
       "Bash(sudo apt install:*)",
       "Bash(sudo mysql:*)",
       "Bash(sudo systemctl:*)",
-      "Bash(sudo service:*)"
+      "Bash(sudo service:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }
