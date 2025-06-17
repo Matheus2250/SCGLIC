@@ -21,7 +21,13 @@
       "Bash(git push:*)",
       "Bash(git config:*)",
       "Bash(git pull:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git commit:*)",
+      "Bash(sudo apt:*)",
+      "Bash(sudo apt install:*)",
+      "Bash(sudo mysql:*)",
+      "Bash(sudo systemctl:*)",
+      "Bash(sudo service:*)"
     ],
     "deny": []
   }
