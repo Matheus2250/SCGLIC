@@ -31,7 +31,10 @@
       "Bash(pkill:*)",
       "Bash(sudo chmod:*)",
       "Bash(head:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(file:*)",
+      "Bash(sed:*)",
+      "Bash(true)"
     ],
     "deny": []
   }
