@@ -1,6 +1,44 @@
 <?php
 require_once 'config.php';
 
+// Função para verificar e corrigir AUTO_INCREMENT
+function verificarECorrigirAutoIncrement($tabela) {
+    try {
+        $pdo = conectarDB();
+        
+        // Verificar AUTO_INCREMENT atual
+        $sql = "SELECT AUTO_INCREMENT FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$tabela]);
+        $result = $stmt->fetch();
+        
+        if ($result && $result['AUTO_INCREMENT'] <= 0) {
+            error_log("AUTO_INCREMENT da tabela $tabela está em valor inválido: " . $result['AUTO_INCREMENT']);
+            
+            // Obter o maior ID atual
+            $sql_max = "SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM $tabela";
+            $stmt_max = $pdo->prepare($sql_max);
+            $stmt_max->execute();
+            $max_result = $stmt_max->fetch();
+            $next_id = $max_result['next_id'];
+            
+            // Corrigir AUTO_INCREMENT
+            $sql_fix = "ALTER TABLE $tabela AUTO_INCREMENT = $next_id";
+            $pdo->exec($sql_fix);
+            
+            error_log("AUTO_INCREMENT da tabela $tabela corrigido para: $next_id");
+            return $next_id;
+        }
+        
+        return $result ? $result['AUTO_INCREMENT'] : 1;
+        
+    } catch (Exception $e) {
+        error_log("Erro ao verificar AUTO_INCREMENT da tabela $tabela: " . $e->getMessage());
+        return false;
+    }
+}
+
 // Função para agrupar áreas
 function agruparArea($area) {
     if (empty($area)) return 'SEM ÁREA';
@@ -624,21 +662,122 @@ function getPcaDataByYear($ano, $limite = 50, $offset = 0) {
 }
 
 /**
+ * Função de debug para imprimir estrutura de dados (somente em modo debug)
+ */
+function debugPCA($dados, $titulo = "Debug PCA") {
+    if (DEBUG_MODE) {
+        error_log("=== $titulo ===");
+        error_log("Tipo: " . gettype($dados));
+        if (is_array($dados)) {
+            error_log("Total de elementos: " . count($dados));
+            if (!empty($dados)) {
+                error_log("Primeiro elemento: " . print_r(array_slice($dados, 0, 1), true));
+                error_log("Chaves do primeiro elemento: " . implode(", ", array_keys($dados[0])));
+            }
+        } else {
+            error_log("Valor: " . print_r($dados, true));
+        }
+        error_log("=== Fim $titulo ===");
+    }
+}
+
+/**
+ * Validar dados de linha PCA antes da importação
+ */
+function validarDadosLinhaPCA($linha) {
+    $erros = [];
+    
+    // Validações essenciais
+    if (empty($linha['numero_contratacao'])) {
+        $erros[] = "Número de contratação é obrigatório";
+    }
+    
+    // Validar valores monetários
+    if (isset($linha['valor_total_contratacao']) && $linha['valor_total_contratacao'] !== null) {
+        if (!is_numeric($linha['valor_total_contratacao']) || $linha['valor_total_contratacao'] < 0) {
+            $erros[] = "Valor total de contratação inválido";
+        }
+    }
+    
+    if (isset($linha['valor_unitario']) && $linha['valor_unitario'] !== null) {
+        if (!is_numeric($linha['valor_unitario']) || $linha['valor_unitario'] < 0) {
+            $erros[] = "Valor unitário inválido";
+        }
+    }
+    
+    if (isset($linha['valor_total']) && $linha['valor_total'] !== null) {
+        if (!is_numeric($linha['valor_total']) || $linha['valor_total'] < 0) {
+            $erros[] = "Valor total inválido";
+        }
+    }
+    
+    // Validar quantidade
+    if (isset($linha['quantidade']) && $linha['quantidade'] !== null) {
+        if (!is_numeric($linha['quantidade']) || $linha['quantidade'] < 0) {
+            $erros[] = "Quantidade inválida";
+        }
+    }
+    
+    // Validar prazo
+    if (isset($linha['prazo_duracao_dias']) && $linha['prazo_duracao_dias'] !== null) {
+        if (!is_numeric($linha['prazo_duracao_dias']) || $linha['prazo_duracao_dias'] < 0) {
+            $erros[] = "Prazo de duração inválido";
+        }
+    }
+    
+    // Validar tamanhos de campos
+    if (isset($linha['numero_contratacao']) && strlen($linha['numero_contratacao']) > 50) {
+        $erros[] = "Número de contratação muito longo (máx 50 caracteres)";
+    }
+    
+    if (isset($linha['titulo_contratacao']) && strlen($linha['titulo_contratacao']) > 500) {
+        $erros[] = "Título de contratação muito longo (máx 500 caracteres)";
+    }
+    
+    if (isset($linha['descricao_material_servico']) && strlen($linha['descricao_material_servico']) > 1000) {
+        $erros[] = "Descrição material/serviço muito longa (máx 1000 caracteres)";
+    }
+    
+    return $erros;
+}
+
+/**
  * Importar dados PCA para ano específico
  */
 function importarPcaParaTabela($ano, $dados, $importacao_id) {
     $pdo = conectarDB();
     $tabela = getPcaTableName($ano);
     
+    // Debug dos dados recebidos
+    debugPCA($dados, "Dados recebidos para importação");
+    
     // Verificar se é ano histórico (não permite importação)
     if (isAnoHistorico($ano)) {
         throw new Exception("Não é possível importar dados para o ano histórico {$ano}");
     }
     
-    $inseridos = 0;
+    // Verificar e corrigir AUTO_INCREMENT antes da importação
+    $auto_increment_result = verificarECorrigirAutoIncrement($tabela);
+    if ($auto_increment_result === false) {
+        error_log("Aviso: Não foi possível verificar AUTO_INCREMENT da tabela $tabela");
+    } else {
+        error_log("AUTO_INCREMENT da tabela $tabela verificado/corrigido: $auto_increment_result");
+    }
     
-    foreach ($dados as $linha) {
+    $inseridos = 0;
+    $erros_detalhados = [];
+    
+    // Log informações básicas
+    error_log("Iniciando importação PCA - Ano: $ano, Tabela: $tabela, Total de registros: " . count($dados));
+    
+    foreach ($dados as $index => $linha) {
         try {
+            // Validar dados da linha antes da inserção
+            $erros_validacao = validarDadosLinhaPCA($linha);
+            if (!empty($erros_validacao)) {
+                throw new Exception("Linha " . ($index + 1) . ": " . implode(", ", $erros_validacao));
+            }
+            
             // Para pca_dados (anos atuais), incluir importacao_id
             if ($tabela == 'pca_dados') {
                 $sql = "INSERT INTO {$tabela} (
@@ -654,32 +793,32 @@ function importarPcaParaTabela($ano, $dados, $importacao_id) {
                 
                 $params = [
                     $importacao_id,
-                    $linha['numero_contratacao'],
-                    $linha['status_contratacao'],
-                    $linha['situacao_execucao'],
-                    $linha['titulo_contratacao'],
-                    $linha['categoria_contratacao'],
-                    $linha['uasg_atual'],
-                    $linha['valor_total_contratacao'],
-                    $linha['data_inicio_processo'],
-                    $linha['data_conclusao_processo'],
-                    $linha['prazo_duracao_dias'],
-                    $linha['area_requisitante'],
-                    $linha['numero_dfd'],
-                    $linha['prioridade'],
-                    $linha['numero_item_dfd'],
-                    $linha['data_conclusao_dfd'],
-                    $linha['classificacao_contratacao'],
-                    $linha['codigo_classe_grupo'],
-                    $linha['nome_classe_grupo'],
-                    $linha['codigo_pdm_material'],
-                    $linha['nome_pdm_material'],
-                    $linha['codigo_material_servico'],
-                    $linha['descricao_material_servico'],
-                    $linha['unidade_fornecimento'],
-                    $linha['valor_unitario'],
-                    $linha['quantidade'],
-                    $linha['valor_total']
+                    $linha['numero_contratacao'] ?? null,
+                    $linha['status_contratacao'] ?? null,
+                    $linha['situacao_execucao'] ?? 'Não iniciado',
+                    $linha['titulo_contratacao'] ?? null,
+                    $linha['categoria_contratacao'] ?? null,
+                    $linha['uasg_atual'] ?? null,
+                    $linha['valor_total_contratacao'] ?? null,
+                    $linha['data_inicio_processo'] ?? null,
+                    $linha['data_conclusao_processo'] ?? null,
+                    $linha['prazo_duracao_dias'] ?? null,
+                    $linha['area_requisitante'] ?? null,
+                    $linha['numero_dfd'] ?? null,
+                    $linha['prioridade'] ?? null,
+                    $linha['numero_item_dfd'] ?? null,
+                    $linha['data_conclusao_dfd'] ?? null,
+                    $linha['classificacao_contratacao'] ?? null,
+                    $linha['codigo_classe_grupo'] ?? null,
+                    $linha['nome_classe_grupo'] ?? null,
+                    $linha['codigo_pdm_material'] ?? null,
+                    $linha['nome_pdm_material'] ?? null,
+                    $linha['codigo_material_servico'] ?? null,
+                    $linha['descricao_material_servico'] ?? null,
+                    $linha['unidade_fornecimento'] ?? null,
+                    $linha['valor_unitario'] ?? null,
+                    $linha['quantidade'] ?? null,
+                    $linha['valor_total'] ?? null
                 ];
             } else {
                 // Para tabelas históricas (pca_2022, pca_2023, pca_2024)
@@ -695,45 +834,118 @@ function importarPcaParaTabela($ano, $dados, $importacao_id) {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 
                 $params = [
-                    $linha['numero_contratacao'],
-                    $linha['status_contratacao'],
-                    $linha['situacao_execucao'],
-                    $linha['titulo_contratacao'],
-                    $linha['categoria_contratacao'],
-                    $linha['uasg_atual'],
-                    $linha['valor_total_contratacao'],
-                    $linha['data_inicio_processo'],
-                    $linha['data_conclusao_processo'],
-                    $linha['prazo_duracao_dias'],
-                    $linha['area_requisitante'],
-                    $linha['numero_dfd'],
-                    $linha['prioridade'],
-                    $linha['numero_item_dfd'],
-                    $linha['data_conclusao_dfd'],
-                    $linha['classificacao_contratacao'],
-                    $linha['codigo_classe_grupo'],
-                    $linha['nome_classe_grupo'],
-                    $linha['codigo_pdm_material'],
-                    $linha['nome_pdm_material'],
-                    $linha['codigo_material_servico'],
-                    $linha['descricao_material_servico'],
-                    $linha['unidade_fornecimento'],
-                    $linha['valor_unitario'],
-                    $linha['quantidade'],
-                    $linha['valor_total']
+                    $linha['numero_contratacao'] ?? null,
+                    $linha['status_contratacao'] ?? null,
+                    $linha['situacao_execucao'] ?? 'Não iniciado',
+                    $linha['titulo_contratacao'] ?? null,
+                    $linha['categoria_contratacao'] ?? null,
+                    $linha['uasg_atual'] ?? null,
+                    $linha['valor_total_contratacao'] ?? null,
+                    $linha['data_inicio_processo'] ?? null,
+                    $linha['data_conclusao_processo'] ?? null,
+                    $linha['prazo_duracao_dias'] ?? null,
+                    $linha['area_requisitante'] ?? null,
+                    $linha['numero_dfd'] ?? null,
+                    $linha['prioridade'] ?? null,
+                    $linha['numero_item_dfd'] ?? null,
+                    $linha['data_conclusao_dfd'] ?? null,
+                    $linha['classificacao_contratacao'] ?? null,
+                    $linha['codigo_classe_grupo'] ?? null,
+                    $linha['nome_classe_grupo'] ?? null,
+                    $linha['codigo_pdm_material'] ?? null,
+                    $linha['nome_pdm_material'] ?? null,
+                    $linha['codigo_material_servico'] ?? null,
+                    $linha['descricao_material_servico'] ?? null,
+                    $linha['unidade_fornecimento'] ?? null,
+                    $linha['valor_unitario'] ?? null,
+                    $linha['quantidade'] ?? null,
+                    $linha['valor_total'] ?? null
                 ];
             }
             
             $stmt = $pdo->prepare($sql);
             if ($stmt->execute($params)) {
                 $inseridos++;
+            } else {
+                $erros_detalhados[] = "Erro ao executar statement para contratação: " . ($linha['numero_contratacao'] ?? 'N/A');
             }
             
+        } catch (PDOException $e) {
+            $erro_msg = "Erro PDO para contratação " . ($linha['numero_contratacao'] ?? 'N/A') . ": " . $e->getMessage();
+            error_log($erro_msg);
+            $erros_detalhados[] = $erro_msg;
         } catch (Exception $e) {
-            error_log("Erro ao inserir linha: " . $e->getMessage());
+            $erro_msg = "Erro geral para contratação " . ($linha['numero_contratacao'] ?? 'N/A') . ": " . $e->getMessage();
+            error_log($erro_msg);
+            $erros_detalhados[] = $erro_msg;
+        }
+    }
+    
+    // Se houver erros, logar e lançar exceção com detalhes
+    if (!empty($erros_detalhados)) {
+        $erro_completo = "Erros durante importação: " . implode("; ", array_slice($erros_detalhados, 0, 3));
+        error_log("Importação PCA - Total de erros: " . count($erros_detalhados) . " - Primeiros erros: " . $erro_completo);
+        
+        // Se mais de 50% das linhas falharam, lançar exceção
+        if (count($erros_detalhados) > (count($dados) / 2)) {
+            throw new Exception("Muitos erros na importação: " . $erro_completo);
         }
     }
     
     return $inseridos;
+}
+
+/**
+ * Função para testar conectividade e estrutura do banco
+ */
+function testarBancoPCA($ano = 2025) {
+    try {
+        $pdo = conectarDB();
+        $tabela = getPcaTableName($ano);
+        
+        // Verificar se a tabela existe
+        $sql_check = "SHOW TABLES LIKE ?";
+        $stmt = $pdo->prepare($sql_check);
+        $stmt->execute([$tabela]);
+        $tabela_existe = $stmt->fetch();
+        
+        if (!$tabela_existe) {
+            return ['sucesso' => false, 'erro' => "Tabela $tabela não existe"];
+        }
+        
+        // Verificar estrutura da tabela
+        $sql_desc = "DESCRIBE $tabela";
+        $stmt = $pdo->prepare($sql_desc);
+        $stmt->execute();
+        $colunas = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Verificar colunas essenciais
+        $colunas_essenciais = ['id', 'numero_contratacao', 'titulo_contratacao'];
+        $colunas_faltando = array_diff($colunas_essenciais, $colunas);
+        
+        if (!empty($colunas_faltando)) {
+            return ['sucesso' => false, 'erro' => "Colunas faltando: " . implode(', ', $colunas_faltando)];
+        }
+        
+        // Testar inserção simples
+        if ($tabela == 'pca_dados') {
+            $sql_test = "SELECT COUNT(*) FROM $tabela WHERE importacao_id IS NOT NULL";
+        } else {
+            $sql_test = "SELECT COUNT(*) FROM $tabela";
+        }
+        $stmt = $pdo->prepare($sql_test);
+        $stmt->execute();
+        $total = $stmt->fetchColumn();
+        
+        return [
+            'sucesso' => true, 
+            'tabela' => $tabela, 
+            'total_registros' => $total,
+            'colunas' => count($colunas)
+        ];
+        
+    } catch (Exception $e) {
+        return ['sucesso' => false, 'erro' => $e->getMessage()];
+    }
 }
 ?>

@@ -118,6 +118,11 @@ switch ($acao) {
     case 'importar_pca':
         verificarLogin();
         
+        // Aumentar limites para importação
+        ini_set('memory_limit', '512M');
+        ini_set('max_execution_time', 300); // 5 minutos
+        ini_set('max_input_time', 300);
+        
         // Verificar permissão para importar PCA
         if (!temPermissao('pca_importar')) {
             setMensagem('Você não tem permissão para importar dados do PCA.', 'erro');
@@ -146,27 +151,82 @@ switch ($acao) {
         // Processar o arquivo CSV
         $arquivo = $resultado['caminho'];
 
-        // Detectar e corrigir encoding antes de abrir
-        $conteudo_original = file_get_contents($arquivo);
-        $encoding = mb_detect_encoding($conteudo_original, ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'CP1252'], true);
+        try {
+            // Detectar e corrigir encoding antes de abrir
+            $conteudo_original = file_get_contents($arquivo);
+            if ($conteudo_original === false) {
+                throw new Exception('Não foi possível ler o arquivo enviado');
+            }
+            
+            $encoding = mb_detect_encoding($conteudo_original, ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'CP1252'], true);
 
-        if ($encoding !== 'UTF-8') {
-            $conteudo_utf8 = mb_convert_encoding($conteudo_original, 'UTF-8', $encoding);
-            file_put_contents($arquivo, $conteudo_utf8);
-        }
+            if ($encoding !== 'UTF-8') {
+                $conteudo_utf8 = mb_convert_encoding($conteudo_original, 'UTF-8', $encoding);
+                if (file_put_contents($arquivo, $conteudo_utf8) === false) {
+                    throw new Exception('Erro ao converter encoding do arquivo');
+                }
+            }
 
-        $handle = fopen($arquivo, 'r');
-        if (!$handle) {
-            setMensagem('Erro ao abrir arquivo!', 'erro');
+            $handle = fopen($arquivo, 'r');
+            if (!$handle) {
+                throw new Exception('Erro ao abrir arquivo para leitura');
+            }
+        } catch (Exception $e) {
+            error_log("Erro no processamento do arquivo CSV: " . $e->getMessage());
+            setMensagem('Erro ao processar arquivo: ' . $e->getMessage(), 'erro');
             header('Location: dashboard.php');
             exit;
         }
 
+        // Verificar e corrigir AUTO_INCREMENT antes da importação
+        verificarECorrigirAutoIncrement('pca_importacoes');
+        
         // Criar registro de importação
-        $sql = "INSERT INTO pca_importacoes (nome_arquivo, usuario_id, ano_pca) VALUES (?, ?, ?)";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$resultado['arquivo'], $_SESSION['usuario_id'], $ano_pca]);
-        $importacao_id = $pdo->lastInsertId();
+        try {
+            $sql = "INSERT INTO pca_importacoes (nome_arquivo, usuario_id, ano_pca) VALUES (?, ?, ?)";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$resultado['arquivo'], $_SESSION['usuario_id'], $ano_pca]);
+            $importacao_id = $pdo->lastInsertId();
+            
+            // Verificar se o ID é válido
+            if ($importacao_id <= 0) {
+                error_log("LastInsertId retornou valor inválido: $importacao_id");
+                throw new Exception('Erro ao obter ID da importação');
+            }
+            
+            error_log("Registro de importação criado com ID: $importacao_id");
+            
+        } catch (PDOException $e) {
+            error_log("Erro PDO na criação de importação: " . $e->getMessage());
+            error_log("Código do erro: " . $e->getCode());
+            
+            // Se for erro de chave duplicada, tentar corrigir uma vez mais
+            if ($e->getCode() == '23000' && strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                error_log("Erro de chave duplicada detectado. Tentando corrigir novamente...");
+                
+                try {
+                    // Forçar correção mais agressiva
+                    verificarECorrigirAutoIncrement('pca_importacoes');
+                    // Tentar inserir novamente
+                    $stmt->execute([$resultado['arquivo'], $_SESSION['usuario_id'], $ano_pca]);
+                    $importacao_id = $pdo->lastInsertId();
+                    
+                    if ($importacao_id <= 0) {
+                        throw new Exception('ID inválido após correção');
+                    }
+                    
+                } catch (Exception $e2) {
+                    error_log("Falha definitiva ao corrigir AUTO_INCREMENT: " . $e2->getMessage());
+                    setMensagem('Erro no banco de dados. Contate o administrador.', 'erro');
+                    header('Location: dashboard.php');
+                    exit;
+                }
+            } else {
+                setMensagem('Erro ao registrar importação: ' . $e->getMessage(), 'erro');
+                header('Location: dashboard.php');
+                exit;
+            }
+        }
 
         // Detectar separador automaticamente
         $primeira_linha = fgets($handle);
@@ -250,10 +310,23 @@ switch ($acao) {
 
         // Usar nova função para importar dados
         try {
+            if (empty($dados_para_importar)) {
+                throw new Exception('Nenhum dado válido encontrado para importação');
+            }
+            
+            error_log("Iniciando importação de " . count($dados_para_importar) . " registros");
             $inseridos = importarPcaParaTabela($ano_pca, $dados_para_importar, $importacao_id);
             $linhas_novas = $inseridos;
+            error_log("Importação concluída: $inseridos registros inseridos");
         } catch (Exception $e) {
+            error_log("ERRO CRÍTICO NA IMPORTAÇÃO: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
             $erros[] = "Erro na importação: " . $e->getMessage();
+            
+            // Atualizar status da importação como erro
+            $sql_erro = "UPDATE pca_importacoes SET status = 'erro', observacoes = ? WHERE id = ?";
+            $stmt_erro = $pdo->prepare($sql_erro);
+            $stmt_erro->execute(["Erro: " . $e->getMessage(), $importacao_id]);
         }
 
         fclose($handle);

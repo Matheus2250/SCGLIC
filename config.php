@@ -32,7 +32,7 @@ define('DB_CHARSET', 'utf8mb4');
 // Configurações do sistema
 define('SITE_NAME', getenv('SITE_NAME') ?: 'Sistema de Licitações');
 define('SITE_URL', getenv('SITE_URL') ?: 'http://localhost/sistema_licitacao/');
-define('DEBUG_MODE', filter_var(getenv('DEBUG_MODE'), FILTER_VALIDATE_BOOLEAN));
+define('DEBUG_MODE', filter_var(getenv('DEBUG_MODE') ?: 'true', FILTER_VALIDATE_BOOLEAN));
 
 // Configurações de segurança
 define('SESSION_LIFETIME', (int)(getenv('SESSION_LIFETIME') ?: 7200)); // 2 horas

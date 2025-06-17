@@ -38,7 +38,7 @@ $numero_contratacao = $contratacao['numero_contratacao'];
 
 // Buscar histórico de mudanças importantes (apenas campos relevantes)
 $sql_historico = "SELECT 
-    h.data_mudanca,
+    h.data_alteracao,
     h.campo_alterado,
     h.valor_anterior,
     h.valor_novo,
@@ -47,7 +47,7 @@ $sql_historico = "SELECT
     LEFT JOIN usuarios u ON h.usuario_id = u.id
     WHERE h.numero_contratacao = ?
     AND h.campo_alterado IN ('situacao_execucao', 'data_inicio_processo', 'data_conclusao_processo', 'valor_total_contratacao', 'prioridade')
-    ORDER BY h.data_mudanca DESC
+    ORDER BY h.data_alteracao DESC
     LIMIT 20";
 $stmt_historico = $pdo->prepare($sql_historico);
 $stmt_historico->execute([$numero_contratacao]);
@@ -214,7 +214,7 @@ $licitacao = $stmt_licitacao->fetch();
                 </div>
                 <div style="text-align: right;">
                     <small style="color: #666;">
-                        <?php echo date('d/m/Y H:i', strtotime($item['data_mudanca'])); ?>
+                        <?php echo date('d/m/Y H:i', strtotime($item['data_alteracao'])); ?>
                         <?php if ($item['usuario_nome']): ?>
                             <br>por <?php echo htmlspecialchars($item['usuario_nome']); ?>
                         <?php endif; ?>
