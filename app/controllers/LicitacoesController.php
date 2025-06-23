@@ -25,10 +25,26 @@ class LicitacoesController extends Controller
         ], 'Licitações');
     }
 
+    /** Exibe detalhes de uma licitação */
+    public function view($id)
+    {
+        requireLogin();
+        $licitacao = $this->licitacaoModel->buscarPorId($id);
+        
+        if (!$licitacao) {
+            echo "Licitação não encontrada.";
+            return;
+        }
+        
+        $this->view('licitacoes/view', [
+            'licitacao' => $licitacao
+        ], 'Detalhes da Licitação');
+    }
+
     /** Exibe formulário para nova licitação */
     public function create()
     {
-        requireLogin();
+        requireLicitacaoOuCoordenador();
         $numerosContratacao = $this->licitacaoModel->listarNumerosContratacaoDisponiveis();
         
         $this->view('licitacoes/create', [
@@ -39,7 +55,7 @@ class LicitacoesController extends Controller
     /** Processa criação de nova licitação */
     public function store()
     {
-        requireLogin();
+        requireLicitacaoOuCoordenador();
         
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: ' . BASE_URL . 'licitacoes/index');
@@ -87,7 +103,7 @@ class LicitacoesController extends Controller
     /** Exibe formulário para editar licitação */
     public function edit($id)
     {
-        requireLogin();
+        requireLicitacaoOuCoordenador();
         $licitacao = $this->licitacaoModel->buscarPorId($id);
         
         if (!$licitacao) {
@@ -106,7 +122,7 @@ class LicitacoesController extends Controller
     /** Processa atualização de licitação */
     public function update($id)
     {
-        requireLogin();
+        requireLicitacaoOuCoordenador();
         
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: ' . BASE_URL . 'licitacoes/index');
@@ -154,7 +170,7 @@ class LicitacoesController extends Controller
     /** Exclui uma licitação */
     public function delete($id)
     {
-        requireLogin();
+        requireLicitacaoOuCoordenador();
         
         if ($this->licitacaoModel->excluir($id)) {
             header('Location: ' . BASE_URL . 'licitacoes/index');

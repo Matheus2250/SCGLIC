@@ -41,19 +41,21 @@ public function login()
 
     public function index()
     {
-        requireLogin();
+        requireCoordenador();
         $usuarios = $this->usuarioModel->buscarTodos();
         $this->view('usuarios/index', ['usuarios' => $usuarios], 'Usuários');
     }
 
     public function create()
     {
+        requireCoordenador();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $dados = [
                 'nome' => $_POST['nome'],
                 'email' => $_POST['email'],
                 'senha' => password_hash($_POST['senha'], PASSWORD_DEFAULT),
                 'tipo_usuario' => $_POST['tipo_usuario'],
+                'nivel_acesso' => $_POST['nivel_acesso'] ?? 4,
                 'departamento' => $_POST['departamento'],
                 'ativo' => 1
             ];
@@ -66,12 +68,14 @@ public function login()
 
 public function edit($id)
 {
+    requireCoordenador();
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dados = [
             'id' => $id,
             'nome' => $_POST['nome'],
             'email' => $_POST['email'],
             'tipo_usuario' => $_POST['tipo_usuario'],
+            'nivel_acesso' => $_POST['nivel_acesso'] ?? 4,
             'departamento' => $_POST['departamento'],
             'ativo' => 1
         ];
@@ -92,6 +96,7 @@ public function edit($id)
 
     public function delete($id)
     {
+        requireCoordenador();
         $this->usuarioModel->excluir($id);
         header('Location: ' . BASE_URL . 'usuarios/index');
     }

@@ -7,15 +7,16 @@ class UsuarioModel extends Model
     public function inserir(array $dados): bool
     {
         $sql = "INSERT INTO usuarios 
-                   (nome, email, senha, tipo_usuario, departamento, ativo)
+                   (nome, email, senha, tipo_usuario, nivel_acesso, departamento, ativo)
                 VALUES 
-                   (:nome, :email, :senha, :tipo_usuario, :departamento, :ativo)";
+                   (:nome, :email, :senha, :tipo_usuario, :nivel_acesso, :departamento, :ativo)";
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([
             ':nome'         => $dados['nome'],
             ':email'        => $dados['email'],
             ':senha'        => $dados['senha'],
             ':tipo_usuario' => $dados['tipo_usuario'],
+            ':nivel_acesso' => $dados['nivel_acesso'] ?? 4,
             ':departamento' => $dados['departamento'],
             ':ativo'        => $dados['ativo']
         ]);
@@ -51,6 +52,7 @@ class UsuarioModel extends Model
                    nome          = :nome,
                    email         = :email,
                    tipo_usuario  = :tipo_usuario,
+                   nivel_acesso  = :nivel_acesso,
                    departamento  = :departamento,
                    ativo         = :ativo
                 WHERE id = :id";
@@ -59,6 +61,7 @@ class UsuarioModel extends Model
             ':nome'         => $dados['nome'],
             ':email'        => $dados['email'],
             ':tipo_usuario' => $dados['tipo_usuario'],
+            ':nivel_acesso' => $dados['nivel_acesso'] ?? 4,
             ':departamento' => $dados['departamento'],
             ':ativo'        => $dados['ativo'],
             ':id'           => $dados['id']

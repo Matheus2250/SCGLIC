@@ -51,10 +51,19 @@ if (!defined('BASE_URL')) {
         <h5 class="text-center mb-3">Menu</h5>
         <ul>
             <li><a href="<?= BASE_URL ?>home/index"><i class="bi bi-house"></i> Início</a></li>
-            <li><a href="<?= BASE_URL ?>usuarios/index"><i class="bi bi-people"></i> Usuários</a></li>
+            
+            <?php if (podeGerenciarUsuarios()): ?>
+                <li><a href="<?= BASE_URL ?>usuarios/index"><i class="bi bi-people"></i> Usuários</a></li>
+            <?php endif; ?>
+            
             <li><a href="<?= BASE_URL ?>planejamento/index"><i class="bi bi-journal-check"></i> Planejamento</a></li>
             <li><a href="<?= BASE_URL ?>licitacoes/index"><i class="bi bi-file-earmark-text"></i> Licitações</a></li>
             <li><a href="<?= BASE_URL ?>contratos/index"><i class="bi bi-file-earmark"></i> Contratos</a></li>
+            
+            <!-- Separador para relatórios -->
+            <li style="border-top: 1px solid #495057; margin: 10px 0;"></li>
+            <li><a href="<?= BASE_URL ?>licitacoes/relatorios"><i class="bi bi-graph-up"></i> Relatórios</a></li>
+            
             <li><a href="<?= BASE_URL ?>usuarios/logout"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
         </ul>
     </nav>
@@ -63,7 +72,22 @@ if (!defined('BASE_URL')) {
     <header class="topbar">
         <div class="me-auto fw-bold">Sistema de Licitações</div>
         <?php if (!empty($_SESSION['usuario'])): ?>
-            <div>Olá, <?= htmlspecialchars($_SESSION['usuario']['nome']) ?></div>
+            <?php
+            require_once __DIR__ . '/../../helpers/auth.php';
+            $nivel = getNivelUsuario();
+            $nomeNivel = getNomeNivel($nivel);
+            $badgeClass = match($nivel) {
+                1 => 'bg-danger',
+                2 => 'bg-success', 
+                3 => 'bg-primary',
+                4 => 'bg-secondary',
+                default => 'bg-secondary'
+            };
+            ?>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge <?= $badgeClass ?>"><?= $nomeNivel ?></span>
+                <span>Olá, <?= htmlspecialchars($_SESSION['usuario']['nome']) ?></span>
+            </div>
         <?php endif; ?>
     </header>
 

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../../helpers/auth.php';
+
 // app/controllers/planejamento/ImportacaoController.php
 class ImportacaoController extends Controller
 {
@@ -11,6 +13,7 @@ class ImportacaoController extends Controller
 
     public function form()
     {
+        requirePlanejamentoOuCoordenador();
         $importacoes = $this->modelo->listarImportacoes();
         $this->view('planejamento/importar', [
             'importacoes' => $importacoes
@@ -19,6 +22,7 @@ class ImportacaoController extends Controller
 
     public function upload()
     {
+        requirePlanejamentoOuCoordenador();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_FILES['csv']['tmp_name'])) {
             echo "Envio inválido."; return;
         }

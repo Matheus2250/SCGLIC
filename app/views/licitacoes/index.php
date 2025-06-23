@@ -2,9 +2,11 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3>Gestão de Licitações</h3>
         <div>
-            <a href="<?= BASE_URL ?>licitacoes/create" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Nova Licitação
-            </a>
+            <?php if (podeEditarLicitacoes()): ?>
+                <a href="<?= BASE_URL ?>licitacoes/create" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Nova Licitação
+                </a>
+            <?php endif; ?>
             <a href="<?= BASE_URL ?>licitacoes/relatorios" class="btn btn-info">
                 <i class="bi bi-graph-up"></i> Relatórios
             </a>
@@ -132,15 +134,21 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="<?= BASE_URL ?>licitacoes/edit/<?= $licitacao['id'] ?>" 
-                                               class="btn btn-outline-primary" title="Editar">
-                                                <i class="bi bi-pencil"></i>
+                                            <a href="<?= BASE_URL ?>licitacoes/view/<?= $licitacao['id'] ?>" 
+                                               class="btn btn-outline-info" title="Ver Detalhes">
+                                                <i class="bi bi-eye"></i>
                                             </a>
-                                            <a href="<?= BASE_URL ?>licitacoes/delete/<?= $licitacao['id'] ?>" 
-                                               class="btn btn-outline-danger" title="Excluir"
-                                               onclick="return confirm('Tem certeza que deseja excluir esta licitação?')">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
+                                            <?php if (podeEditarLicitacoes()): ?>
+                                                <a href="<?= BASE_URL ?>licitacoes/edit/<?= $licitacao['id'] ?>" 
+                                                   class="btn btn-outline-primary" title="Editar">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <a href="<?= BASE_URL ?>licitacoes/delete/<?= $licitacao['id'] ?>" 
+                                                   class="btn btn-outline-danger" title="Excluir"
+                                                   onclick="return confirm('Tem certeza que deseja excluir esta licitação?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
