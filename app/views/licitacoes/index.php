@@ -134,7 +134,7 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="<?= BASE_URL ?>licitacoes/view/<?= $licitacao['id'] ?>" 
+                                            <a href="<?= BASE_URL ?>licitacoes/details/<?= $licitacao['id'] ?>" 
                                                class="btn btn-outline-info" title="Ver Detalhes">
                                                 <i class="bi bi-eye"></i>
                                             </a>

@@ -26,7 +26,7 @@ class LicitacoesController extends Controller
     }
 
     /** Exibe detalhes de uma licitação */
-    public function view($id)
+    public function details($id)
     {
         requireLogin();
         $licitacao = $this->licitacaoModel->buscarPorId($id);
