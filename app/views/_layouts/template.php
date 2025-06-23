@@ -3,6 +3,9 @@
 if (!defined('BASE_URL')) {
     define('BASE_URL', 'http://10.1.41.251:8080/sistema_licitacoes/public/');
 }
+
+// Carrega as funções de autenticação
+require_once __DIR__ . '/../../helpers/auth.php';
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -73,7 +76,6 @@ if (!defined('BASE_URL')) {
         <div class="me-auto fw-bold">Sistema de Licitações</div>
         <?php if (!empty($_SESSION['usuario'])): ?>
             <?php
-            require_once __DIR__ . '/../../helpers/auth.php';
             $nivel = getNivelUsuario();
             $nomeNivel = getNomeNivel($nivel);
             $badgeClass = match($nivel) {
