@@ -190,7 +190,7 @@ if (!empty($importacoes_ids)) {
         ")->fetchColumn(),
         
         'valor_total' => $pdo->query("
-            SELECT COALESCE(SUM(DISTINCT valor_total_contratacao), 0) 
+            SELECT COALESCE(SUM(DISTINCT valor_total), 0) 
             FROM $tabela_pca 
             WHERE $where_stats 
             AND numero_dfd IS NOT NULL 
