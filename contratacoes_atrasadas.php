@@ -1122,7 +1122,7 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             var area = document.querySelector('select[name="area"]').value;
             
             // Construir URL de exportação
-            var url = 'exportar_atrasadas_novo.php?tipo=' + tipo;
+            var url = 'relatorios/exportar_atrasadas_novo.php?tipo=' + tipo;
             if (area) {
                 url += '&area=' + encodeURIComponent(area);
             }
