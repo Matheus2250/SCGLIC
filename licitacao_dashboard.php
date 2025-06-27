@@ -1336,12 +1336,6 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
         </main>
     </div>
 
-<!-- Botão de teste temporário -->
-<div style="position: fixed; bottom: 20px; right: 20px; z-index: 2000;">
-    <button onclick="testarModal()" style="background: red; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">
-        🧪 Teste Modal
-    </button>
-</div>
 
     <script>
         // Dados passados do PHP para JavaScript
