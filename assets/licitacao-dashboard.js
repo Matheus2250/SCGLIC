@@ -1449,8 +1449,7 @@ function realizarPesquisa(termo, sugestoesDiv, container, input) {
             const titulo = (contratacao.titulo_contratacao || '').toLowerCase();
 
             return numero.includes(termoLower) ||
-                   titulo.includes(termoLower) ||
-                   dfd.includes(termoLower);
+                   titulo.includes(termoLower);
         }).slice(0, 15); // Limitar a 15 resultados para performance
 
         // Mostrar sugestões
@@ -1612,7 +1611,6 @@ function ocultarSugestoes() {
 function limparCamposOcultos() {
     const tituloField = document.getElementById('titulo_contratacao_selecionado');
 
-    if (dfdField) dfdField.value = '';
     if (tituloField) tituloField.value = '';
 }
 
