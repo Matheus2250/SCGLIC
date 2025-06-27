@@ -260,6 +260,8 @@ function initAndamentos() {
 window.abrirModalImportarAndamentos = abrirModalImportarAndamentos;
 window.consultarAndamentos = consultarAndamentos;
 window.testarModal = testarModal;
+window.showSection = showSection;
+window.formatarValorCorreto = formatarValorCorreto;
 
 // ==================== GRÁFICOS ====================
 
@@ -1100,6 +1102,7 @@ function fecharModal(modalId) {
  * Inicialização quando DOM estiver carregado
  */
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded - Licitacao Dashboard');
     // Inicializar ícones Lucide
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
@@ -1216,6 +1219,7 @@ window.onclick = function(event) {
  * Abrir modal de criar licitação
  */
 function abrirModalCriarLicitacao() {
+    console.log('=== ABRINDO MODAL DE CRIAR LICITAÇÃO ===');
     const modal = document.getElementById('modalCriarLicitacao');
 
     // Limpar formulário
@@ -1716,6 +1720,12 @@ function inicializarCampoPesquisa() {
 window.mostrarSugestoes = mostrarSugestoes;
 window.ocultarSugestoes = ocultarSugestoes;
 window.abrirModalCriarLicitacao = abrirModalCriarLicitacao;
+window.editarLicitacao = editarLicitacao;
+window.verDetalhes = verDetalhes;
+window.gerarRelatorio = gerarRelatorio;
+window.filtrarLicitacoes = filtrarLicitacoes;
+window.exportarLicitacoes = exportarLicitacoes;
+window.fecharModal = fecharModal;
 
 // formatarValorCorreto é usada no verDetalhes
 // window.formatarValorCorreto = formatarValorCorreto; // Já é definida no topo
