@@ -149,7 +149,6 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     <link rel="stylesheet" href="assets/licitacao-dashboard.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="assets/licitacao-dashboard.js"></script>
 
     <style>
     /* Garantir que modais funcionem */
@@ -1355,6 +1354,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
         // Compatibilidade com arquivo JS externo
         window.contratacoesPCA = window.dadosContratacoes;
     </script>
+    <script src="assets/licitacao-dashboard.js"></script>
     <script src="assets/notifications.js"></script>
 </body>
 </html>
