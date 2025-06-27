@@ -1715,54 +1715,80 @@ window.verDetalhes = function(id) {
             if (data.success && data.data) {
                 const licitacao = data.data;
                 
-                // Gerar HTML dos detalhes
-                const html = `
-                    <div class="detalhes-licitacao">
-                        <div class="detail-section">
-                            <h4>Informações Básicas</h4>
-                            <p><strong>NUP:</strong> ${licitacao.nup || 'N/A'}</p>
-                            <p><strong>Número da Contratação:</strong> ${licitacao.numero_contratacao || licitacao.numero_contratacao_final || 'N/A'}</p>
-                            <p><strong>Modalidade:</strong> ${licitacao.modalidade || 'N/A'}</p>
-                            <p><strong>Tipo:</strong> ${licitacao.tipo || 'N/A'}</p>
-                            <p><strong>Situação:</strong> <span class="status-badge status-${(licitacao.situacao || '').toLowerCase().replace('_', '-')}">${(licitacao.situacao || '').replace('_', ' ')}</span></p>
-                        </div>
-                        
-                        <div class="detail-section">
-                            <h4>Responsáveis</h4>
-                            <p><strong>Área Demandante:</strong> ${licitacao.area_demandante || 'N/A'}</p>
-                            <p><strong>Pregoeiro:</strong> ${licitacao.pregoeiro || 'N/A'}</p>
-                            <p><strong>Resp. Instrução:</strong> ${licitacao.resp_instrucao || 'N/A'}</p>
-                        </div>
-                        
-                        <div class="detail-section">
-                            <h4>Valores e Prazos</h4>
-                            <p><strong>Valor Estimado:</strong> ${licitacao.valor_estimado ? 'R$ ' + parseFloat(licitacao.valor_estimado).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : 'N/A'}</p>
-                            <p><strong>Valor Homologado:</strong> ${licitacao.valor_homologado ? 'R$ ' + parseFloat(licitacao.valor_homologado).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : 'N/A'}</p>
-                            <p><strong>Economia:</strong> ${licitacao.economia ? 'R$ ' + parseFloat(licitacao.economia).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : 'N/A'}</p>
-                            <p><strong>Data Abertura:</strong> ${licitacao.data_abertura ? new Date(licitacao.data_abertura + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</p>
-                            <p><strong>Data Homologação:</strong> ${licitacao.data_homologacao ? new Date(licitacao.data_homologacao + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</p>
-                        </div>
-                        
-                        <div class="detail-section">
-                            <h4>Objeto</h4>
-                            <p>${licitacao.objeto || 'N/A'}</p>
-                        </div>
-                        
-                        ${licitacao.link ? `
-                        <div class="detail-section">
-                            <h4>Link</h4>
-                            <p><a href="${licitacao.link}" target="_blank" rel="noopener">${licitacao.link}</a></p>
-                        </div>
-                        ` : ''}
-                        
-                        <div class="detail-section">
-                            <h4>Informações do Sistema</h4>
-                            <p><strong>Criado em:</strong> ${licitacao.criado_em ? new Date(licitacao.criado_em).toLocaleString('pt-BR') : 'N/A'}</p>
-                            <p><strong>Atualizado em:</strong> ${licitacao.atualizado_em ? new Date(licitacao.atualizado_em).toLocaleString('pt-BR') : 'N/A'}</p>
-                            <p><strong>Criado por:</strong> ${licitacao.usuario_nome || 'N/A'}</p>
-                        </div>
-                    </div>
-                `;
+                // Gerar HTML dos detalhes (concatenação simples para evitar erros)
+                let html = '<div class="detalhes-licitacao">';
+                html += '<div class="detail-section">';
+                html += '<h4>Informações Básicas</h4>';
+                html += '<p><strong>NUP:</strong> ' + (licitacao.nup || 'N/A') + '</p>';
+                html += '<p><strong>Número da Contratação:</strong> ' + (licitacao.numero_contratacao || licitacao.numero_contratacao_final || 'N/A') + '</p>';
+                html += '<p><strong>Modalidade:</strong> ' + (licitacao.modalidade || 'N/A') + '</p>';
+                html += '<p><strong>Tipo:</strong> ' + (licitacao.tipo || 'N/A') + '</p>';
+                html += '<p><strong>Situação:</strong> <span class="status-badge">' + (licitacao.situacao || '').replace('_', ' ') + '</span></p>';
+                html += '</div>';
+                
+                html += '<div class="detail-section">';
+                html += '<h4>Responsáveis</h4>';
+                html += '<p><strong>Área Demandante:</strong> ' + (licitacao.area_demandante || 'N/A') + '</p>';
+                html += '<p><strong>Pregoeiro:</strong> ' + (licitacao.pregoeiro || 'N/A') + '</p>';
+                html += '<p><strong>Resp. Instrução:</strong> ' + (licitacao.resp_instrucao || 'N/A') + '</p>';
+                html += '</div>';
+                
+                html += '<div class="detail-section">';
+                html += '<h4>Valores e Prazos</h4>';
+                if (licitacao.valor_estimado) {
+                    html += '<p><strong>Valor Estimado:</strong> R$ ' + parseFloat(licitacao.valor_estimado).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</p>';
+                } else {
+                    html += '<p><strong>Valor Estimado:</strong> N/A</p>';
+                }
+                if (licitacao.valor_homologado) {
+                    html += '<p><strong>Valor Homologado:</strong> R$ ' + parseFloat(licitacao.valor_homologado).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</p>';
+                } else {
+                    html += '<p><strong>Valor Homologado:</strong> N/A</p>';
+                }
+                if (licitacao.economia) {
+                    html += '<p><strong>Economia:</strong> R$ ' + parseFloat(licitacao.economia).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</p>';
+                } else {
+                    html += '<p><strong>Economia:</strong> N/A</p>';
+                }
+                if (licitacao.data_abertura) {
+                    html += '<p><strong>Data Abertura:</strong> ' + new Date(licitacao.data_abertura + 'T00:00:00').toLocaleDateString('pt-BR') + '</p>';
+                } else {
+                    html += '<p><strong>Data Abertura:</strong> N/A</p>';
+                }
+                if (licitacao.data_homologacao) {
+                    html += '<p><strong>Data Homologação:</strong> ' + new Date(licitacao.data_homologacao + 'T00:00:00').toLocaleDateString('pt-BR') + '</p>';
+                } else {
+                    html += '<p><strong>Data Homologação:</strong> N/A</p>';
+                }
+                html += '</div>';
+                
+                html += '<div class="detail-section">';
+                html += '<h4>Objeto</h4>';
+                html += '<p>' + (licitacao.objeto || 'N/A') + '</p>';
+                html += '</div>';
+                
+                if (licitacao.link) {
+                    html += '<div class="detail-section">';
+                    html += '<h4>Link</h4>';
+                    html += '<p><a href="' + licitacao.link + '" target="_blank" rel="noopener">' + licitacao.link + '</a></p>';
+                    html += '</div>';
+                }
+                
+                html += '<div class="detail-section">';
+                html += '<h4>Informações do Sistema</h4>';
+                if (licitacao.criado_em) {
+                    html += '<p><strong>Criado em:</strong> ' + new Date(licitacao.criado_em).toLocaleString('pt-BR') + '</p>';
+                } else {
+                    html += '<p><strong>Criado em:</strong> N/A</p>';
+                }
+                if (licitacao.atualizado_em) {
+                    html += '<p><strong>Atualizado em:</strong> ' + new Date(licitacao.atualizado_em).toLocaleString('pt-BR') + '</p>';
+                } else {
+                    html += '<p><strong>Atualizado em:</strong> N/A</p>';
+                }
+                html += '<p><strong>Criado por:</strong> ' + (licitacao.usuario_nome || 'N/A') + '</p>';
+                html += '</div>';
+                html += '</div>';
                 
                 document.getElementById('detalhesContent').innerHTML = html;
                 document.getElementById('modalDetalhes').style.display = 'block';
