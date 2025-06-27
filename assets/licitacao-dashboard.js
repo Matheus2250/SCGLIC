@@ -63,46 +63,41 @@ function abrirModalImportarAndamentos(nup) {
     console.log('=== ABRINDO MODAL DE IMPORTAÇÃO ===');
     console.log('NUP:', nup);
     console.log('Todos os modais na página:', document.querySelectorAll('.modal'));
-    
+
     // Verificar se elementos existem
     const modalElement = document.getElementById('modalImportarAndamentos');
     const nupElement = document.getElementById('nupSelecionado');
-    
+
     console.log('Modal encontrado:', modalElement);
     console.log('Elemento NUP encontrado:', nupElement);
-    
+
     if (!modalElement) {
         console.error('Modal modalImportarAndamentos não encontrado');
         console.log('Todos os elementos com ID:', document.querySelectorAll('[id*="modal"]'));
         alert('Erro: Modal não encontrado. Verifique o console para mais detalhes.');
         return;
     }
-    
+
     if (!nupElement) {
         console.error('Elemento nupSelecionado não encontrado');
         console.log('Elementos dentro do modal:', modalElement.querySelectorAll('*[id]'));
         alert('Erro: Elemento NUP não encontrado. Verifique o console para mais detalhes.');
         return;
     }
-    
-    console.log('Definindo texto do NUP...');
+
+    console.log("Definindo texto do NUP...");
     nupElement.textContent = nup;
-    
-    console.log('Mostrando modal...');
-    modalElement.style.display = 'block';
-    modalElement.classList.add('show');
-    
-    console.log('Modal exibido. Display:', modalElement.style.display);
-    console.log('Classes do modal:', modalElement.classList.toString());
-    
-    // Recriar ícones Lucide após mostrar modal
+    modalElement.style.display = "block";
+    modalElement.classList.add("show");
+    console.log("Modal exibido. Display:", modalElement.style.display);
+    console.log("Classes do modal:", modalElement.classList.toString());
     setTimeout(() => {
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
             console.log('Recriando ícones Lucide...');
             lucide.createIcons();
         }
     }, 100);
-    
+
     console.log('=== FIM DA FUNÇÃO ===');
 }
 
@@ -111,50 +106,48 @@ function abrirModalImportarAndamentos(nup) {
  */
 function consultarAndamentos(nup) {
     console.log('Consultando andamentos para NUP:', nup);
-    
+
     // Verificar se modal existe
     const modalElement = document.getElementById('modalVisualizarAndamentos');
     const conteudoElement = document.getElementById('conteudoAndamentos');
-    
+
     if (!modalElement) {
         console.error('Modal modalVisualizarAndamentos não encontrado');
         alert('Erro: Modal de visualização não encontrado');
         return;
     }
-    
+
     if (!conteudoElement) {
         console.error('Elemento conteudoAndamentos não encontrado');
         alert('Erro: Conteúdo do modal não encontrado');
         return;
     }
-    
+
     // Abrir modal
     modalElement.style.display = 'block';
     modalElement.classList.add('show');
-    
-    // Resetar conteúdo para loading
     conteudoElement.innerHTML = '<div style="text-align: center; padding: 20px;"><i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 1s linear infinite;"></i><p>Carregando andamentos...</p></div>';
-    
+
     // Recriar ícones
     setTimeout(() => {
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
             lucide.createIcons();
         }
     }, 100);
-    
+
     // Buscar dados
     fetch('api/consultar_andamentos.php?nup=' + encodeURIComponent(nup) + '&calcular_tempo=true')
         .then(response => response.json())
         .then(data => {
             console.log('Dados de andamentos:', data);
-            
+
             if (data.success) {
                 if (data.total === 0) {
                     conteudoElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;"><i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px;"></i><h3 style="margin: 0 0 10px 0;">Nenhum andamento encontrado</h3><p style="margin: 0;">Não há dados de andamentos para este NUP.</p></div>';
                 } else {
                     // Gerar HTML simplificado para evitar erros de sintaxe
                     let html = '<div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><h4>NUP: ' + nup + '</h4><p>Total: ' + data.total + ' registros | Dias: ' + (data.total_dias_geral || 0) + '</p></div>';
-                    
+
                     if (data.resumo_tempo_por_unidade) {
                         html += '<div style="background: #f3e5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><h4>Resumo por Unidade</h4>';
                         for (const [unidade, dias] of Object.entries(data.resumo_tempo_por_unidade)) {
@@ -162,7 +155,7 @@ function consultarAndamentos(nup) {
                         }
                         html += '</div>';
                     }
-                    
+
                     conteudoElement.innerHTML = html;
                 }
             } else {
@@ -198,58 +191,58 @@ function initAndamentos() {
     if (formElement) {
         formElement.addEventListener('submit', function(e) {
             e.preventDefault();
-    
+
             const formData = new FormData(this);
             const nup = document.getElementById('nupSelecionado').textContent;
-            
+
             // Verificar se arquivo foi selecionado
             const arquivo = document.getElementById('arquivo_json').files[0];
             if (!arquivo) {
                 alert('Por favor, selecione um arquivo JSON.');
                 return;
             }
-            
+
             // Mostrar loading
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<i data-lucide="loader" style="animation: spin 1s linear infinite;"></i> Importando...';
             submitBtn.disabled = true;
-            
+
             // Enviar requisição
             fetch('api/importar_andamentos.php', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Resposta da importação:', data);
-                
-                if (data.success) {
-                    alert('Andamentos importados com sucesso!\n\n' + 
-                          'NUP: ' + data.data.nup + '\n' +
-                          'Processo ID: ' + data.data.processo_id + '\n' +
-                          'Total de andamentos: ' + data.data.total_andamentos + '\n' +
-                          'Ação: ' + data.data.acao);
-                    
-                    // Fechar modal e limpar formulário
-                    document.getElementById('modalImportarAndamentos').style.display = 'none';
-                    document.getElementById('formImportarAndamentos').reset();
-                } else {
-                    alert('Erro ao importar andamentos:\n' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao processar requisição de importação.');
-            })
-            .finally(() => {
-                // Restaurar botão
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-                if (typeof lucide !== 'undefined' && lucide.createIcons) {
-                    lucide.createIcons();
-                }
-            });
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Resposta da importação:', data);
+
+                    if (data.success) {
+                        alert('Andamentos importados com sucesso!\n\n' +
+                            'NUP: ' + data.data.nup + '\n' +
+                            'Processo ID: ' + data.data.processo_id + '\n' +
+                            'Total de andamentos: ' + data.data.total_andamentos + '\n' +
+                            'Ação: ' + data.data.acao);
+
+                        // Fechar modal e limpar formulário
+                        document.getElementById('modalImportarAndamentos').style.display = 'none';
+                        document.getElementById('formImportarAndamentos').reset();
+                    } else {
+                        alert('Erro ao importar andamentos:\n' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao processar requisição de importação.');
+                })
+                .finally(() => {
+                    // Restaurar botão
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                        lucide.createIcons();
+                    }
+                });
         });
     } else {
         console.error('Formulário formImportarAndamentos não encontrado');
@@ -1093,7 +1086,38 @@ function preencherDadosPCA() {
  * Fechar modal genérico
  */
 function fecharModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+        console.warn('Modal não encontrado:', modalId);
+        return;
+    }
+
+    // Remover classe show primeiro
+    modal.classList.remove('show');
+
+    // Forçar ocultação removendo display inline e permitindo CSS assumir
+    modal.style.removeProperty('display');
+    modal.style.setProperty('display', 'none', 'important');
+
+    // Para o modal de criar licitação, limpar formulário
+    if (modalId === 'modalCriarLicitacao') {
+        const form = modal.querySelector('form');
+        if (form) {
+            form.reset();
+
+            // Limpar campos específicos
+            const economiaField = document.getElementById('economia_criar');
+            if (economiaField) economiaField.value = '';
+
+            const tituloField = document.getElementById('titulo_contratacao_selecionado');
+            if (tituloField) tituloField.value = '';
+
+            const inputContratacao = document.getElementById('input_contratacao');
+            if (inputContratacao) inputContratacao.value = '';
+        }
+    }
+
+    console.log('Modal fechado:', modalId);
 }
 
 // ==================== EVENT LISTENERS ====================
@@ -1211,7 +1235,14 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
-        event.target.style.display = 'none';
+        const modalId = event.target.id;
+        if (modalId) {
+            fecharModal(modalId);
+        } else {
+            // Fallback para modais sem ID
+            event.target.style.setProperty('display', 'none', 'important');
+            event.target.classList.remove('show');
+        }
     }
 }
 
@@ -1240,12 +1271,10 @@ function abrirModalCriarLicitacao() {
 
     // Limpar campos de PCA ocultos
     document.getElementById('titulo_contratacao_selecionado').value = '';
-    document.getElementById('input_contratacao').value = ''; // Limpar o campo de input de contratação também
-
-    // Mostrar modal
+    document.getElementById('input_contratacao').value = ''; // Limpar o campo de input
+    // Abrir modal
     modal.style.display = 'block';
-
-    // Focar no primeiro campo após um pequeno delay
+    modal.classList.add('show');  // Focar no primeiro campo após um pequeno delay
     setTimeout(() => {
         const nupField = modal.querySelector('#nup_criar');
         if (nupField) {
@@ -1300,31 +1329,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Fechar modal e recarregar página
-                    fecharModal('modalCriarLicitacao');
-                    window.location.reload();
-                } else {
-                    alert(data.message || 'Erro ao criar licitação');
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Fechar modal e recarregar página
+                        fecharModal('modalCriarLicitacao');
+                        window.location.reload();
+                    } else {
+                        alert(data.message || 'Erro ao criar licitação');
+                        // Restaurar botão
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    }
+                })
+                .catch(error => {
+                    alert('Erro ao processar requisição');
                     // Restaurar botão
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
                     if (typeof lucide !== 'undefined') {
                         lucide.createIcons();
                     }
-                }
-            })
-            .catch(error => {
-                alert('Erro ao processar requisição');
-                // Restaurar botão
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
-            });
+                });
         });
     }
 
@@ -1449,7 +1478,7 @@ function realizarPesquisa(termo, sugestoesDiv, container, input) {
             const titulo = (contratacao.titulo_contratacao || '').toLowerCase();
 
             return numero.includes(termoLower) ||
-                   titulo.includes(termoLower);
+                titulo.includes(termoLower);
         }).slice(0, 15); // Limitar a 15 resultados para performance
 
         // Mostrar sugestões
@@ -1843,30 +1872,85 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    fecharModal('modalEdicao');
-                    window.location.reload();
-                } else {
-                    alert(data.message || 'Erro ao salvar alterações');
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        fecharModal('modalEdicao');
+                        window.location.reload();
+                    } else {
+                        alert(data.message || 'Erro ao salvar alterações');
+                        // Restaurar botão
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    }
+                })
+                .catch(error => {
+                    alert('Erro ao processar requisição');
                     // Restaurar botão
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
                     if (typeof lucide !== 'undefined') {
                         lucide.createIcons();
                     }
-                }
-            })
-            .catch(error => {
-                alert('Erro ao processar requisição');
-                // Restaurar botão
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
-            });
+                });
         });
     }
 });
+
+/**
+ * Fechar um modal genérico
+ */
+function fecharModal(modalId) {
+    const modalElement = document.getElementById(modalId);
+    if (modalElement) {
+        modalElement.style.display = 'none';
+        modalElement.classList.remove('show');
+    }
+}
+
+window.fecharModal = fecharModal;
+
+
+
+
+/**
+ * Abrir modal de edição de licitação
+ */
+function editarLicitacao(id) {
+    console.log("Editando licitação com ID:", id);
+    // Implementar lógica para buscar dados da licitação e preencher o modal de edição
+    // Por enquanto, apenas abre o modal
+    const modalElement = document.getElementById("modalEdicao");
+    if (modalElement) {
+        modalElement.style.display = "block";
+        modalElement.classList.add("show");
+    } else {
+        console.error("Modal modalEdicao não encontrado");
+    }
+}
+
+window.editarLicitacao = editarLicitacao;
+
+
+
+
+/**
+ * Abrir modal de detalhes da licitação
+ */
+function verDetalhes(id) {
+    console.log("Visualizando detalhes da licitação com ID:", id);
+    // Implementar lógica para buscar dados da licitação e preencher o modal de detalhes
+    // Por enquanto, apenas abre o modal
+    const modalElement = document.getElementById("modalDetalhes");
+    if (modalElement) {
+        modalElement.style.display = "block";
+        modalElement.classList.add("show");
+    } else {
+        console.error("Modal modalDetalhes não encontrado");
+    }
+}
+
+window.verDetalhes = verDetalhes;
