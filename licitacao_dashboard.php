@@ -152,6 +152,28 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     <script src="assets/licitacao-dashboard.js"></script>
 
     <style>
+    /* Garantir que modais funcionem */
+    .modal {
+        display: none !important;
+        position: fixed !important;
+        z-index: 1000 !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background-color: rgba(0,0,0,0.5) !important;
+    }
+    
+    .modal.show {
+        display: block !important;
+    }
+    
+    /* Animação de spinner */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
     .search-input {
         width: 100% !important;
         padding: 12px 16px !important;
@@ -1315,6 +1337,13 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
         </main>
     </div>
 
+<!-- Botão de teste temporário -->
+<div style="position: fixed; bottom: 20px; right: 20px; z-index: 2000;">
+    <button onclick="testarModal()" style="background: red; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">
+        🧪 Teste Modal
+    </button>
+</div>
+
     <script>
         // Dados passados do PHP para JavaScript
         window.dadosModalidade = <?php echo json_encode($dados_modalidade); ?>;
@@ -1337,7 +1366,11 @@ window.abrirModalCriarLicitacao = function() {
 };
 
 window.fecharModal = function(id) {
-    document.getElementById(id).style.display = 'none';
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+    }
 };
 
 window.exportarLicitacoes = function() {
@@ -1758,14 +1791,65 @@ document.getElementById('formExportar').addEventListener('submit', function(e) {
 
 // Abrir modal de importação de andamentos
 window.abrirModalImportarAndamentos = function(nup) {
-    console.log('Abrindo modal de importação para NUP:', nup);
-    document.getElementById('nupSelecionado').textContent = nup;
-    document.getElementById('modalImportarAndamentos').style.display = 'block';
+    console.log('=== ABRINDO MODAL DE IMPORTAÇÃO ===');
+    console.log('NUP:', nup);
+    console.log('Todos os modais na página:', document.querySelectorAll('.modal'));
+    
+    // Verificar se elementos existem
+    const modalElement = document.getElementById('modalImportarAndamentos');
+    const nupElement = document.getElementById('nupSelecionado');
+    
+    console.log('Modal encontrado:', modalElement);
+    console.log('Elemento NUP encontrado:', nupElement);
+    
+    if (!modalElement) {
+        console.error('Modal modalImportarAndamentos não encontrado');
+        console.log('Todos os elementos com ID:', document.querySelectorAll('[id*="modal"]'));
+        alert('Erro: Modal não encontrado. Verifique o console para mais detalhes.');
+        return;
+    }
+    
+    if (!nupElement) {
+        console.error('Elemento nupSelecionado não encontrado');
+        console.log('Elementos dentro do modal:', modalElement.querySelectorAll('*[id]'));
+        alert('Erro: Elemento NUP não encontrado. Verifique o console para mais detalhes.');
+        return;
+    }
+    
+    console.log('Definindo texto do NUP...');
+    nupElement.textContent = nup;
+    
+    console.log('Mostrando modal...');
+    modalElement.style.display = 'block';
+    modalElement.classList.add('show');
+    
+    console.log('Modal exibido. Display:', modalElement.style.display);
+    console.log('Classes do modal:', modalElement.classList.toString());
+    
+    // Recriar ícones Lucide após mostrar modal
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            console.log('Recriando ícones Lucide...');
+            lucide.createIcons();
+        }
+    }, 100);
+    
+    console.log('=== FIM DA FUNÇÃO ===');
+};
+
+// Função de teste para debugar
+window.testarModal = function() {
+    console.log('=== TESTE DE MODAL ===');
+    console.log('Tentando abrir modal de teste...');
+    window.abrirModalImportarAndamentos('12345.123456/2024-99');
 };
 
 // Processar formulário de importação de andamentos
-document.getElementById('formImportarAndamentos').addEventListener('submit', function(e) {
-    e.preventDefault();
+document.addEventListener('DOMContentLoaded', function() {
+    const formElement = document.getElementById('formImportarAndamentos');
+    if (formElement) {
+        formElement.addEventListener('submit', function(e) {
+            e.preventDefault();
     
     const formData = new FormData(this);
     const nup = document.getElementById('nupSelecionado').textContent;
@@ -1815,15 +1899,50 @@ document.getElementById('formImportarAndamentos').addEventListener('submit', fun
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
         lucide.createIcons(); // Recriar ícones
-    });
+        });
+    } else {
+        console.error('Formulário formImportarAndamentos não encontrado');
+    }
 });
 
 // Consultar andamentos de um processo
 window.consultarAndamentos = function(nup) {
     console.log('Consultando andamentos para NUP:', nup);
     
+    // Verificar se modal existe
+    const modalElement = document.getElementById('modalVisualizarAndamentos');
+    const conteudoElement = document.getElementById('conteudoAndamentos');
+    
+    if (!modalElement) {
+        console.error('Modal modalVisualizarAndamentos não encontrado');
+        alert('Erro: Modal de visualização não encontrado');
+        return;
+    }
+    
+    if (!conteudoElement) {
+        console.error('Elemento conteudoAndamentos não encontrado');
+        alert('Erro: Conteúdo do modal não encontrado');
+        return;
+    }
+    
     // Abrir modal
-    document.getElementById('modalVisualizarAndamentos').style.display = 'block';
+    modalElement.style.display = 'block';
+    modalElement.classList.add('show');
+    
+    // Resetar conteúdo para loading
+    conteudoElement.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+            <i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 1s linear infinite;"></i>
+            <p>Carregando andamentos...</p>
+        </div>
+    `;
+    
+    // Recriar ícones
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    }, 100);
     
     // Buscar dados
     fetch('api/consultar_andamentos.php?nup=' + encodeURIComponent(nup) + '&calcular_tempo=true')
