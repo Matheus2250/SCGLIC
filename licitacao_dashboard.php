@@ -1473,6 +1473,135 @@ console.log('Sistema carregado com sucesso!');
 // Compatibilidade com arquivo JS externo
 window.contratacoesPCA = window.dadosContratacoes;
 
+// ========== FUNÇÕES PARA ANDAMENTOS (DEFINIDAS NO INÍCIO) ==========
+
+// Abrir modal de importação de andamentos
+window.abrirModalImportarAndamentos = function(nup) {
+    console.log('=== ABRINDO MODAL DE IMPORTAÇÃO ===');
+    console.log('NUP:', nup);
+    console.log('Todos os modais na página:', document.querySelectorAll('.modal'));
+    
+    // Verificar se elementos existem
+    const modalElement = document.getElementById('modalImportarAndamentos');
+    const nupElement = document.getElementById('nupSelecionado');
+    
+    console.log('Modal encontrado:', modalElement);
+    console.log('Elemento NUP encontrado:', nupElement);
+    
+    if (!modalElement) {
+        console.error('Modal modalImportarAndamentos não encontrado');
+        console.log('Todos os elementos com ID:', document.querySelectorAll('[id*="modal"]'));
+        alert('Erro: Modal não encontrado. Verifique o console para mais detalhes.');
+        return;
+    }
+    
+    if (!nupElement) {
+        console.error('Elemento nupSelecionado não encontrado');
+        console.log('Elementos dentro do modal:', modalElement.querySelectorAll('*[id]'));
+        alert('Erro: Elemento NUP não encontrado. Verifique o console para mais detalhes.');
+        return;
+    }
+    
+    console.log('Definindo texto do NUP...');
+    nupElement.textContent = nup;
+    
+    console.log('Mostrando modal...');
+    modalElement.style.display = 'block';
+    modalElement.classList.add('show');
+    
+    console.log('Modal exibido. Display:', modalElement.style.display);
+    console.log('Classes do modal:', modalElement.classList.toString());
+    
+    // Recriar ícones Lucide após mostrar modal
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            console.log('Recriando ícones Lucide...');
+            lucide.createIcons();
+        }
+    }, 100);
+    
+    console.log('=== FIM DA FUNÇÃO ===');
+};
+
+// Consultar andamentos de um processo
+window.consultarAndamentos = function(nup) {
+    console.log('Consultando andamentos para NUP:', nup);
+    
+    // Verificar se modal existe
+    const modalElement = document.getElementById('modalVisualizarAndamentos');
+    const conteudoElement = document.getElementById('conteudoAndamentos');
+    
+    if (!modalElement) {
+        console.error('Modal modalVisualizarAndamentos não encontrado');
+        alert('Erro: Modal de visualização não encontrado');
+        return;
+    }
+    
+    if (!conteudoElement) {
+        console.error('Elemento conteudoAndamentos não encontrado');
+        alert('Erro: Conteúdo do modal não encontrado');
+        return;
+    }
+    
+    // Abrir modal
+    modalElement.style.display = 'block';
+    modalElement.classList.add('show');
+    
+    // Resetar conteúdo para loading
+    conteudoElement.innerHTML = '<div style="text-align: center; padding: 20px;"><i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 1s linear infinite;"></i><p>Carregando andamentos...</p></div>';
+    
+    // Recriar ícones
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    }, 100);
+    
+    // Buscar dados
+    fetch('api/consultar_andamentos.php?nup=' + encodeURIComponent(nup) + '&calcular_tempo=true')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Dados de andamentos:', data);
+            
+            if (data.success) {
+                if (data.total === 0) {
+                    conteudoElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;"><i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px;"></i><h3 style="margin: 0 0 10px 0;">Nenhum andamento encontrado</h3><p style="margin: 0;">Não há dados de andamentos para este NUP.</p></div>';
+                } else {
+                    // Gerar HTML simplificado para evitar erros de sintaxe
+                    let html = '<div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><h4>NUP: ' + nup + '</h4><p>Total: ' + data.total + ' registros | Dias: ' + (data.total_dias_geral || 0) + '</p></div>';
+                    
+                    if (data.resumo_tempo_por_unidade) {
+                        html += '<div style="background: #f3e5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><h4>Resumo por Unidade</h4>';
+                        for (const [unidade, dias] of Object.entries(data.resumo_tempo_por_unidade)) {
+                            html += '<div style="display: inline-block; margin: 5px; padding: 10px; background: white; border-radius: 6px;"><strong>' + unidade + '</strong>: ' + dias + ' dias</div>';
+                        }
+                        html += '</div>';
+                    }
+                    
+                    conteudoElement.innerHTML = html;
+                }
+            } else {
+                conteudoElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #dc3545;"><h3>Erro</h3><p>' + data.message + '</p></div>';
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            conteudoElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #dc3545;"><h3>Erro de conexão</h3><p>Não foi possível consultar os andamentos.</p></div>';
+        })
+        .finally(() => {
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        });
+};
+
+// Função de teste para debugar
+window.testarModal = function() {
+    console.log('=== TESTE DE MODAL ===');
+    console.log('Tentando abrir modal de teste...');
+    window.abrirModalImportarAndamentos('12345.123456/2024-99');
+};
+
 // Formulário de criação funcionando normalmente
 
 // Função para editar licitação
@@ -1787,63 +1916,6 @@ document.getElementById('formExportar').addEventListener('submit', function(e) {
     }, 500);
 });
 
-// ========== FUNÇÕES PARA ANDAMENTOS ==========
-
-// Abrir modal de importação de andamentos
-window.abrirModalImportarAndamentos = function(nup) {
-    console.log('=== ABRINDO MODAL DE IMPORTAÇÃO ===');
-    console.log('NUP:', nup);
-    console.log('Todos os modais na página:', document.querySelectorAll('.modal'));
-    
-    // Verificar se elementos existem
-    const modalElement = document.getElementById('modalImportarAndamentos');
-    const nupElement = document.getElementById('nupSelecionado');
-    
-    console.log('Modal encontrado:', modalElement);
-    console.log('Elemento NUP encontrado:', nupElement);
-    
-    if (!modalElement) {
-        console.error('Modal modalImportarAndamentos não encontrado');
-        console.log('Todos os elementos com ID:', document.querySelectorAll('[id*="modal"]'));
-        alert('Erro: Modal não encontrado. Verifique o console para mais detalhes.');
-        return;
-    }
-    
-    if (!nupElement) {
-        console.error('Elemento nupSelecionado não encontrado');
-        console.log('Elementos dentro do modal:', modalElement.querySelectorAll('*[id]'));
-        alert('Erro: Elemento NUP não encontrado. Verifique o console para mais detalhes.');
-        return;
-    }
-    
-    console.log('Definindo texto do NUP...');
-    nupElement.textContent = nup;
-    
-    console.log('Mostrando modal...');
-    modalElement.style.display = 'block';
-    modalElement.classList.add('show');
-    
-    console.log('Modal exibido. Display:', modalElement.style.display);
-    console.log('Classes do modal:', modalElement.classList.toString());
-    
-    // Recriar ícones Lucide após mostrar modal
-    setTimeout(() => {
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-            console.log('Recriando ícones Lucide...');
-            lucide.createIcons();
-        }
-    }, 100);
-    
-    console.log('=== FIM DA FUNÇÃO ===');
-};
-
-// Função de teste para debugar
-window.testarModal = function() {
-    console.log('=== TESTE DE MODAL ===');
-    console.log('Tentando abrir modal de teste...');
-    window.abrirModalImportarAndamentos('12345.123456/2024-99');
-};
-
 // Processar formulário de importação de andamentos
 document.addEventListener('DOMContentLoaded', function() {
     const formElement = document.getElementById('formImportarAndamentos');
@@ -1898,174 +1970,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Restaurar botão
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
-        lucide.createIcons(); // Recriar ícones
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
         });
     } else {
         console.error('Formulário formImportarAndamentos não encontrado');
     }
 });
-
-// Consultar andamentos de um processo
-window.consultarAndamentos = function(nup) {
-    console.log('Consultando andamentos para NUP:', nup);
-    
-    // Verificar se modal existe
-    const modalElement = document.getElementById('modalVisualizarAndamentos');
-    const conteudoElement = document.getElementById('conteudoAndamentos');
-    
-    if (!modalElement) {
-        console.error('Modal modalVisualizarAndamentos não encontrado');
-        alert('Erro: Modal de visualização não encontrado');
-        return;
-    }
-    
-    if (!conteudoElement) {
-        console.error('Elemento conteudoAndamentos não encontrado');
-        alert('Erro: Conteúdo do modal não encontrado');
-        return;
-    }
-    
-    // Abrir modal
-    modalElement.style.display = 'block';
-    modalElement.classList.add('show');
-    
-    // Resetar conteúdo para loading
-    conteudoElement.innerHTML = `
-        <div style="text-align: center; padding: 20px;">
-            <i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 1s linear infinite;"></i>
-            <p>Carregando andamentos...</p>
-        </div>
-    `;
-    
-    // Recriar ícones
-    setTimeout(() => {
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-            lucide.createIcons();
-        }
-    }, 100);
-    
-    // Buscar dados
-    fetch('api/consultar_andamentos.php?nup=' + encodeURIComponent(nup) + '&calcular_tempo=true')
-        .then(response => response.json())
-        .then(data => {
-            console.log('Dados de andamentos:', data);
-            
-            if (data.success) {
-                if (data.total === 0) {
-                    document.getElementById('conteudoAndamentos').innerHTML = `
-                        <div style="text-align: center; padding: 40px; color: #7f8c8d;">
-                            <i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px;"></i>
-                            <h3 style="margin: 0 0 10px 0;">Nenhum andamento encontrado</h3>
-                            <p style="margin: 0;">Não há dados de andamentos para este NUP.</p>
-                        </div>
-                    `;
-                } else {
-                    // Gerar HTML com os dados
-                    let html = `
-                        <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #4caf50;">
-                            <h4 style="margin: 0 0 10px 0; color: #2e7d32;">
-                                <i data-lucide="info" style="width: 16px; height: 16px;"></i> NUP: ${nup}
-                            </h4>
-                            <p style="margin: 0; color: #2e7d32;">
-                                <strong>Total de registros:</strong> ${data.total} | 
-                                <strong>Total de dias geral:</strong> ${data.total_dias_geral || 0}
-                            </p>
-                        </div>
-                    `;
-                    
-                    if (data.resumo_tempo_por_unidade) {
-                        html += `
-                            <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #9c27b0;">
-                                <h4 style="margin: 0 0 15px 0; color: #7b1fa2;">
-                                    <i data-lucide="clock" style="width: 16px; height: 16px;"></i> Resumo de Tempo por Unidade
-                                </h4>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                        `;
-                        
-                        for (const [unidade, dias] of Object.entries(data.resumo_tempo_por_unidade)) {
-                            html += `
-                                <div style="background: white; padding: 10px; border-radius: 6px; text-align: center;">
-                                    <div style="font-weight: 600; color: #7b1fa2;">${unidade}</div>
-                                    <div style="font-size: 18px; color: #4a148c;">${dias} dias</div>
-                                </div>
-                            `;
-                        }
-                        
-                        html += `
-                                </div>
-                            </div>
-                        `;
-                    }
-                    
-                    // Detalhes de cada registro
-                    html += '<div style="space-y: 15px;">';
-                    
-                    data.data.forEach((registro, index) => {
-                        html += `
-                            <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                    <h5 style="margin: 0; color: #495057;">Registro #${index + 1}</h5>
-                                    <small style="color: #6c757d;">ID: ${registro.processo_id}</small>
-                                </div>
-                                
-                                <div style="margin-bottom: 10px;">
-                                    <strong>Total de andamentos:</strong> ${registro.total_andamentos} | 
-                                    <strong>Timestamp:</strong> ${new Date(registro.timestamp).toLocaleString('pt-BR')}
-                                </div>
-                        `;
-                        
-                        if (registro.tempo_por_unidade) {
-                            html += `
-                                <div style="background: white; padding: 10px; border-radius: 6px; margin-top: 10px;">
-                                    <strong style="color: #495057;">Tempo por unidade:</strong>
-                                    <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
-                            `;
-                            
-                            for (const [unidade, dias] of Object.entries(registro.tempo_por_unidade)) {
-                                html += `
-                                    <span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
-                                        ${unidade}: ${dias}d
-                                    </span>
-                                `;
-                            }
-                            
-                            html += `
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        
-                        html += '</div>';
-                    });
-                    
-                    html += '</div>';
-                    
-                    document.getElementById('conteudoAndamentos').innerHTML = html;
-                }
-            } else {
-                document.getElementById('conteudoAndamentos').innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #dc3545;">
-                        <i data-lucide="alert-circle" style="width: 64px; height: 64px; margin-bottom: 20px;"></i>
-                        <h3 style="margin: 0 0 10px 0;">Erro ao consultar andamentos</h3>
-                        <p style="margin: 0;">${data.message}</p>
-                    </div>
-                `;
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            document.getElementById('conteudoAndamentos').innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #dc3545;">
-                    <i data-lucide="wifi-off" style="width: 64px; height: 64px; margin-bottom: 20px;"></i>
-                    <h3 style="margin: 0 0 10px 0;">Erro de conexão</h3>
-                    <p style="margin: 0;">Não foi possível consultar os andamentos.</p>
-                </div>
-            `;
-        })
-        .finally(() => {
-            lucide.createIcons(); // Recriar ícones
-        });
-};
 
     </script>
     <script src="assets/notifications.js"></script>
