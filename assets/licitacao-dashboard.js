@@ -1,6 +1,7 @@
 /**
  * Licitação Dashboard JavaScript - Sistema CGLIC
  * Funcionalidades do painel de controle de licitações
+ * Inclui sistema de importação e consulta de andamentos
  */
 
 // ==================== NAVEGAÇÃO E INTERFACE ====================
@@ -52,6 +53,213 @@ function formatarValorCorreto(valor) {
         maximumFractionDigits: 2
     });
 }
+
+// ==================== ANDAMENTOS ====================
+
+/**
+ * Abrir modal de importação de andamentos
+ */
+function abrirModalImportarAndamentos(nup) {
+    console.log('=== ABRINDO MODAL DE IMPORTAÇÃO ===');
+    console.log('NUP:', nup);
+    console.log('Todos os modais na página:', document.querySelectorAll('.modal'));
+    
+    // Verificar se elementos existem
+    const modalElement = document.getElementById('modalImportarAndamentos');
+    const nupElement = document.getElementById('nupSelecionado');
+    
+    console.log('Modal encontrado:', modalElement);
+    console.log('Elemento NUP encontrado:', nupElement);
+    
+    if (!modalElement) {
+        console.error('Modal modalImportarAndamentos não encontrado');
+        console.log('Todos os elementos com ID:', document.querySelectorAll('[id*="modal"]'));
+        alert('Erro: Modal não encontrado. Verifique o console para mais detalhes.');
+        return;
+    }
+    
+    if (!nupElement) {
+        console.error('Elemento nupSelecionado não encontrado');
+        console.log('Elementos dentro do modal:', modalElement.querySelectorAll('*[id]'));
+        alert('Erro: Elemento NUP não encontrado. Verifique o console para mais detalhes.');
+        return;
+    }
+    
+    console.log('Definindo texto do NUP...');
+    nupElement.textContent = nup;
+    
+    console.log('Mostrando modal...');
+    modalElement.style.display = 'block';
+    modalElement.classList.add('show');
+    
+    console.log('Modal exibido. Display:', modalElement.style.display);
+    console.log('Classes do modal:', modalElement.classList.toString());
+    
+    // Recriar ícones Lucide após mostrar modal
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            console.log('Recriando ícones Lucide...');
+            lucide.createIcons();
+        }
+    }, 100);
+    
+    console.log('=== FIM DA FUNÇÃO ===');
+}
+
+/**
+ * Consultar andamentos de um processo
+ */
+function consultarAndamentos(nup) {
+    console.log('Consultando andamentos para NUP:', nup);
+    
+    // Verificar se modal existe
+    const modalElement = document.getElementById('modalVisualizarAndamentos');
+    const conteudoElement = document.getElementById('conteudoAndamentos');
+    
+    if (!modalElement) {
+        console.error('Modal modalVisualizarAndamentos não encontrado');
+        alert('Erro: Modal de visualização não encontrado');
+        return;
+    }
+    
+    if (!conteudoElement) {
+        console.error('Elemento conteudoAndamentos não encontrado');
+        alert('Erro: Conteúdo do modal não encontrado');
+        return;
+    }
+    
+    // Abrir modal
+    modalElement.style.display = 'block';
+    modalElement.classList.add('show');
+    
+    // Resetar conteúdo para loading
+    conteudoElement.innerHTML = '<div style="text-align: center; padding: 20px;"><i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 1s linear infinite;"></i><p>Carregando andamentos...</p></div>';
+    
+    // Recriar ícones
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    }, 100);
+    
+    // Buscar dados
+    fetch('api/consultar_andamentos.php?nup=' + encodeURIComponent(nup) + '&calcular_tempo=true')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Dados de andamentos:', data);
+            
+            if (data.success) {
+                if (data.total === 0) {
+                    conteudoElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;"><i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px;"></i><h3 style="margin: 0 0 10px 0;">Nenhum andamento encontrado</h3><p style="margin: 0;">Não há dados de andamentos para este NUP.</p></div>';
+                } else {
+                    // Gerar HTML simplificado para evitar erros de sintaxe
+                    let html = '<div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><h4>NUP: ' + nup + '</h4><p>Total: ' + data.total + ' registros | Dias: ' + (data.total_dias_geral || 0) + '</p></div>';
+                    
+                    if (data.resumo_tempo_por_unidade) {
+                        html += '<div style="background: #f3e5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><h4>Resumo por Unidade</h4>';
+                        for (const [unidade, dias] of Object.entries(data.resumo_tempo_por_unidade)) {
+                            html += '<div style="display: inline-block; margin: 5px; padding: 10px; background: white; border-radius: 6px;"><strong>' + unidade + '</strong>: ' + dias + ' dias</div>';
+                        }
+                        html += '</div>';
+                    }
+                    
+                    conteudoElement.innerHTML = html;
+                }
+            } else {
+                conteudoElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #dc3545;"><h3>Erro</h3><p>' + data.message + '</p></div>';
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            conteudoElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #dc3545;"><h3>Erro de conexão</h3><p>Não foi possível consultar os andamentos.</p></div>';
+        })
+        .finally(() => {
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        });
+}
+
+/**
+ * Função de teste para debugar modais
+ */
+function testarModal() {
+    console.log('=== TESTE DE MODAL ===');
+    console.log('Tentando abrir modal de teste...');
+    abrirModalImportarAndamentos('12345.123456/2024-99');
+}
+
+/**
+ * Inicializar sistema de andamentos
+ */
+function initAndamentos() {
+    // Formulário de importação de andamentos
+    const formElement = document.getElementById('formImportarAndamentos');
+    if (formElement) {
+        formElement.addEventListener('submit', function(e) {
+            e.preventDefault();
+    
+            const formData = new FormData(this);
+            const nup = document.getElementById('nupSelecionado').textContent;
+            
+            // Verificar se arquivo foi selecionado
+            const arquivo = document.getElementById('arquivo_json').files[0];
+            if (!arquivo) {
+                alert('Por favor, selecione um arquivo JSON.');
+                return;
+            }
+            
+            // Mostrar loading
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i data-lucide="loader" style="animation: spin 1s linear infinite;"></i> Importando...';
+            submitBtn.disabled = true;
+            
+            // Enviar requisição
+            fetch('api/importar_andamentos.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Resposta da importação:', data);
+                
+                if (data.success) {
+                    alert('Andamentos importados com sucesso!\n\n' + 
+                          'NUP: ' + data.data.nup + '\n' +
+                          'Processo ID: ' + data.data.processo_id + '\n' +
+                          'Total de andamentos: ' + data.data.total_andamentos + '\n' +
+                          'Ação: ' + data.data.acao);
+                    
+                    // Fechar modal e limpar formulário
+                    document.getElementById('modalImportarAndamentos').style.display = 'none';
+                    document.getElementById('formImportarAndamentos').reset();
+                } else {
+                    alert('Erro ao importar andamentos:\n' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao processar requisição de importação.');
+            })
+            .finally(() => {
+                // Restaurar botão
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                    lucide.createIcons();
+                }
+            });
+        });
+    } else {
+        console.error('Formulário formImportarAndamentos não encontrado');
+    }
+}
+
+// Exportar funções para o escopo global
+window.abrirModalImportarAndamentos = abrirModalImportarAndamentos;
+window.consultarAndamentos = consultarAndamentos;
+window.testarModal = testarModal;
 
 // ==================== GRÁFICOS ====================
 
@@ -400,6 +608,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
     }
+
+    // Inicializar sistema de andamentos
+    initAndamentos();
 });
 
 // ==================== FUNÇÕES DA TABELA ====================
