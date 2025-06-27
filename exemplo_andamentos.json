@@ -1,0 +1,28 @@
+{
+  "nup": "12345.123456/2024-12",
+  "processo_id": "SEI123456789",
+  "timestamp": "2024-12-27 10:30:00",
+  "total_andamentos": 4,
+  "andamentos": [
+    {
+      "unidade": "DIPLI",
+      "dias": 15,
+      "descricao": "Análise técnica do processo licitatório"
+    },
+    {
+      "unidade": "DIPLAN", 
+      "dias": 8,
+      "descricao": "Revisão do planejamento orçamentário"
+    },
+    {
+      "unidade": "JURIDICO",
+      "dias": 12,
+      "descricao": "Análise jurídica dos contratos"
+    },
+    {
+      "unidade": "CGLIC",
+      "dias": 5,
+      "descricao": "Aprovação final da coordenação"
+    }
+  ]
+}
