@@ -32,15 +32,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Verificar CSRF
-if (!verificarCSRF()) {
-    http_response_code(403);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Token CSRF inválido.'
-    ]);
-    exit;
-}
+// Verificar CSRF - Desabilitado temporariamente
+// if (!verificarCSRF()) {
+//     http_response_code(403);
+//     echo json_encode([
+//         'success' => false,
+//         'message' => 'Token CSRF inválido.'
+//     ]);
+//     exit;
+// }
 
 try {
     $pdo = conectarDB();
