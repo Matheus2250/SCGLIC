@@ -1888,6 +1888,135 @@ function inicializarCampoPesquisa() {
 window.mostrarSugestoes = mostrarSugestoes;
 window.ocultarSugestoes = ocultarSugestoes;
 window.abrirModalCriarLicitacao = abrirModalCriarLicitacao;
+
+// ==================== FUNÇÃO EXCLUIR LICITAÇÃO ====================
+
+/**
+ * Excluir licitação com confirmação
+ */
+function excluirLicitacao(id, nup) {
+    // Confirmação dupla para segurança
+    const confirmacao1 = confirm(`⚠️ ATENÇÃO: Você tem certeza que deseja EXCLUIR a licitação?\n\nNUP: ${nup}\n\nEsta ação NÃO pode ser desfeita!`);
+    
+    if (!confirmacao1) {
+        return;
+    }
+    
+    const confirmacao2 = confirm(`🚨 CONFIRMAÇÃO FINAL: Excluir definitivamente a licitação ${nup}?\n\nDigite 'EXCLUIR' para confirmar:`);
+    
+    if (!confirmacao2) {
+        return;
+    }
+    
+    // Mostrar loading
+    const loadingToast = document.createElement('div');
+    loadingToast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #f39c12;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        font-weight: 600;
+    `;
+    loadingToast.innerHTML = `
+        <i data-lucide="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite; margin-right: 8px;"></i>
+        Excluindo licitação...
+    `;
+    document.body.appendChild(loadingToast);
+    
+    // Reinicializar ícones
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+    
+    // Fazer requisição AJAX
+    const formData = new FormData();
+    formData.append('acao', 'excluir_licitacao');
+    formData.append('id', id);
+    
+    fetch('process.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Remover loading
+        document.body.removeChild(loadingToast);
+        
+        if (data.success) {
+            // Sucesso - mostrar feedback positivo
+            showNotification(`✅ Licitação ${data.nup || nup} excluída com sucesso!`, 'success');
+            
+            // Recarregar a lista de licitações
+            setTimeout(() => {
+                // Se estivermos usando AJAX, recarregar via AJAX
+                if (document.getElementById('formFiltrosLicitacao')) {
+                    const formFiltros = document.getElementById('formFiltrosLicitacao');
+                    const formData = new FormData(formFiltros);
+                    filtrarLicitacoes(formData);
+                } else {
+                    // Senão, recarregar a página
+                    window.location.reload();
+                }
+            }, 1500);
+            
+        } else {
+            // Erro - mostrar mensagem de erro
+            showNotification(`❌ Erro ao excluir licitação: ${data.message}`, 'error');
+        }
+    })
+    .catch(error => {
+        // Remover loading
+        if (document.body.contains(loadingToast)) {
+            document.body.removeChild(loadingToast);
+        }
+        
+        console.error('Erro na requisição:', error);
+        showNotification('❌ Erro de conexão. Tente novamente.', 'error');
+    });
+}
+
+// Função auxiliar para mostrar notificações
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    const bgColor = type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db';
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${bgColor};
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        font-weight: 600;
+        max-width: 400px;
+        animation: slideInRight 0.3s ease;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remover após 5 segundos
+    setTimeout(() => {
+        if (document.body.contains(notification)) {
+            notification.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }
+    }, 5000);
+}
+
+window.excluirLicitacao = excluirLicitacao;
 window.editarLicitacao = editarLicitacao;
 window.verDetalhes = verDetalhes;
 window.gerarRelatorio = gerarRelatorio;
@@ -2443,6 +2572,80 @@ window.resetarFormulario = resetarFormulario;
 window.proximaAbaComValidacao = proximaAbaComValidacao;
 window.inicializarLucideIcons = inicializarLucideIcons;
 
+// ==================== SISTEMA DE FILTROS AJAX ====================
+
+/**
+ * Filtrar licitações via AJAX
+ */
+function filtrarLicitacoes(formData) {
+    const resultadosDiv = document.getElementById('resultadosLicitacoes');
+    if (!resultadosDiv) return;
+
+    // Mostrar loading
+    resultadosDiv.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 1s linear infinite; color: #3498db;"></i>
+            <p style="margin-top: 15px; color: #666;">Carregando...</p>
+        </div>
+    `;
+
+    // Fazer requisição AJAX
+    const url = new URL(window.location.href);
+    url.searchParams.set('ajax', 'filtrar_licitacoes');
+    
+    // Adicionar parâmetros do formulário
+    for (const [key, value] of formData.entries()) {
+        if (value) {
+            url.searchParams.set(key, value);
+        }
+    }
+
+    fetch(url.toString())
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                resultadosDiv.innerHTML = data.html;
+                
+                // Reinicializar ícones Lucide
+                setTimeout(() => {
+                    inicializarLucideIcons();
+                }, 100);
+                
+                // Adicionar event listeners para paginação AJAX
+                document.querySelectorAll('.ajax-link').forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const url = this.getAttribute('data-url');
+                        if (url) {
+                            fetch(url)
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        resultadosDiv.innerHTML = data.html;
+                                        setTimeout(() => {
+                                            inicializarLucideIcons();
+                                        }, 100);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Erro na paginação:', error);
+                                });
+                        }
+                    });
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Erro na filtragem:', error);
+            resultadosDiv.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #dc3545;">
+                    <i data-lucide="alert-circle" style="width: 32px; height: 32px; margin-bottom: 15px;"></i>
+                    <p>Erro ao carregar os dados. Tente novamente.</p>
+                </div>
+            `;
+        });
+}
+
 // Inicializar sistema de abas quando DOM carregar
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar estado das abas
@@ -2456,6 +2659,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnProximo = document.getElementById('btn-proximo');
     if (btnProximo) {
         btnProximo.onclick = proximaAbaComValidacao;
+    }
+    
+    // Interceptar formulário de filtros
+    const formFiltros = document.getElementById('formFiltrosLicitacao');
+    if (formFiltros) {
+        formFiltros.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Garantir que estamos na aba de lista de licitações
+            showSection('lista-licitacoes');
+            
+            // Preparar dados do formulário
+            const formData = new FormData(this);
+            filtrarLicitacoes(formData);
+        });
+        
+        // Filtrar automaticamente quando campo "por página" mudar
+        const selectPorPagina = formFiltros.querySelector('select[name="por_pagina"]');
+        if (selectPorPagina) {
+            selectPorPagina.addEventListener('change', function() {
+                const formData = new FormData(formFiltros);
+                filtrarLicitacoes(formData);
+            });
+        }
     }
     
     // Inicializar ícones Lucide após carregamento completo

@@ -89,6 +89,39 @@ body {
     to { transform: rotate(360deg); }
 }
 
+/* ==================== AJAX LOADING ==================== */
+.ajax-link {
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.ajax-link:hover {
+    text-decoration: underline;
+}
+
+/* ==================== NOTIFICAÇÕES ==================== */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
 /* ==================== SIDEBAR FIXA ==================== */
 .sidebar {
     width: 280px;

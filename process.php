@@ -717,5 +717,75 @@ case 'editar_licitacao':
         echo json_encode($response);
 
         break;
+
+    case 'excluir_licitacao':
+        verificarLogin();
+        
+        // Verificar permissão para excluir licitação (apenas DIPLI)
+        if (!temPermissao('licitacao_excluir')) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Você não tem permissão para excluir licitações. Apenas usuários DIPLI podem excluir.'
+            ]);
+            exit;
+        }
+
+        header('Content-Type: application/json');
+        $response = ['success' => false, 'message' => ''];
+
+        try {
+            $pdo = conectarDB();
+
+            // Validar ID
+            if (empty($_POST['id'])) {
+                throw new Exception('ID da licitação não fornecido');
+            }
+
+            $id = intval($_POST['id']);
+
+            // Verificar se a licitação existe e buscar dados para log
+            $sql_verificar = "SELECT id, nup, objeto FROM licitacoes WHERE id = ?";
+            $stmt_verificar = $pdo->prepare($sql_verificar);
+            $stmt_verificar->execute([$id]);
+            $licitacao = $stmt_verificar->fetch();
+
+            if (!$licitacao) {
+                throw new Exception('Licitação não encontrada');
+            }
+
+            // Verificar se há dependências (ex: andamentos, etc.)
+            // Para futuras implementações, verificar relacionamentos
+            
+            // Excluir a licitação
+            $sql_excluir = "DELETE FROM licitacoes WHERE id = ?";
+            $stmt_excluir = $pdo->prepare($sql_excluir);
+            $resultado = $stmt_excluir->execute([$id]);
+
+            if (!$resultado) {
+                throw new Exception('Erro ao excluir licitação do banco de dados');
+            }
+
+            // Verificar se realmente foi excluída
+            if ($stmt_excluir->rowCount() === 0) {
+                throw new Exception('Nenhuma licitação foi excluída. Verifique se o ID está correto');
+            }
+
+            // Registrar no log
+            registrarLog('EXCLUIR_LICITACAO', "Excluiu licitação ID: $id - NUP: {$licitacao['nup']} - Objeto: " . substr($licitacao['objeto'], 0, 50) . "...", 'licitacoes', $id);
+
+            $response['success'] = true;
+            $response['message'] = 'Licitação excluída com sucesso!';
+            $response['nup'] = $licitacao['nup']; // Para feedback no frontend
+
+        } catch (Exception $e) {
+            $response['success'] = false;
+            $response['message'] = $e->getMessage();
+            
+            // Log do erro
+            error_log("Erro ao excluir licitação: " . $e->getMessage());
+        }
+
+        echo json_encode($response);
+        break;
     }
 ?>

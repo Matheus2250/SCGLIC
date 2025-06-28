@@ -523,7 +523,7 @@ function temPermissao($permissao, $usuario_id = null) {
             'risco_visualizar', 'risco_exportar'
         ],
         3 => [ // DIPLI - Apenas edição em LICITAÇÕES, visualização em planejamento
-            'licitacao_criar', 'licitacao_editar', 'licitacao_visualizar', 'licitacao_exportar', 'licitacao_relatorios',
+            'licitacao_criar', 'licitacao_editar', 'licitacao_excluir', 'licitacao_visualizar', 'licitacao_exportar', 'licitacao_relatorios',
             'pca_visualizar', 'pca_exportar', 'pca_relatorios',
             'risco_visualizar', 'risco_criar', 'risco_editar'
         ],

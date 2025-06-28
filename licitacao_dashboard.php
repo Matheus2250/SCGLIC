@@ -9,6 +9,80 @@ verificarLogin();
 
 $pdo = conectarDB();
 
+// Verificar se é uma requisição AJAX para filtros
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'filtrar_licitacoes') {
+    // Processar filtros (mesmo código que já existe)
+    $licitacoes_por_pagina = isset($_GET['por_pagina']) ? max(10, min(100, intval($_GET['por_pagina']))) : 10;
+    $pagina_atual = isset($_GET['pagina']) ? max(1, intval($_GET['pagina'])) : 1;
+    $offset = ($pagina_atual - 1) * $licitacoes_por_pagina;
+
+    $filtro_situacao = $_GET['situacao_filtro'] ?? '';
+    $filtro_busca = $_GET['busca'] ?? '';
+
+    $where_conditions = ['1=1'];
+    $params = [];
+
+    if (!empty($filtro_situacao)) {
+        $where_conditions[] = "l.situacao = ?";
+        $params[] = $filtro_situacao;
+    }
+
+    if (!empty($filtro_busca)) {
+        $where_conditions[] = "(l.nup LIKE ? OR l.objeto LIKE ? OR l.pregoeiro LIKE ? OR COALESCE(l.numero_contratacao, p.numero_contratacao) LIKE ?)";
+        $busca_param = "%$filtro_busca%";
+        $params[] = $busca_param;
+        $params[] = $busca_param;
+        $params[] = $busca_param;
+        $params[] = $busca_param;
+    }
+
+    $where_clause = implode(' AND ', $where_conditions);
+
+    // Contar total
+    $sql_count = "SELECT COUNT(*) as total 
+                  FROM licitacoes l 
+                  LEFT JOIN usuarios u ON l.usuario_id = u.id
+                  LEFT JOIN pca_dados p ON l.pca_dados_id = p.id
+                  WHERE $where_clause";
+    $stmt_count = $pdo->prepare($sql_count);
+    $stmt_count->execute($params);
+    $total_licitacoes = $stmt_count->fetch()['total'];
+
+    // Buscar licitações
+    $sql_licitacoes = "SELECT 
+        l.*,
+        u.nome as usuario_nome,
+        COALESCE(l.numero_contratacao, p.numero_contratacao) as numero_contratacao_final
+        FROM licitacoes l
+        LEFT JOIN usuarios u ON l.usuario_id = u.id
+        LEFT JOIN pca_dados p ON l.pca_dados_id = p.id
+        WHERE $where_clause
+        ORDER BY l.criado_em DESC
+        LIMIT $licitacoes_por_pagina OFFSET $offset";
+    
+    $stmt_licitacoes = $pdo->prepare($sql_licitacoes);
+    $stmt_licitacoes->execute($params);
+    $licitacoes_recentes = $stmt_licitacoes->fetchAll();
+
+    // Calcular paginação
+    $total_paginas = ceil($total_licitacoes / $licitacoes_por_pagina);
+
+    // Retornar apenas o HTML dos resultados
+    ob_start();
+    include_once 'partials/lista_licitacoes_ajax.php'; // Vamos criar este arquivo
+    $html = ob_get_clean();
+    
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => true,
+        'html' => $html,
+        'total' => $total_licitacoes,
+        'pagina_atual' => $pagina_atual,
+        'total_paginas' => $total_paginas
+    ]);
+    exit;
+}
+
 // Buscar estatísticas para os cards e gráficos
 $stats_sql = "SELECT
     COUNT(*) as total_licitacoes,
@@ -545,7 +619,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 
         <!-- Filtros e Busca -->
         <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <form method="GET" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
+            <form id="formFiltrosLicitacao" method="GET" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #495057;">Buscar</label>
                     <input type="text" name="busca" value="<?php echo htmlspecialchars($filtro_busca); ?>" 
@@ -566,7 +640,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #495057;">Por página</label>
-                    <select name="por_pagina" onchange="this.form.submit()" style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px;">
+                    <select name="por_pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px;">
                         <option value="10" <?php echo $licitacoes_por_pagina == 10 ? 'selected' : ''; ?>>10</option>
                         <option value="25" <?php echo $licitacoes_por_pagina == 25 ? 'selected' : ''; ?>>25</option>
                         <option value="50" <?php echo $licitacoes_por_pagina == 50 ? 'selected' : ''; ?>>50</option>
@@ -585,6 +659,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
             </form>
         </div>
 
+        <div id="resultadosLicitacoes">
         <?php if (empty($licitacoes_recentes)): ?>
             <div style="text-align: center; padding: 60px; color: #7f8c8d;">
                 <i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px;"></i>
@@ -645,6 +720,11 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 <button onclick="editarLicitacao(<?php echo $licitacao['id']; ?>)" title="Editar" style="background: #f39c12; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">
 <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
 </button>
+<?php if (temPermissao('licitacao_excluir')): ?>
+<button onclick="excluirLicitacao(<?php echo $licitacao['id']; ?>, '<?php echo htmlspecialchars($licitacao['nup']); ?>')" title="Excluir" style="background: #e74c3c; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">
+<i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+</button>
+<?php endif; ?>
 <button onclick="abrirModalImportarAndamentos('<?php echo htmlspecialchars($licitacao['nup']); ?>')" title="Importar Andamentos" style="background: #3498db; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">
 <i data-lucide="upload" style="width: 14px; height: 14px;"></i>
 </button>
@@ -723,6 +803,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
                 <?php endif; ?>
             </div>
         <?php endif; ?>
+        </div> <!-- fim resultadosLicitacoes -->
     </div>
 </div>
 
