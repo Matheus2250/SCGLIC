@@ -286,8 +286,11 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
 <body>
     <div class="dashboard-container">
         <!-- Sidebar -->
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+                    <i data-lucide="menu"></i>
+                </button>
                 <h2><i data-lucide="clipboard-check"></i> Planejamento</h2>
             </div>
             
@@ -295,7 +298,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                 <div class="nav-section">
                     <div class="nav-section-title">Visão Geral</div>
                     <button class="nav-item <?php echo $secao_ativa === 'dashboard' ? 'active' : ''; ?>" onclick="showSection('dashboard')">
-                        <i data-lucide="bar-chart-3"></i> Dashboard
+                        <i data-lucide="bar-chart-3"></i> <span>Dashboard</span>
                     </button>
                 </div>
                 
@@ -303,15 +306,15 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                     <div class="nav-section-title">Gerenciar</div>
                     <?php if (temPermissao('pca_importar')): ?>
                     <button class="nav-item <?php echo $secao_ativa === 'importar-pca' ? 'active' : ''; ?>" onclick="showSection('importar-pca')">
-                        <i data-lucide="upload"></i> Importar PCA
+                        <i data-lucide="upload"></i> <span>Importar PCA</span>
                     </button>
                     <?php endif; ?>
                     <?php if (temPermissao('pca_visualizar')): ?>
                     <button class="nav-item <?php echo $secao_ativa === 'lista-contratacoes' ? 'active' : ''; ?>" onclick="showSection('lista-contratacoes')">
-                        <i data-lucide="list"></i> Lista de Contratações
+                        <i data-lucide="list"></i> <span>Lista de Contratações</span>
                     </button>
                     <a href="contratacoes_atrasadas.php" class="nav-item">
-                        <i data-lucide="alert-triangle"></i> Contratações Atrasadas
+                        <i data-lucide="alert-triangle"></i> <span>Contratações Atrasadas</span>
                     </a>
                     <?php endif; ?>
                     <?php if (isVisitante()): ?>
@@ -328,12 +331,12 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                     <div class="nav-section-title">Relatórios</div>
                     <?php if (temPermissao('pca_relatorios')): ?>
                     <button class="nav-item" onclick="showSection('relatorios')">
-                        <i data-lucide="file-text"></i> Relatórios
+                        <i data-lucide="file-text"></i> <span>Relatórios</span>
                     </button>
                     <?php endif; ?>
                     <?php if (temPermissao('risco_visualizar')): ?>
                     <button class="nav-item" onclick="window.location.href='gestao_riscos.php'">
-                        <i data-lucide="shield-alert"></i> Gestão de Riscos
+                        <i data-lucide="shield-alert"></i> <span>Gestão de Riscos</span>
                     </button>
                     <?php endif; ?>
                 </div>
@@ -341,7 +344,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                 <div class="nav-section">
                     <div class="nav-section-title">Navegação</div>
                     <a href="licitacao_dashboard.php" class="nav-item">
-                        <i data-lucide="gavel"></i> Dashboard Licitações
+                        <i data-lucide="gavel"></i> <span>Dashboard Licitações</span>
                     </a>
                 </div>
 
@@ -349,11 +352,11 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                     <div class="nav-section-title">Sistema</div>
                     <?php if (temPermissao('backup_executar')): ?>
                     <button class="nav-item" onclick="showSection('backup-sistema')">
-                        <i data-lucide="shield"></i> Backup & Segurança
+                        <i data-lucide="shield"></i> <span>Backup & Segurança</span>
                     </button>
                     <?php endif; ?>
                     <a href="selecao_modulos.php" class="nav-item">
-                        <i data-lucide="arrow-left"></i> Voltar ao Menu
+                        <i data-lucide="arrow-left"></i> <span>Voltar ao Menu</span>
                     </a>
                 </div>
             </nav>
@@ -377,13 +380,13 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                     </div>
                 </div>
                 <button class="logout-btn" onclick="window.location.href='logout.php'">
-                    <i data-lucide="log-out"></i> Sair
+                    <i data-lucide="log-out"></i> <span>Sair</span>
                 </button>
             </div>
         </div>
 
         <!-- Main Content -->
-        <div class="main-content">
+        <div class="main-content" id="mainContent">
             <?php echo getMensagem(); ?>
 
             <!-- Dashboard Section -->

@@ -4,6 +4,109 @@
  * Inclui sistema de importação e consulta de andamentos
  */
 
+// ==================== TOGGLE SIDEBAR ====================
+
+/**
+ * Toggle da sidebar - abre/fecha a barra lateral
+ */
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    const toggleIcon = document.querySelector('#sidebarToggle i');
+    
+    if (sidebar && mainContent) {
+        // Verificar se estamos em mobile
+        const isMobile = window.innerWidth <= 768;
+        
+        if (isMobile) {
+            // Comportamento mobile - toggle da classe mobile-open
+            sidebar.classList.toggle('mobile-open');
+            
+            // Alterar ícone
+            if (sidebar.classList.contains('mobile-open')) {
+                toggleIcon.setAttribute('data-lucide', 'x');
+            } else {
+                toggleIcon.setAttribute('data-lucide', 'menu');
+            }
+        } else {
+            // Comportamento desktop - toggle da classe collapsed
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('collapsed');
+            
+            // Alterar ícone baseado no estado
+            if (sidebar.classList.contains('collapsed')) {
+                toggleIcon.setAttribute('data-lucide', 'panel-left-open');
+            } else {
+                toggleIcon.setAttribute('data-lucide', 'menu');
+            }
+            
+            // Salvar estado no localStorage (apenas para desktop)
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+        
+        // Reinicializar os ícones Lucide para atualizar o ícone alterado
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+}
+
+/**
+ * Restaurar estado da sidebar do localStorage
+ */
+function restoreSidebarState() {
+    // Só restaurar estado se não estivermos em mobile
+    const isMobile = window.innerWidth <= 768;
+    
+    if (!isMobile) {
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed) {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const toggleIcon = document.querySelector('#sidebarToggle i');
+            
+            if (sidebar && mainContent) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('collapsed');
+                toggleIcon.setAttribute('data-lucide', 'panel-left-open');
+                
+                // Reinicializar os ícones Lucide
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Lidar com redimensionamento da janela
+ */
+function handleResize() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    const toggleIcon = document.querySelector('#sidebarToggle i');
+    const isMobile = window.innerWidth <= 768;
+    
+    if (sidebar && mainContent && toggleIcon) {
+        if (isMobile) {
+            // Reset para comportamento mobile
+            sidebar.classList.remove('collapsed');
+            mainContent.classList.remove('collapsed');
+            sidebar.classList.remove('mobile-open');
+            toggleIcon.setAttribute('data-lucide', 'menu');
+        } else {
+            // Restaurar estado desktop
+            sidebar.classList.remove('mobile-open');
+            restoreSidebarState();
+        }
+        
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+}
+
 // ==================== NAVEGAÇÃO E INTERFACE ====================
 
 // Variável global para armazenar instâncias dos gráficos
@@ -1139,16 +1242,6 @@ function fecharModal(modalId) {
         }
     }
 
-    // Para o modal de importar andamentos, limpar formulário
-    if (modalId === 'modalImportarAndamentos') {
-        const form = modal.querySelector('form');
-        if (form) {
-            form.reset();
-        }
-        const nupElement = document.getElementById('nupSelecionado');
-        if (nupElement) nupElement.textContent = '-';
-    }
-
     console.log('Modal fechado:', modalId);
 }
 
@@ -1159,6 +1252,13 @@ function fecharModal(modalId) {
  */
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - Licitacao Dashboard');
+    
+    // Restaurar estado da sidebar
+    restoreSidebarState();
+    
+    // Event listener para redimensionamento
+    window.addEventListener('resize', handleResize);
+    
     // Inicializar ícones Lucide
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
@@ -1932,7 +2032,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Função fecharModal já definida acima - removendo duplicação
+/**
+ * Fechar um modal genérico
+ */
+function fecharModal(modalId) {
+    const modalElement = document.getElementById(modalId);
+    if (modalElement) {
+        modalElement.style.display = 'none';
+        modalElement.classList.remove('show');
+    }
+}
+
+window.fecharModal = fecharModal;
 
 
 

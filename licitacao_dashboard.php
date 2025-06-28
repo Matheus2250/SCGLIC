@@ -378,8 +378,11 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 </head>
 <body>
     <div class="dashboard-container">
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+                    <i data-lucide="menu"></i>
+                </button>
                 <h2><i data-lucide="gavel"></i> Licitações</h2>
             </div>
 
@@ -387,14 +390,14 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     <div class="nav-section">
         <div class="nav-section-title">Visão Geral</div>
         <button class="nav-item active" onclick="showSection('dashboard')">
-            <i data-lucide="bar-chart-3"></i> Dashboard
+            <i data-lucide="bar-chart-3"></i> <span>Dashboard</span>
         </button>
     </div>
 
     <div class="nav-section">
         <div class="nav-section-title">Gerenciar</div>
         <button class="nav-item" onclick="showSection('lista-licitacoes')">
-            <i data-lucide="list"></i> Lista de Licitações
+            <i data-lucide="list"></i> <span>Lista de Licitações</span>
         </button>
         <?php if (isVisitante()): ?>
         <div style="margin: 10px 15px; padding: 8px; background: #fff3cd; border-radius: 6px; border-left: 3px solid #f39c12;">
@@ -410,7 +413,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     <div class="nav-section">
         <div class="nav-section-title">Relatórios</div>
         <button class="nav-item" onclick="showSection('relatorios')">
-            <i data-lucide="file-text"></i> Relatórios
+            <i data-lucide="file-text"></i> <span>Relatórios</span>
         </button>
     </div>
     <?php endif; ?>
@@ -418,14 +421,14 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     <div class="nav-section">
         <div class="nav-section-title">Navegação</div>
         <a href="dashboard.php" class="nav-item">
-            <i data-lucide="calendar"></i> Dashboard Planejamento
+            <i data-lucide="calendar"></i> <span>Dashboard Planejamento</span>
         </a>
     </div>
 
     <div class="nav-section">
         <div class="nav-section-title">Sistema</div>
         <a href="selecao_modulos.php" class="nav-item">
-            <i data-lucide="arrow-left"></i> Voltar ao Menu
+            <i data-lucide="arrow-left"></i> <span>Voltar ao Menu</span>
         </a>
     </div>
 </nav>
@@ -449,12 +452,12 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
                     </div>
                 </div>
                 <button class="logout-btn" onclick="window.location.href='logout.php'">
-                    <i data-lucide="log-out"></i> Sair
+                    <i data-lucide="log-out"></i> <span>Sair</span>
                 </button>
             </div>
         </div>
 
-        <main class="main-content">
+        <main class="main-content" id="mainContent">
             <?php echo getMensagem(); ?>
 
             <div id="dashboard" class="content-section active">
