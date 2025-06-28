@@ -153,18 +153,71 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     <style>
     /* Garantir que modais funcionem */
     .modal {
-        display: none !important;
-        position: fixed !important;
-        z-index: 1000 !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        background-color: rgba(0,0,0,0.5) !important;
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        overflow: auto;
     }
     
     .modal.show {
         display: block !important;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 20px 15px 20px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f8f9fa;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .modal-body {
+        padding: 20px;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    
+    .close {
+        color: #aaa;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        line-height: 1;
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .close:hover,
+    .close:focus {
+        color: #000;
+        text-decoration: none;
+    }
+    
+    .modal-content {
+        position: relative;
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 0;
+        border: none;
+        width: 80%;
+        max-width: 500px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        animation: modalFadeIn 0.3s;
+    }
+    
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: translateY(-50px); }
+        to { opacity: 1; transform: translateY(0); }
     }
     
     /* Animação de spinner */
@@ -1242,6 +1295,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
             </form>
         </div>
     </div>
+</div>
 
 <!-- Modal para Importar Andamentos -->
 <div id="modalImportarAndamentos" class="modal" style="display: none;">

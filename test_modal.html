@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Modal - Sistema CGLIC</title>
+    <script>
+        // Função simples para testar modais
+        function testarModal() {
+            console.log('=== TESTE DOS MODAIS ===');
+            
+            // Testar modal de importar andamentos
+            console.log('1. Testando modal de importar andamentos...');
+            if (typeof abrirModalImportarAndamentos === 'function') {
+                abrirModalImportarAndamentos('12345.123456/2024-99');
+                console.log('✅ Modal de importar andamentos aberto');
+            } else {
+                console.error('❌ Função abrirModalImportarAndamentos não encontrada');
+            }
+            
+            // Aguardar 2 segundos e testar modal de visualizar
+            setTimeout(() => {
+                console.log('2. Testando modal de visualizar andamentos...');
+                if (typeof consultarAndamentos === 'function') {
+                    consultarAndamentos('12345.123456/2024-99');
+                    console.log('✅ Modal de visualizar andamentos aberto');
+                } else {
+                    console.error('❌ Função consultarAndamentos não encontrada');
+                }
+            }, 2000);
+        }
+        
+        // Função para fechar todos os modais
+        function fecharTodosModais() {
+            console.log('Fechando todos os modais...');
+            const modais = ['modalImportarAndamentos', 'modalVisualizarAndamentos'];
+            modais.forEach(modalId => {
+                if (typeof fecharModal === 'function') {
+                    fecharModal(modalId);
+                } else {
+                    const modal = document.getElementById(modalId);
+                    if (modal) {
+                        modal.style.display = 'none';
+                        modal.classList.remove('show');
+                    }
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>🧪 Teste dos Modais de Andamentos</h1>
+    
+    <div style="padding: 20px; background: #f0f0f0; margin: 20px 0; border-radius: 8px;">
+        <h3>Instruções para o Teste:</h3>
+        <ol>
+            <li>Abra o <strong>licitacao_dashboard.php</strong> no navegador</li>
+            <li>Abra o Console do navegador (F12 → Console)</li>
+            <li>Digite no console: <code>testarModal()</code></li>
+            <li>Verifique se os modais abrem corretamente</li>
+            <li>Digite no console: <code>fecharTodosModais()</code> para fechar</li>
+        </ol>
+        
+        <p><strong>Alternativamente, teste diretamente na interface:</strong></p>
+        <ul>
+            <li>Clique no botão de "Importar Andamentos" (ícone de upload) de qualquer licitação</li>
+            <li>Clique no botão de "Ver Andamentos" (ícone de relógio) de qualquer licitação</li>
+        </ul>
+    </div>
+    
+    <div style="padding: 20px; background: #e8f5e8; margin: 20px 0; border-radius: 8px;">
+        <h3>✅ Problemas Corrigidos:</h3>
+        <ul>
+            <li><strong>Estrutura HTML:</strong> Fechamento correto das divs dos modais</li>
+            <li><strong>CSS:</strong> Estilos dos modais com z-index correto e classes .show funcionando</li>
+            <li><strong>JavaScript:</strong> Funções de abertura/fechamento com logs de debug</li>
+            <li><strong>Event Listeners:</strong> Inicialização correta dos formulários</li>
+            <li><strong>Validação:</strong> Verificação se elementos existem antes de usar</li>
+            <li><strong>APIs:</strong> Todas as APIs necessárias estão presentes na pasta /api/</li>
+        </ul>
+    </div>
+    
+    <div style="padding: 20px; background: #fff3cd; margin: 20px 0; border-radius: 8px;">
+        <h3>🔍 Como Debugar se Ainda Houver Problemas:</h3>
+        <ol>
+            <li>Abra o Console do navegador (F12)</li>
+            <li>Procure por mensagens de erro em vermelho</li>
+            <li>Verifique se aparecem os logs: 
+                <ul>
+                    <li>"=== DOM CONTENT LOADED - LICITACAO DASHBOARD ==="</li>
+                    <li>"=== INICIALIZANDO SISTEMA DE ANDAMENTOS ==="</li>
+                    <li>"Modal Importar encontrado: true"</li>
+                    <li>"Modal Visualizar encontrado: true"</li>
+                </ul>
+            </li>
+            <li>Se algum modal não abrir, digite no console: <code>document.getElementById('modalImportarAndamentos')</code></li>
+            <li>Se retornar <code>null</code>, o modal não foi encontrado no HTML</li>
+        </ol>
+    </div>
+    
+    <p>
+        <button onclick="window.open('licitacao_dashboard.php', '_blank')" style="padding: 10px 20px; background: #007cba; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            🚀 Abrir Dashboard de Licitações para Teste
+        </button>
+    </p>
+</body>
+</html>

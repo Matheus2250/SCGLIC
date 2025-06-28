@@ -87,8 +87,11 @@ function abrirModalImportarAndamentos(nup) {
 
     console.log("Definindo texto do NUP...");
     nupElement.textContent = nup;
-    modalElement.style.display = "block";
+    
+    // Adicionar classe show primeiro (para que o CSS .modal.show funcione)
     modalElement.classList.add("show");
+    modalElement.style.display = "block";
+    
     console.log("Modal exibido. Display:", modalElement.style.display);
     console.log("Classes do modal:", modalElement.classList.toString());
     setTimeout(() => {
@@ -124,8 +127,8 @@ function consultarAndamentos(nup) {
     }
 
     // Abrir modal
-    modalElement.style.display = 'block';
     modalElement.classList.add('show');
+    modalElement.style.display = 'block';
     conteudoElement.innerHTML = '<div style="text-align: center; padding: 20px;"><i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 1s linear infinite;"></i><p>Carregando andamentos...</p></div>';
 
     // Recriar ícones
@@ -186,14 +189,20 @@ function testarModal() {
  * Inicializar sistema de andamentos
  */
 function initAndamentos() {
+    console.log('=== INICIALIZANDO SISTEMA DE ANDAMENTOS ===');
+    
     // Formulário de importação de andamentos
     const formElement = document.getElementById('formImportarAndamentos');
     if (formElement) {
+        console.log('Formulário de importação encontrado');
         formElement.addEventListener('submit', function(e) {
             e.preventDefault();
 
             const formData = new FormData(this);
-            const nup = document.getElementById('nupSelecionado').textContent;
+            const nupElement = document.getElementById('nupSelecionado');
+            const nup = nupElement ? nupElement.textContent : '';
+
+            console.log('NUP para importação:', nup);
 
             // Verificar se arquivo foi selecionado
             const arquivo = document.getElementById('arquivo_json').files[0];
@@ -202,11 +211,19 @@ function initAndamentos() {
                 return;
             }
 
+            // Adicionar NUP ao FormData
+            formData.append('nup', nup);
+
             // Mostrar loading
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<i data-lucide="loader" style="animation: spin 1s linear infinite;"></i> Importando...';
             submitBtn.disabled = true;
+
+            // Recriar ícones
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
 
             // Enviar requisição
             fetch('api/importar_andamentos.php', {
@@ -219,16 +236,16 @@ function initAndamentos() {
 
                     if (data.success) {
                         alert('Andamentos importados com sucesso!\n\n' +
-                            'NUP: ' + data.data.nup + '\n' +
-                            'Processo ID: ' + data.data.processo_id + '\n' +
-                            'Total de andamentos: ' + data.data.total_andamentos + '\n' +
-                            'Ação: ' + data.data.acao);
+                            'NUP: ' + (data.data.nup || nup) + '\n' +
+                            'Processo ID: ' + (data.data.processo_id || 'N/A') + '\n' +
+                            'Total de andamentos: ' + (data.data.total_andamentos || '0') + '\n' +
+                            'Ação: ' + (data.data.acao || 'Importação'));
 
                         // Fechar modal e limpar formulário
-                        document.getElementById('modalImportarAndamentos').style.display = 'none';
-                        document.getElementById('formImportarAndamentos').reset();
+                        fecharModal('modalImportarAndamentos');
+                        this.reset();
                     } else {
-                        alert('Erro ao importar andamentos:\n' + data.message);
+                        alert('Erro ao importar andamentos:\n' + (data.message || 'Erro desconhecido'));
                     }
                 })
                 .catch(error => {
@@ -589,6 +606,8 @@ window.addEventListener('resize', () => {
 
 // Atualizar o event listener para o botão de voltar ao dashboard
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DOM CONTENT LOADED - LICITACAO DASHBOARD ===');
+    
     // Reinicializar gráficos ao mudar de seção
     const originalShowSection = window.showSection;
     if (originalShowSection) {
@@ -606,6 +625,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Inicializar sistema de andamentos
     initAndamentos();
+    
+    // Verificar se modais existem
+    const modalImportar = document.getElementById('modalImportarAndamentos');
+    const modalVisualizar = document.getElementById('modalVisualizarAndamentos');
+    console.log('Modal Importar encontrado:', !!modalImportar);
+    console.log('Modal Visualizar encontrado:', !!modalVisualizar);
 });
 
 // ==================== FUNÇÕES DA TABELA ====================
@@ -1092,12 +1117,9 @@ function fecharModal(modalId) {
         return;
     }
 
-    // Remover classe show primeiro
+    // Remover classe show e forçar display none
     modal.classList.remove('show');
-
-    // Forçar ocultação removendo display inline e permitindo CSS assumir
-    modal.style.removeProperty('display');
-    modal.style.setProperty('display', 'none', 'important');
+    modal.style.display = 'none';
 
     // Para o modal de criar licitação, limpar formulário
     if (modalId === 'modalCriarLicitacao') {
@@ -1115,6 +1137,16 @@ function fecharModal(modalId) {
             const inputContratacao = document.getElementById('input_contratacao');
             if (inputContratacao) inputContratacao.value = '';
         }
+    }
+
+    // Para o modal de importar andamentos, limpar formulário
+    if (modalId === 'modalImportarAndamentos') {
+        const form = modal.querySelector('form');
+        if (form) {
+            form.reset();
+        }
+        const nupElement = document.getElementById('nupSelecionado');
+        if (nupElement) nupElement.textContent = '-';
     }
 
     console.log('Modal fechado:', modalId);
@@ -1900,57 +1932,216 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Função fecharModal já definida acima - removendo duplicação
+
+
+
+
+// ==================== FUNÇÕES INLINE PARA AUTOCOMPLETE ====================
+
 /**
- * Fechar um modal genérico
+ * Pesquisar contratação inline (modal de criação)
  */
-function fecharModal(modalId) {
-    const modalElement = document.getElementById(modalId);
-    if (modalElement) {
-        modalElement.style.display = 'none';
-        modalElement.classList.remove('show');
+function pesquisarContratacaoInline(termo) {
+    const sugestoesDiv = document.getElementById('sugestoes_contratacao');
+    
+    if (!sugestoesDiv) {
+        console.error('Elemento sugestoes_contratacao não encontrado');
+        return;
     }
-}
 
-window.fecharModal = fecharModal;
+    if (!termo || termo.length < 2) {
+        sugestoesDiv.style.display = 'none';
+        return;
+    }
 
+    // Inicializar dados se necessário
+    if (!contratacoesPCA || contratacoesPCA.length === 0) {
+        inicializarContratacoesPCA();
+    }
 
+    // Filtrar contratações
+    const termoLower = termo.toLowerCase().trim();
+    const filtradas = contratacoesPCA.filter(contratacao => {
+        const numero = (contratacao.numero_contratacao || '').toLowerCase();
+        const titulo = (contratacao.titulo_contratacao || '').toLowerCase();
+        return numero.includes(termoLower) || titulo.includes(termoLower);
+    }).slice(0, 10);
 
-
-/**
- * Abrir modal de edição de licitação
- */
-function editarLicitacao(id) {
-    console.log("Editando licitação com ID:", id);
-    // Implementar lógica para buscar dados da licitação e preencher o modal de edição
-    // Por enquanto, apenas abre o modal
-    const modalElement = document.getElementById("modalEdicao");
-    if (modalElement) {
-        modalElement.style.display = "block";
-        modalElement.classList.add("show");
+    // Gerar HTML das sugestões
+    if (filtradas.length === 0) {
+        sugestoesDiv.innerHTML = '<div class="no-results">Nenhuma contratação encontrada</div>';
     } else {
-        console.error("Modal modalEdicao não encontrado");
+        let html = '';
+        filtradas.forEach(contratacao => {
+            const titulo = contratacao.titulo_contratacao || 'Título não disponível';
+            const tituloTruncado = titulo.length > 80 ? titulo.substring(0, 80) + '...' : titulo;
+            const tituloEscapado = titulo.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+            
+            html += `
+                <div class="suggestion-item" onclick="selecionarContratacao('${contratacao.numero_contratacao}', '${tituloEscapado}')">
+                    <div class="suggestion-numero">${contratacao.numero_contratacao}</div>
+                    <div class="suggestion-titulo">${tituloTruncado}</div>
+                </div>
+            `;
+        });
+        sugestoesDiv.innerHTML = html;
     }
+
+    sugestoesDiv.style.display = 'block';
 }
-
-window.editarLicitacao = editarLicitacao;
-
-
-
 
 /**
- * Abrir modal de detalhes da licitação
+ * Mostrar sugestões inline (modal de criação)
  */
-function verDetalhes(id) {
-    console.log("Visualizando detalhes da licitação com ID:", id);
-    // Implementar lógica para buscar dados da licitação e preencher o modal de detalhes
-    // Por enquanto, apenas abre o modal
-    const modalElement = document.getElementById("modalDetalhes");
-    if (modalElement) {
-        modalElement.style.display = "block";
-        modalElement.classList.add("show");
-    } else {
-        console.error("Modal modalDetalhes não encontrado");
+function mostrarSugestoesInline() {
+    const input = document.getElementById('input_contratacao');
+    const sugestoesDiv = document.getElementById('sugestoes_contratacao');
+    
+    if (input && input.value && input.value.length >= 2) {
+        pesquisarContratacaoInline(input.value);
     }
 }
 
-window.verDetalhes = verDetalhes;
+/**
+ * Ocultar sugestões inline (modal de criação)
+ */
+function ocultarSugestoesInline() {
+    setTimeout(() => {
+        const sugestoesDiv = document.getElementById('sugestoes_contratacao');
+        if (sugestoesDiv) {
+            sugestoesDiv.style.display = 'none';
+        }
+    }, 200);
+}
+
+/**
+ * Selecionar contratação
+ */
+function selecionarContratacao(numero, titulo) {
+    const inputContratacao = document.getElementById('input_contratacao') || document.getElementById('edit_input_contratacao');
+    const tituloHidden = document.getElementById('titulo_contratacao_selecionado') || document.getElementById('edit_titulo_contratacao_selecionado');
+    const sugestoesDiv = document.getElementById('sugestoes_contratacao') || document.getElementById('edit_sugestoes_contratacao');
+    
+    if (inputContratacao) {
+        inputContratacao.value = numero;
+    }
+    
+    if (tituloHidden) {
+        tituloHidden.value = titulo;
+    }
+    
+    if (sugestoesDiv) {
+        sugestoesDiv.style.display = 'none';
+    }
+
+    // Preencher outros campos se estiver criando
+    if (document.getElementById('input_contratacao')) {
+        preencherCamposFormulario(numero, titulo);
+    }
+
+    console.log('Contratação selecionada:', numero, titulo);
+}
+
+/**
+ * Pesquisar contratação inline (modal de edição)
+ */
+function pesquisarContratacaoInlineEdit(termo) {
+    const sugestoesDiv = document.getElementById('edit_sugestoes_contratacao');
+    
+    if (!sugestoesDiv) {
+        console.error('Elemento edit_sugestoes_contratacao não encontrado');
+        return;
+    }
+
+    if (!termo || termo.length < 2) {
+        sugestoesDiv.style.display = 'none';
+        return;
+    }
+
+    // Inicializar dados se necessário
+    if (!contratacoesPCA || contratacoesPCA.length === 0) {
+        inicializarContratacoesPCA();
+    }
+
+    // Filtrar contratações
+    const termoLower = termo.toLowerCase().trim();
+    const filtradas = contratacoesPCA.filter(contratacao => {
+        const numero = (contratacao.numero_contratacao || '').toLowerCase();
+        const titulo = (contratacao.titulo_contratacao || '').toLowerCase();
+        return numero.includes(termoLower) || titulo.includes(termoLower);
+    }).slice(0, 10);
+
+    // Gerar HTML das sugestões
+    if (filtradas.length === 0) {
+        sugestoesDiv.innerHTML = '<div class="no-results">Nenhuma contratação encontrada</div>';
+    } else {
+        let html = '';
+        filtradas.forEach(contratacao => {
+            const titulo = contratacao.titulo_contratacao || 'Título não disponível';
+            const tituloTruncado = titulo.length > 80 ? titulo.substring(0, 80) + '...' : titulo;
+            const tituloEscapado = titulo.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+            
+            html += `
+                <div class="suggestion-item" onclick="selecionarContratacao('${contratacao.numero_contratacao}', '${tituloEscapado}')">
+                    <div class="suggestion-numero">${contratacao.numero_contratacao}</div>
+                    <div class="suggestion-titulo">${tituloTruncado}</div>
+                </div>
+            `;
+        });
+        sugestoesDiv.innerHTML = html;
+    }
+
+    sugestoesDiv.style.display = 'block';
+}
+
+/**
+ * Mostrar sugestões inline (modal de edição)
+ */
+function mostrarSugestoesInlineEdit() {
+    const input = document.getElementById('edit_input_contratacao');
+    const sugestoesDiv = document.getElementById('edit_sugestoes_contratacao');
+    
+    if (input && input.value && input.value.length >= 2) {
+        pesquisarContratacaoInlineEdit(input.value);
+    }
+}
+
+/**
+ * Ocultar sugestões inline (modal de edição)
+ */
+function ocultarSugestoesInlineEdit() {
+    setTimeout(() => {
+        const sugestoesDiv = document.getElementById('edit_sugestoes_contratacao');
+        if (sugestoesDiv) {
+            sugestoesDiv.style.display = 'none';
+        }
+    }, 200);
+}
+
+// Exportar funções para escopo global
+window.pesquisarContratacaoInline = pesquisarContratacaoInline;
+window.mostrarSugestoesInline = mostrarSugestoesInline;
+window.ocultarSugestoesInline = ocultarSugestoesInline;
+window.selecionarContratacao = selecionarContratacao;
+window.pesquisarContratacaoInlineEdit = pesquisarContratacaoInlineEdit;
+window.mostrarSugestoesInlineEdit = mostrarSugestoesInlineEdit;
+window.ocultarSugestoesInlineEdit = ocultarSugestoesInlineEdit;
+
+/**
+ * Selecionar todos os campos de exportação
+ */
+function selecionarTodosCampos(selecionar) {
+    const checkboxes = document.querySelectorAll('input[name="campos[]"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selecionar;
+    });
+}
+
+// Exportar função para escopo global
+window.selecionarTodosCampos = selecionarTodosCampos;
+
+// Inicializar dados das contratações quando DOM carregar
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarContratacoesPCA();
+});
