@@ -226,16 +226,16 @@ function validarItemPGC($item) {
 
 // Função para abreviar valores grandes
 function abreviarValor($valor) {
-    if (is_null($valor) || $valor === '') return '0';
+    if (is_null($valor) || $valor === '') return '0,000';
     
     if ($valor >= 1000000000) {
-        return number_format($valor / 1000000000, 1, ',', '.') . 'B';
+        return number_format($valor / 1000000000, 3, ',', '.') . 'B';
     } elseif ($valor >= 1000000) {
-        return number_format($valor / 1000000, 1, ',', '.') . 'M';
+        return number_format($valor / 1000000, 3, ',', '.') . 'M';
     } elseif ($valor >= 1000) {
-        return number_format($valor / 1000, 1, ',', '.') . 'K';
+        return number_format($valor / 1000, 3, ',', '.') . 'K';
     } else {
-        return number_format($valor, 0, ',', '.');
+        return number_format($valor, 3, ',', '.');
     }
 }
 

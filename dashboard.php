@@ -197,34 +197,6 @@ if (!empty($importacoes_ids)) {
             AND numero_dfd != ''
         ")->fetchColumn(),
         
-        'homologadas' => $pdo->query("
-            SELECT COUNT(DISTINCT numero_dfd) 
-            FROM $tabela_pca 
-            WHERE $where_stats 
-            AND numero_dfd IS NOT NULL 
-            AND numero_dfd != ''
-            AND situacao_execucao = 'Concluído'
-        ")->fetchColumn(),
-        
-        'atrasadas_inicio' => $pdo->query("
-            SELECT COUNT(DISTINCT numero_dfd) 
-            FROM $tabela_pca 
-            WHERE $where_stats 
-            AND numero_dfd IS NOT NULL 
-            AND numero_dfd != ''
-            AND data_inicio_processo < CURDATE() 
-            AND (situacao_execucao IS NULL OR situacao_execucao = 'Não iniciado')
-        ")->fetchColumn(),
-        
-        'atrasadas_conclusao' => $pdo->query("
-            SELECT COUNT(DISTINCT numero_dfd) 
-            FROM $tabela_pca 
-            WHERE $where_stats 
-            AND numero_dfd IS NOT NULL 
-            AND numero_dfd != ''
-            AND data_conclusao_processo < CURDATE() 
-            AND situacao_execucao != 'Concluído'
-        ")->fetchColumn()
     ];
     
     $dados_categoria = $pdo->query("
@@ -283,10 +255,7 @@ if (!empty($importacoes_ids)) {
     $stats = [
         'total_dfds' => 0,
         'total_contratacoes' => 0,
-        'valor_total' => 0,
-        'homologadas' => 0,
-        'atrasadas_inicio' => 0,
-        'atrasadas_conclusao' => 0
+        'valor_total' => 0
     ];
     $dados_categoria = [];
     $dados_area = [];
@@ -464,15 +433,6 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                         <div class="stat-label">Valor Total (R$)</div>
                     </div>
                     
-                    <div class="stat-card success">
-                        <div class="stat-number"><?php echo $stats['homologadas']; ?></div>
-                        <div class="stat-label">Homologadas</div>
-                    </div>
-                    
-                    <div class="stat-card warning">
-                        <div class="stat-number"><?php echo $stats['atrasadas_inicio'] + $stats['atrasadas_conclusao']; ?></div>
-                        <div class="stat-label">Atrasadas</div>
-                    </div>
                 </div>
 
                 <!-- Gráficos -->
