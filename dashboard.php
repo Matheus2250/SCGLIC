@@ -303,7 +303,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                 </div>
                 
                 <div class="nav-section">
-                    <div class="nav-section-title">Gerenciar</div>
+                    <div class="nav-section-title">Gerenciar & Relatórios</div>
                     <?php if (temPermissao('pca_importar')): ?>
                     <button class="nav-item <?php echo $secao_ativa === 'importar-pca' ? 'active' : ''; ?>" onclick="showSection('importar-pca')">
                         <i data-lucide="upload"></i> <span>Importar PCA</span>
@@ -317,6 +317,16 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                         <i data-lucide="alert-triangle"></i> <span>Contratações Atrasadas</span>
                     </a>
                     <?php endif; ?>
+                    <?php if (temPermissao('pca_relatorios')): ?>
+                    <button class="nav-item" onclick="showSection('relatorios')">
+                        <i data-lucide="file-text"></i> <span>Relatórios</span>
+                    </button>
+                    <?php endif; ?>
+                    <?php if (temPermissao('risco_visualizar')): ?>
+                    <button class="nav-item" onclick="window.location.href='gestao_riscos.php'">
+                        <i data-lucide="shield-alert"></i> <span>Gestão de Riscos</span>
+                    </button>
+                    <?php endif; ?>
                     <?php if (isVisitante()): ?>
                     <div style="margin: 10px 15px; padding: 8px; background: #fff3cd; border-radius: 6px; border-left: 3px solid #f39c12;">
                         <small style="color: #856404; font-size: 11px; font-weight: 600;">
@@ -328,28 +338,10 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                 </div>
                 
                 <div class="nav-section">
-                    <div class="nav-section-title">Relatórios</div>
-                    <?php if (temPermissao('pca_relatorios')): ?>
-                    <button class="nav-item" onclick="showSection('relatorios')">
-                        <i data-lucide="file-text"></i> <span>Relatórios</span>
-                    </button>
-                    <?php endif; ?>
-                    <?php if (temPermissao('risco_visualizar')): ?>
-                    <button class="nav-item" onclick="window.location.href='gestao_riscos.php'">
-                        <i data-lucide="shield-alert"></i> <span>Gestão de Riscos</span>
-                    </button>
-                    <?php endif; ?>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Navegação</div>
+                    <div class="nav-section-title">Sistema & Navegação</div>
                     <a href="licitacao_dashboard.php" class="nav-item">
                         <i data-lucide="gavel"></i> <span>Dashboard Licitações</span>
                     </a>
-                </div>
-
-                <div class="nav-section">
-                    <div class="nav-section-title">Sistema</div>
                     <?php if (temPermissao('backup_executar')): ?>
                     <button class="nav-item" onclick="showSection('backup-sistema')">
                         <i data-lucide="shield"></i> <span>Backup & Segurança</span>
