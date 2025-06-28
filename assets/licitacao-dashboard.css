@@ -1760,3 +1760,422 @@ td a {
     td a:hover {
         text-decoration: underline;
     }
+
+/* ==================== VARIÁVEIS PARA ÍCONES ==================== */
+:root {
+    --icon-size-normal: 20px;
+    --icon-size-mobile: 18px;
+    --icon-size-small: 16px;
+}
+
+/* ==================== SISTEMA DE ABAS ==================== */
+.tabs-container {
+    width: 100%;
+}
+
+.tabs-header {
+    display: flex;
+    gap: 2px;
+    background: #f8f9fa;
+    border-radius: 12px 12px 0 0;
+    padding: 5px;
+    margin-bottom: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.tabs-header::-webkit-scrollbar {
+    display: none;
+}
+
+.tab-button {
+    flex: 1;
+    min-width: 140px;
+    padding: 12px 15px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 13px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.tab-button:hover {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.tab-button.active {
+    background: #3b82f6;
+    color: white;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* CORREÇÃO: Ícones padronizados para todos os contextos */
+.tab-button i,
+.tab-content i,
+.tab-content h4 i {
+    width: var(--icon-size-normal);
+    height: var(--icon-size-normal);
+    flex-shrink: 0;
+    min-width: var(--icon-size-normal);
+    min-height: var(--icon-size-normal);
+    max-width: var(--icon-size-normal);
+    max-height: var(--icon-size-normal);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--icon-size-normal);
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Força tamanho específico para ícones de Font Awesome */
+.tab-button i.fa,
+.tab-button i.fas,
+.tab-button i.far,
+.tab-button i.fab,
+.tab-button i[class^="fa-"],
+.tab-button i[class*=" fa-"] {
+    font-size: var(--icon-size-normal) !important;
+    width: var(--icon-size-normal) !important;
+    height: var(--icon-size-normal) !important;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+    background: white;
+    border-radius: 0 0 12px 12px;
+    min-height: 200px;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeInTab 0.3s ease;
+}
+
+@keyframes fadeInTab {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tab-navigation {
+    display: flex;
+    gap: 10px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Progress indicator */
+.tabs-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+/* ==================== RESPONSIVE TABLETS ==================== */
+@media (max-width: 768px) {
+    .tabs-header {
+        flex-direction: column;
+        gap: 5px;
+        padding: 10px;
+    }
+    
+    .tab-button {
+        min-width: auto;
+        width: 100%;
+        justify-content: flex-start;
+        padding: 15px;
+    }
+    
+    .tab-content {
+        padding: 20px 15px;
+    }
+    
+    .tab-navigation,
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    /* Ícones ligeiramente menores em tablets */
+    .tab-button i,
+    .tab-content i,
+    .tab-content h4 i {
+        width: var(--icon-size-mobile);
+        height: var(--icon-size-mobile);
+        min-width: var(--icon-size-mobile);
+        min-height: var(--icon-size-mobile);
+        max-width: var(--icon-size-mobile);
+        max-height: var(--icon-size-mobile);
+        font-size: var(--icon-size-mobile);
+    }
+    
+    /* Força tamanho para Font Awesome em tablets */
+    .tab-button i.fa,
+    .tab-button i.fas,
+    .tab-button i.far,
+    .tab-button i.fab,
+    .tab-button i[class^="fa-"],
+    .tab-button i[class*=" fa-"] {
+        font-size: var(--icon-size-mobile) !important;
+        width: var(--icon-size-mobile) !important;
+        height: var(--icon-size-mobile) !important;
+    }
+    
+    /* Força uniformidade total em tablets */
+    .tab-button i,
+    .tab-button .icon,
+    .tab-button [class^="icon-"],
+    .tab-button [class*=" icon-"] {
+        width: var(--icon-size-mobile) !important;
+        height: var(--icon-size-mobile) !important;
+        font-size: var(--icon-size-mobile) !important;
+        line-height: var(--icon-size-mobile) !important;
+    }
+}
+
+/* ==================== RESPONSIVE MOBILE ==================== */
+@media (max-width: 480px) {
+    .tab-button {
+        font-size: 12px;
+        padding: 12px;
+    }
+    
+    .tab-content h4 {
+        font-size: 14px;
+    }
+    
+    /* Ícones menores para mobile */
+    .tab-button i,
+    .tab-content i,
+    .tab-content h4 i {
+        width: var(--icon-size-small);
+        height: var(--icon-size-small);
+        min-width: var(--icon-size-small);
+        min-height: var(--icon-size-small);
+        max-width: var(--icon-size-small);
+        max-height: var(--icon-size-small);
+        font-size: var(--icon-size-small);
+    }
+    
+    /* Força tamanho para Font Awesome em mobile */
+    .tab-button i.fa,
+    .tab-button i.fas,
+    .tab-button i.far,
+    .tab-button i.fab,
+    .tab-button i[class^="fa-"],
+    .tab-button i[class*=" fa-"] {
+        font-size: var(--icon-size-small) !important;
+        width: var(--icon-size-small) !important;
+        height: var(--icon-size-small) !important;
+    }
+    
+    /* Força uniformidade total em mobile */
+    .tab-button i,
+    .tab-button .icon,
+    .tab-button [class^="icon-"],
+    .tab-button [class*=" icon-"] {
+        width: var(--icon-size-small) !important;
+        height: var(--icon-size-small) !important;
+        font-size: var(--icon-size-small) !important;
+        line-height: var(--icon-size-small) !important;
+    }
+}
+
+/* ==================== CLASSES UTILITÁRIAS PARA ÍCONES ==================== */
+.icon-normal {
+    width: var(--icon-size-normal) !important;
+    height: var(--icon-size-normal) !important;
+    font-size: var(--icon-size-normal) !important;
+}
+
+.icon-mobile {
+    width: var(--icon-size-mobile) !important;
+    height: var(--icon-size-mobile) !important;
+    font-size: var(--icon-size-mobile) !important;
+}
+
+.icon-small {
+    width: var(--icon-size-small) !important;
+    height: var(--icon-size-small) !important;
+    font-size: var(--icon-size-small) !important;
+}
+
+/* ==================== FORÇA UNIFORMIDADE TOTAL DOS ÍCONES ==================== */
+/* Garante que TODOS os ícones nas abas tenham exatamente o mesmo tamanho */
+.tab-button i,
+.tab-button .icon,
+.tab-button [class^="icon-"],
+.tab-button [class*=" icon-"] {
+    width: var(--icon-size-normal) !important;
+    height: var(--icon-size-normal) !important;
+    font-size: var(--icon-size-normal) !important;
+    line-height: var(--icon-size-normal) !important;
+    min-width: var(--icon-size-normal) !important;
+    min-height: var(--icon-size-normal) !important;
+    max-width: var(--icon-size-normal) !important;
+    max-height: var(--icon-size-normal) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    vertical-align: middle !important;
+    overflow: hidden;
+}
+
+/* ==================== BOTÃO SUCCESS ==================== */
+.btn-success {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #229954, #27ae60);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+}
+
+.btn-success:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(39, 174, 96, 0.3);
+}
+
+.btn-success:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-success i {
+    width: 16px;
+    height: 16px;
+}
+
+/* ==================== FORMULÁRIO DAS ABAS ==================== */
+.tab-content .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px; /* Reduzido de 20px para 15px */
+    margin-bottom: 15px; /* Reduzido */
+}
+
+.tab-content .form-group {
+    margin-bottom: 0; /* Remove margem extra */
+}
+
+.tab-content .form-group label {
+    display: block;
+    margin-bottom: 6px; /* Reduzido de 8px para 6px */
+    font-weight: 600;
+    color: #374151;
+    font-size: 13px; /* Ligeiramente menor */
+}
+
+.tab-content .form-group input,
+.tab-content .form-group select,
+.tab-content .form-group textarea {
+    width: 100%;
+    padding: 8px 12px; /* Reduzido de 10px para 8px */
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.tab-content .form-group small {
+    display: block;
+    margin-top: 4px; /* Reduzido de 6px para 4px */
+    font-size: 11px; /* Menor */
+    color: #6b7280;
+    line-height: 1.3;
+}
+
+.tab-content h4 {
+    margin: 0 0 15px 0; /* Reduzido de 20px para 15px */
+    color: #2c3e50;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 8px; /* Reduzido de 10px para 8px */
+    font-size: 16px; /* Ligeiramente menor */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-content h4 i {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: #3b82f6;
+}
+
+/* Reduzir espaçamento específico para mobile */
+@media (max-width: 768px) {
+    .tab-content {
+        padding: 15px;
+    }
+    
+    .tab-content .form-grid {
+        gap: 12px;
+        grid-template-columns: 1fr;
+    }
+    
+    .tab-content h4 {
+        margin-bottom: 12px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tab-content {
+        padding: 12px;
+    }
+    
+    .tab-content .form-grid {
+        gap: 10px;
+    }
+    
+    .tab-content .form-group input,
+    .tab-content .form-group select,
+    .tab-content .form-group textarea {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+}

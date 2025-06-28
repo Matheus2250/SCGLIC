@@ -1018,6 +1018,27 @@ function verificarEspaco() {
           'Entre em contato com o administrador do sistema para verificar o espaço em disco.');
 }
 
+// ==================== ATUALIZAÇÕES RECENTES ====================
+
+/**
+ * Atualizar lista de atividades recentes
+ */
+function atualizarAtividadesRecentes() {
+    const button = event.target;
+    const originalHTML = button.innerHTML;
+    
+    // Mostrar loading
+    button.disabled = true;
+    button.innerHTML = '<i data-lucide="loader-2" style="width: 12px; height: 12px; animation: spin 1s linear infinite;"></i> Atualizando...';
+    
+    // Simular requisição (em produção, fazer fetch para uma API)
+    setTimeout(() => {
+        // Recarregar a página para atualizar os dados
+        window.location.reload();
+    }, 1000);
+}
+
+
 // ==================== EVENT LISTENERS ====================
 
 /**

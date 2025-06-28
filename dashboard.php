@@ -296,6 +296,7 @@ if (!empty($importacoes_ids)) {
 
 // Buscar histórico de importações para o ano selecionado
 $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
+
 ?>
 
 <!DOCTYPE html>
@@ -491,6 +492,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                         <canvas id="chartStatus" width="400" height="200"></canvas>
                     </div>
                 </div>
+
             </div>
 
             <!-- Importar PCA Section -->

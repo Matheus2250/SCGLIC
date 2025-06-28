@@ -615,9 +615,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 <?php foreach ($licitacoes_recentes as $licitacao): ?>
 <tr>
 <td>
-<a href="#" onclick="verDetalhes(<?php echo $licitacao['id']; ?>); return false;" title="Clique para ver os detalhes">
 <strong><?php echo htmlspecialchars($licitacao['nup']); ?></strong>
-</a>
 </td>
 <td><?php echo htmlspecialchars($licitacao['numero_contratacao_final'] ?? $licitacao['numero_contratacao'] ?? 'N/A'); ?></td>
  
@@ -638,6 +636,11 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 <td><?php echo $licitacao['data_abertura'] ? formatarData($licitacao['data_abertura']) : '-'; ?></td>
 <td>
 <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+<!-- Botão Ver Detalhes (sempre visível) -->
+<button onclick="verDetalhes(<?php echo $licitacao['id']; ?>)" title="Ver Detalhes" style="background: #6c757d; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">
+<i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+</button>
+
 <?php if (temPermissao('licitacao_editar')): ?>
 <button onclick="editarLicitacao(<?php echo $licitacao['id']; ?>)" title="Editar" style="background: #f39c12; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">
 <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
@@ -732,145 +735,254 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
             <span class="close" onclick="fecharModal('modalCriarLicitacao')">&times;</span>
         </div>
         <div class="modal-body">
-            <form action="process.php" method="POST">
-                <input type="hidden" name="acao" value="criar_licitacao">
-                <?php echo getCSRFInput(); ?>
+            <!-- Sistema de Abas -->
+            <div class="tabs-container">
+                <div class="tabs-header">
+                    <button type="button" class="tab-button active" onclick="mostrarAba('vinculacao-pca')">
+                        <i data-lucide="link"></i> Vinculação PCA
+                    </button>
+                    <button type="button" class="tab-button" onclick="mostrarAba('informacoes-gerais')">
+                        <i data-lucide="info"></i> Informações Gerais
+                    </button>
+                    <button type="button" class="tab-button" onclick="mostrarAba('prazos-datas')">
+                        <i data-lucide="clock"></i> Prazos e Datas
+                    </button>
+                    <button type="button" class="tab-button" onclick="mostrarAba('valores-financeiro')">
+                        <i data-lucide="wallet"></i> Valores e Financeiro
+                    </button>
+                    <button type="button" class="tab-button" onclick="mostrarAba('responsaveis')">
+                        <i data-lucide="users"></i> Responsáveis
+                    </button>
+                </div>
 
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>NUP *</label>
-                        <input type="text" name="nup" id="nup_criar" required placeholder="xxxxx.xxxxxx/xxxx-xx" maxlength="20">
+                <form action="process.php" method="POST" id="formCriarLicitacao">
+                    <input type="hidden" name="acao" value="criar_licitacao">
+                    <?php echo getCSRFInput(); ?>
+
+                    <!-- Aba 1: Vinculação PCA -->
+                    <div id="aba-vinculacao-pca" class="tab-content active">
+                        <h4 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
+                            <i data-lucide="link"></i> Vinculação com PCA
+                        </h4>
+                        <div class="form-grid">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Número da Contratação *</label>
+                                <div class="search-container" style="position: relative;">
+                                    <input
+                                        type="text"
+                                        name="numero_contratacao"
+                                        id="input_contratacao"
+                                        required
+                                        placeholder="Digite o número da contratação..."
+                                        autocomplete="off"
+                                        class="search-input"
+                                        oninput="pesquisarContratacaoInline(this.value)"
+                                        onfocus="mostrarSugestoesInline()"
+                                        onblur="ocultarSugestoesInline()"
+                                    >
+                                    <div id="sugestoes_contratacao" class="search-suggestions" style="display: none;">
+                                    </div>
+                                </div>
+
+                                <input type="hidden" id="numero_dfd_selecionado" name="numero_dfd">
+                                <input type="hidden" id="titulo_contratacao_selecionado" name="titulo_contratacao">
+
+                                <small style="color: #6b7280; font-size: 12px; margin-top: 5px; display: block;">
+                                    <i data-lucide="info" style="width: 12px; height: 12px;"></i>
+                                    Digite o número da contratação ou parte do título para pesquisar
+                                </small>
+                            </div>
+
+                            <div id="info_contratacao_selecionada" style="grid-column: 1 / -1; display: none; background: #e8f5e9; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                                <h5 style="margin: 0 0 10px 0; color: #388e3c;">
+                                    <i data-lucide="check-circle"></i> Contratação Selecionada
+                                </h5>
+                                <div id="detalhes_contratacao"></div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Data Entrada DIPLI</label>
-                        <input type="date" name="data_entrada_dipli">
+                    <!-- Aba 2: Informações Gerais -->
+                    <div id="aba-informacoes-gerais" class="tab-content">
+                        <h4 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
+                            <i data-lucide="file"></i> Informações Básicas
+                        </h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>NUP *</label>
+                                <input type="text" name="nup" id="nup_criar" required placeholder="xxxxx.xxxxxx/xxxx-xx" maxlength="20">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Modalidade *</label>
+                                <select name="modalidade" required>
+                                    <option value="">Selecione a modalidade</option>
+                                    <option value="DISPENSA">DISPENSA</option>
+                                    <option value="PREGAO">PREGÃO</option>
+                                    <option value="RDC">RDC</option>
+                                    <option value="INEXIBILIDADE">INEXIBILIDADE</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Tipo *</label>
+                                <select name="tipo" required>
+                                    <option value="">Selecione o tipo</option>
+                                    <option value="TRADICIONAL">TRADICIONAL</option>
+                                    <option value="COTACAO">COTAÇÃO</option>
+                                    <option value="SRP">SRP</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Ano</label>
+                                <input type="number" name="ano" value="<?php echo date('Y'); ?>" min="2020" max="2030">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Situação *</label>
+                                <select name="situacao" required>
+                                    <option value="">Selecione a situação</option>
+                                    <option value="EM_ANDAMENTO" selected>EM ANDAMENTO</option>
+                                    <option value="REVOGADO">REVOGADO</option>
+                                    <option value="FRACASSADO">FRACASSADO</option>
+                                    <option value="HOMOLOGADO">HOMOLOGADO</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Link (Documentos/Edital)</label>
+                                <input type="url" name="link" placeholder="https://...">
+                            </div>
+
+                            <div class="form-group form-full">
+                                <label>Objeto *</label>
+                                <textarea name="objeto" id="objeto_textarea" required rows="4" placeholder="Descreva detalhadamente o objeto da licitação..."></textarea>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Responsável Instrução</label>
-                        <input type="text" name="resp_instrucao">
+
+                    <!-- Aba 3: Prazos e Datas -->
+                    <div id="aba-prazos-datas" class="tab-content">
+                        <h4 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
+                            <i data-lucide="calendar"></i> Cronograma do Processo
+                        </h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Data Entrada DIPLI</label>
+                                <input type="date" name="data_entrada_dipli">
+                                <small style="color: #6b7280; font-size: 12px;">Data de entrada do processo na DIPLI</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Data Abertura</label>
+                                <input type="date" name="data_abertura">
+                                <small style="color: #6b7280; font-size: 12px;">Data prevista para abertura das propostas</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Data Homologação</label>
+                                <input type="date" name="data_homologacao" id="data_homologacao_criar">
+                                <small style="color: #6b7280; font-size: 12px;">Data de homologação do resultado</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Data Publicação</label>
+                                <input type="date" name="data_publicacao">
+                                <small style="color: #6b7280; font-size: 12px;">Data de publicação do edital</small>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Área Demandante</label>
-                        <input type="text" name="area_demandante" id="area_demandante_criar">
+                    <!-- Aba 4: Valores e Financeiro -->
+                    <div id="aba-valores-financeiro" class="tab-content">
+                        <h4 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
+                            <i data-lucide="banknote"></i> Valores Financeiros
+                        </h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Valor Estimado (R$) *</label>
+                                <input type="text" name="valor_estimado" id="valor_estimado_criar" placeholder="0,00" required>
+                                <small style="color: #6b7280; font-size: 12px;">Valor estimado para a contratação</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Valor Homologado (R$)</label>
+                                <input type="text" name="valor_homologado" id="valor_homologado_criar" placeholder="0,00">
+                                <small style="color: #6b7280; font-size: 12px;">Valor final homologado</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Economia (R$)</label>
+                                <input type="text" name="economia" id="economia_criar" placeholder="0,00" readonly style="background: #f8f9fa;">
+                                <small style="color: #6b7280; font-size: 12px;">Calculado automaticamente (Estimado - Homologado)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Quantidade de Itens</label>
+                                <input type="number" name="qtd_itens" min="1" placeholder="1">
+                                <small style="color: #6b7280; font-size: 12px;">Número de itens da licitação</small>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Pregoeiro</label>
-                        <input type="text" name="pregoeiro">
+                    <!-- Aba 5: Responsáveis -->
+                    <div id="aba-responsaveis" class="tab-content">
+                        <h4 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
+                            <i data-lucide="users"></i> Responsáveis pelo Processo
+                        </h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Pregoeiro/Responsável</label>
+                                <input type="text" name="pregoeiro" placeholder="Nome do pregoeiro">
+                                <small style="color: #6b7280; font-size: 12px;">Pregoeiro responsável pela condução</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Responsável Instrução</label>
+                                <input type="text" name="resp_instrucao" placeholder="Nome do responsável">
+                                <small style="color: #6b7280; font-size: 12px;">Responsável pela instrução do processo</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Área Demandante</label>
+                                <input type="text" name="area_demandante" id="area_demandante_criar" placeholder="Área que solicitou">
+                                <small style="color: #6b7280; font-size: 12px;">Área que demandou a licitação</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Observações</label>
+                                <textarea name="observacoes" rows="3" placeholder="Observações gerais sobre responsabilidades..."></textarea>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Modalidade *</label>
-                        <select name="modalidade" required>
-                            <option value="DISPENSA">DISPENSA</option>
-                            <option value="PREGAO">PREGÃO</option>
-                            <option value="RDC">RDC</option>
-                            <option value="INEXIBILIDADE">INEXIBILIDADE</option>
-                        </select>
+                    <!-- Botões de Ação -->
+                    <div style="margin-top: 20px; display: flex; gap: 15px; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 2px solid #e9ecef;">
+                        <div class="tab-navigation">
+                            <button type="button" id="btn-anterior" onclick="abaAnterior()" class="btn-secondary" style="display: none;">
+                                <i data-lucide="chevron-left"></i> Anterior
+                            </button>
+                            <button type="button" id="btn-proximo" onclick="proximaAba()" class="btn-primary">
+                                Próximo <i data-lucide="chevron-right"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" onclick="fecharModal('modalCriarLicitacao')" class="btn-secondary">
+                                <i data-lucide="x"></i> Cancelar
+                            </button>
+                            <button type="reset" class="btn-secondary" onclick="resetarFormulario()">
+                                <i data-lucide="refresh-cw"></i> Limpar
+                            </button>
+                            <button type="submit" class="btn-success" id="btn-criar" style="display: none;">
+                                <i data-lucide="check"></i> Criar Licitação
+                            </button>
+                        </div>
                     </div>
-
-                    <div class="form-group">
-                        <label>Tipo *</label>
-                        <select name="tipo" required>
-                            <option value="TRADICIONAL">TRADICIONAL</option>
-                            <option value="COTACAO">COTAÇÃO</option>
-                            <option value="SRP">SRP</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-    <label>Número da Contratação *</label>
-    <div class="search-container" style="position: relative;">
-        <input
-            type="text"
-            name="numero_contratacao"
-            id="input_contratacao"
-            required
-            placeholder="Digite o número da contratação..."
-            autocomplete="off"
-            class="search-input"
-            oninput="pesquisarContratacaoInline(this.value)"
-            onfocus="mostrarSugestoesInline()"
-            onblur="ocultarSugestoesInline()"
-        >
-        <div id="sugestoes_contratacao" class="search-suggestions" style="display: none;">
+                </form>
             </div>
-    </div>
-
-<input type="hidden" id="numero_dfd_selecionado" name="numero_dfd">
-<input type="hidden" id="titulo_contratacao_selecionado" name="titulo_contratacao">
-
-    <small style="color: #6b7280; font-size: 12px;">
-        Digite o número da contratação ou parte do título para pesquisar
-    </small>
-</div>
-
-                    <div class="form-group">
-                        <label>Ano</label>
-                        <input type="number" name="ano" value="<?php echo date('Y'); ?>">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Valor Estimado (R$)</label>
-                        <input type="text" name="valor_estimado" id="valor_estimado_criar" placeholder="0,00">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Data Abertura</label>
-                        <input type="date" name="data_abertura">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Data Homologação</label>
-                        <input type="date" name="data_homologacao" id="data_homologacao_criar">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Valor Homologado (R$)</label>
-                        <input type="text" name="valor_homologado" id="valor_homologado_criar" placeholder="0,00">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Economia (R$)</label>
-                        <input type="text" name="economia" id="economia_criar" placeholder="0,00" readonly style="background: #f8f9fa;">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Link</label>
-                        <input type="url" name="link" placeholder="https://...">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Situação *</label>
-                        <select name="situacao" required>
-                            <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
-                            <option value="REVOGADO">REVOGADO</option>
-                            <option value="FRACASSADO">FRACASSADO</option>
-                            <option value="HOMOLOGADO">HOMOLOGADO</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group form-full">
-                        <label>Objeto *</label>
-                        <textarea name="objeto" id="objeto_textarea" required rows="3" placeholder="Descreva o objeto da licitação..."></textarea>
-                    </div>
-                </div>
-
-                <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: flex-end;">
-                    <button type="button" onclick="fecharModal('modalCriarLicitacao')" class="btn-secondary">
-                        <i data-lucide="x"></i> Cancelar
-                    </button>
-                    <button type="reset" class="btn-secondary">
-                        <i data-lucide="refresh-cw"></i> Limpar Formulário
-                    </button>
-                    <button type="submit" class="btn-primary">
-                        <i data-lucide="check"></i> Criar Licitação
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>

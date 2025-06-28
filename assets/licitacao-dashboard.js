@@ -1406,12 +1406,21 @@ function abrirModalCriarLicitacao() {
     document.getElementById('input_contratacao').value = ''; // Limpar o campo de input
     // Abrir modal
     modal.style.display = 'block';
-    modal.classList.add('show');  // Focar no primeiro campo após um pequeno delay
+    modal.classList.add('show');
+    
+    // Reinicializar ícones Lucide e sistema de abas
     setTimeout(() => {
+        // Inicializar primeira aba
+        mostrarAba('vinculacao-pca');
+        
+        // Focar no primeiro campo
         const nupField = modal.querySelector('#nup_criar');
         if (nupField) {
             nupField.focus();
         }
+        
+        // Garantir que ícones Lucide sejam inicializados
+        inicializarLucideIcons();
     }, 100);
 }
 
@@ -2255,4 +2264,202 @@ window.selecionarTodosCampos = selecionarTodosCampos;
 // Inicializar dados das contratações quando DOM carregar
 document.addEventListener('DOMContentLoaded', function() {
     inicializarContratacoesPCA();
+});
+
+// ==================== SISTEMA DE ABAS ==================== 
+
+let abaAtual = 0;
+const abas = ['vinculacao-pca', 'informacoes-gerais', 'prazos-datas', 'valores-financeiro', 'responsaveis'];
+
+/**
+ * Mostrar aba específica
+ */
+function mostrarAba(nomeAba) {
+    // Remover active de todas as abas
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    // Ativar aba selecionada
+    document.querySelector(`[onclick="mostrarAba('${nomeAba}')"]`).classList.add('active');
+    document.getElementById(`aba-${nomeAba}`).classList.add('active');
+    
+    // Atualizar índice atual
+    abaAtual = abas.indexOf(nomeAba);
+    
+    // Atualizar botões de navegação
+    atualizarBotoesNavegacao();
+    
+    // Reinicializar ícones Lucide após um pequeno delay para garantir renderização
+    setTimeout(() => {
+        inicializarLucideIcons();
+    }, 50);
+}
+
+/**
+ * Ir para próxima aba
+ */
+function proximaAba() {
+    if (abaAtual < abas.length - 1) {
+        abaAtual++;
+        mostrarAba(abas[abaAtual]);
+    }
+}
+
+/**
+ * Ir para aba anterior
+ */
+function abaAnterior() {
+    if (abaAtual > 0) {
+        abaAtual--;
+        mostrarAba(abas[abaAtual]);
+    }
+}
+
+/**
+ * Atualizar estado dos botões de navegação
+ */
+function atualizarBotoesNavegacao() {
+    const btnAnterior = document.getElementById('btn-anterior');
+    const btnProximo = document.getElementById('btn-proximo');
+    const btnCriar = document.getElementById('btn-criar');
+    
+    // Botão anterior
+    if (abaAtual === 0) {
+        btnAnterior.style.display = 'none';
+    } else {
+        btnAnterior.style.display = 'inline-flex';
+    }
+    
+    // Botão próximo/criar
+    if (abaAtual === abas.length - 1) {
+        btnProximo.style.display = 'none';
+        btnCriar.style.display = 'inline-flex';
+    } else {
+        btnProximo.style.display = 'inline-flex';
+        btnCriar.style.display = 'none';
+    }
+}
+
+/**
+ * Resetar formulário e voltar para primeira aba
+ */
+function resetarFormulario() {
+    // Resetar formulário
+    document.getElementById('formCriarLicitacao').reset();
+    
+    // Voltar para primeira aba
+    abaAtual = 0;
+    mostrarAba(abas[0]);
+    
+    // Limpar informações da contratação selecionada
+    const infoContratacao = document.getElementById('info_contratacao_selecionada');
+    if (infoContratacao) {
+        infoContratacao.style.display = 'none';
+    }
+    
+    // Limpar campos ocultos
+    const numeroDfdField = document.getElementById('numero_dfd_selecionado');
+    const tituloField = document.getElementById('titulo_contratacao_selecionado');
+    if (numeroDfdField) numeroDfdField.value = '';
+    if (tituloField) tituloField.value = '';
+}
+
+/**
+ * Validação por aba
+ */
+function validarAbaAtual() {
+    const abaAtiva = document.getElementById(`aba-${abas[abaAtual]}`);
+    const camposObrigatorios = abaAtiva.querySelectorAll('input[required], select[required], textarea[required]');
+    
+    let valido = true;
+    camposObrigatorios.forEach(campo => {
+        if (!campo.value.trim()) {
+            campo.style.borderColor = '#e74c3c';
+            valido = false;
+        } else {
+            campo.style.borderColor = '#ddd';
+        }
+    });
+    
+    return valido;
+}
+
+/**
+ * Avançar com validação
+ */
+function proximaAbaComValidacao() {
+    if (validarAbaAtual()) {
+        proximaAba();
+    } else {
+        alert('Por favor, preencha todos os campos obrigatórios da aba atual.');
+    }
+}
+
+/**
+ * Calcular economia automaticamente
+ */
+function calcularEconomia() {
+    const valorEstimado = document.getElementById('valor_estimado_criar');
+    const valorHomologado = document.getElementById('valor_homologado_criar');
+    const economia = document.getElementById('economia_criar');
+    
+    if (valorEstimado && valorHomologado && economia) {
+        valorEstimado.addEventListener('input', calcular);
+        valorHomologado.addEventListener('input', calcular);
+        
+        function calcular() {
+            const estimado = parseFloat(valorEstimado.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+            const homologado = parseFloat(valorHomologado.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+            
+            if (estimado > 0 && homologado > 0) {
+                const economiaValor = estimado - homologado;
+                economia.value = economiaValor.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            } else {
+                economia.value = '';
+            }
+        }
+    }
+}
+
+// Função auxiliar para inicializar ícones Lucide de forma segura
+function inicializarLucideIcons() {
+    try {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    } catch (error) {
+        console.warn('Erro ao inicializar ícones Lucide:', error);
+    }
+}
+
+// Exportar funções para escopo global
+window.mostrarAba = mostrarAba;
+window.proximaAba = proximaAba;
+window.abaAnterior = abaAnterior;
+window.resetarFormulario = resetarFormulario;
+window.proximaAbaComValidacao = proximaAbaComValidacao;
+window.inicializarLucideIcons = inicializarLucideIcons;
+
+// Inicializar sistema de abas quando DOM carregar
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar estado das abas
+    abaAtual = 0;
+    atualizarBotoesNavegacao();
+    
+    // Inicializar cálculo de economia
+    calcularEconomia();
+    
+    // Modificar botão próximo para usar validação
+    const btnProximo = document.getElementById('btn-proximo');
+    if (btnProximo) {
+        btnProximo.onclick = proximaAbaComValidacao;
+    }
+    
+    // Inicializar ícones Lucide após carregamento completo
+    setTimeout(() => {
+        inicializarLucideIcons();
+    }, 200);
 });
