@@ -250,7 +250,33 @@ if (!empty($importacoes_ids)) {
         LIMIT 10
     ")->fetchAll();
     
-    $dados_mensal_pca = [];
+    // Dados mensais de evolução
+    $dados_mensal_pca = $pdo->query("
+        SELECT 
+            DATE_FORMAT(data_inicio_processo, '%Y-%m') as mes,
+            COUNT(DISTINCT numero_dfd) as quantidade
+        FROM $tabela_pca 
+        WHERE $where_stats 
+        AND data_inicio_processo IS NOT NULL
+        AND numero_dfd IS NOT NULL 
+        AND numero_dfd != ''
+        GROUP BY DATE_FORMAT(data_inicio_processo, '%Y-%m')
+        ORDER BY mes DESC
+        LIMIT 12
+    ")->fetchAll();
+    
+    // Dados de status das contratações
+    $dados_status = $pdo->query("
+        SELECT 
+            COALESCE(situacao_execucao, 'Não iniciado') as status,
+            COUNT(DISTINCT numero_dfd) as total
+        FROM $tabela_pca 
+        WHERE $where_stats 
+        AND numero_dfd IS NOT NULL 
+        AND numero_dfd != ''
+        GROUP BY COALESCE(situacao_execucao, 'Não iniciado')
+        ORDER BY total DESC
+    ")->fetchAll();
     
 } else {
     // Sem importações do ano - dados zerados
@@ -265,6 +291,7 @@ if (!empty($importacoes_ids)) {
     $dados_categoria = [];
     $dados_area = [];
     $dados_mensal_pca = [];
+    $dados_status = [];
 }
 
 // Buscar histórico de importações para o ano selecionado
@@ -1132,6 +1159,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
             dados_categoria: <?php echo json_encode($dados_categoria); ?>,
             dados_area: <?php echo json_encode($dados_area); ?>,
             dados_mensal: <?php echo json_encode($dados_mensal_pca); ?>,
+            dados_status: <?php echo json_encode($dados_status); ?>,
             stats: <?php echo json_encode($stats); ?>
         };
 

@@ -352,6 +352,14 @@ body {
     margin-bottom: 25px;
 }
 
+/* ==================== GRÁFICOS ==================== */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
 .stat-card {
     background: white;
     border-radius: 12px;
@@ -981,7 +989,7 @@ body {
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    height: 320px;
+    height: 280px;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -1005,13 +1013,13 @@ body {
 }
 
 .chart-card canvas {
-    max-height: 250px !important;
+    max-height: 200px !important;
     width: 100% !important;
 }
 
 .chart-container {
     position: relative;
-    height: 280px;
+    height: 240px;
     width: 100%;
     margin: 0 auto;
 }
@@ -1416,6 +1424,24 @@ tbody tr:hover {
         grid-template-columns: 1fr !important;
     }
     
+    .chart-card {
+        height: 160px !important;
+        padding: 15px !important;
+    }
+    
+    .chart-card canvas {
+        max-height: 100px !important;
+    }
+    
+    .chart-container {
+        height: 120px !important;
+    }
+    
+    .chart-title {
+        font-size: 14px !important;
+        margin-bottom: 10px !important;
+    }
+    
     .backup-info-item span {
         font-size: 13px !important;
     }
@@ -1633,6 +1659,18 @@ tbody tr:hover {
     
     .charts-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .chart-card {
+        height: 240px;
+    }
+    
+    .chart-card canvas {
+        max-height: 160px !important;
+    }
+    
+    .chart-container {
+        height: 180px;
     }
     
     .filtros-form {

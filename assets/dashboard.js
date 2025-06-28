@@ -189,6 +189,7 @@ function initCharts() {
         const dadosCategoria = window.dashboardData.dados_categoria || [];
         const dadosArea = window.dashboardData.dados_area || [];
         const dadosMensal = window.dashboardData.dados_mensal || [];
+        const dadosStatus = window.dashboardData.dados_status || [];
         const stats = window.dashboardData.stats || {};
 
         // Debug: verificar dados
@@ -320,6 +321,65 @@ function initCharts() {
                 }
             } catch (error) {
                 console.error('Erro ao criar gráfico mensal:', error);
+            }
+        }
+
+        // Gráfico de Status das Contratações
+        if (document.getElementById('chartStatus')) {
+            try {
+                console.log('Criando gráfico de status com', dadosStatus.length, 'itens');
+                if (dadosStatus && dadosStatus.length > 0) {
+                    new Chart(document.getElementById('chartStatus'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: dadosStatus.map(item => item.status || 'Não definido'),
+                            datasets: [{
+                                data: dadosStatus.map(item => item.total || 0),
+                                backgroundColor: [
+                                    '#27ae60', // Concluído - Verde
+                                    '#3498db', // Em andamento - Azul
+                                    '#f39c12', // Não iniciado - Amarelo
+                                    '#e74c3c', // Suspenso/Cancelado - Vermelho
+                                    '#9b59b6', // Outros - Roxo
+                                    '#1abc9c'  // Outros - Verde água
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { 
+                                legend: { 
+                                    position: 'bottom',
+                                    labels: {
+                                        padding: 10,
+                                        font: {
+                                            size: 11
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.label || '';
+                                            const value = context.parsed || 0;
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = ((value / total) * 100).toFixed(1);
+                                            return `${label}: ${value} (${percentage}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    // Exibir gráfico vazio quando não há dados de status
+                    console.log('Sem dados de status, exibindo gráfico vazio');
+                    document.getElementById('chartStatus').innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 200px; color: #7f8c8d; text-align: center;"><div><i data-lucide="activity" style="width: 48px; height: 48px; margin-bottom: 10px; opacity: 0.5;"></i><p>Nenhum dado de status disponível<br><small>Importe dados do PCA para ver o status das contratações</small></p></div></div>';
+                    lucide.createIcons();
+                }
+            } catch (error) {
+                console.error('Erro ao criar gráfico de status:', error);
             }
         }
 
