@@ -180,7 +180,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     
     .modal-body {
         padding: 20px;
-        max-height: 70vh;
+        max-height: calc(90vh - 120px);
         overflow-y: auto;
     }
     
@@ -205,14 +205,16 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     .modal-content {
         position: relative;
         background-color: #fefefe;
-        margin: 15% auto;
+        margin: 5% auto;
         padding: 0;
         border: none;
-        width: 80%;
-        max-width: 500px;
+        width: 90%;
+        max-width: 600px;
+        max-height: 90vh;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         border-radius: 8px;
         animation: modalFadeIn 0.3s;
+        overflow: hidden;
     }
     
     @keyframes modalFadeIn {
@@ -1330,29 +1332,21 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
                     </small>
                 </div>
                 
-                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f39c12;">
-                    <h4 style="margin: 0 0 10px 0; color: #856404;">
-                        <i data-lucide="alert-triangle" style="width: 16px; height: 16px;"></i> Estrutura Esperada do JSON
-                    </h4>
-                    <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto;">{
+                <details style="background: #fff3cd; padding: 10px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f39c12;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #856404; padding: 5px 0;">
+                        <i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i> Estrutura Esperada do JSON (clique para expandir)
+                    </summary>
+                    <pre style="background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin-top: 10px;">{
   "nup": "12345.123456/2024-12",
   "processo_id": "SEI123456789",
   "timestamp": "2024-12-27 10:30:00",
   "total_andamentos": 3,
   "andamentos": [
-    {
-      "unidade": "DIPLI",
-      "dias": 15,
-      "descricao": "Análise técnica"
-    },
-    {
-      "unidade": "DIPLAN", 
-      "dias": 8,
-      "descricao": "Revisão planejamento"
-    }
+    {"unidade": "DIPLI", "dias": 15, "descricao": "Análise técnica"},
+    {"unidade": "DIPLAN", "dias": 8, "descricao": "Revisão planejamento"}
   ]
 }</pre>
-                </div>
+                </details>
                 
                 <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: flex-end;">
                     <button type="button" onclick="fecharModal('modalImportarAndamentos')" class="btn-secondary">

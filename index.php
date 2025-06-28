@@ -52,14 +52,16 @@ if (isset($_SESSION['usuario_id'])) {
         .login-container {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
-            padding: 50px 45px;
+            padding: 30px 35px;
             border-radius: 24px;
             box-shadow: 
                 0 25px 50px rgba(0, 0, 0, 0.15),
                 0 0 0 1px rgba(255, 255, 255, 0.2),
                 inset 0 1px 0 rgba(255, 255, 255, 0.8);
             width: 100%;
-            max-width: 480px;
+            max-width: 450px;
+            max-height: 95vh;
+            overflow-y: auto;
             position: relative;
             z-index: 1;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -75,20 +77,20 @@ if (isset($_SESSION['usuario_id'])) {
 
         .logo-section {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 25px;
         }
 
         .logo-icon {
-            width: 90px;
-            height: 90px;
+            width: 70px;
+            height: 70px;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 25px;
+            margin: 0 auto 15px;
             color: white;
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             box-shadow: 
                 0 10px 25px rgba(30, 60, 114, 0.3),
                 0 0 0 4px rgba(255, 255, 255, 0.1),
@@ -106,38 +108,38 @@ if (isset($_SESSION['usuario_id'])) {
         }
 
         .logo-title {
-            font-size: 32px;
+            font-size: 26px;
             font-weight: 800;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             letter-spacing: -0.5px;
         }
 
         .logo-subtitle {
             color: #64748b;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 500;
             opacity: 0.8;
         }
 
         .form-tabs {
             display: flex;
-            margin-bottom: 35px;
+            margin-bottom: 25px;
             background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-            border-radius: 16px;
-            padding: 6px;
+            border-radius: 14px;
+            padding: 4px;
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
         }
 
         .form-tab {
             flex: 1;
-            padding: 14px 20px;
+            padding: 10px 16px;
             text-align: center;
             cursor: pointer;
-            border-radius: 12px;
+            border-radius: 10px;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             font-weight: 600;
             color: #64748b;
@@ -145,7 +147,8 @@ if (isset($_SESSION['usuario_id'])) {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
+            font-size: 14px;
         }
 
         .form-tab:hover {
@@ -178,15 +181,15 @@ if (isset($_SESSION['usuario_id'])) {
         }
 
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 16px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 500;
             color: #2c3e50;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .input-wrapper {
@@ -195,19 +198,19 @@ if (isset($_SESSION['usuario_id'])) {
 
         .input-wrapper i {
             position: absolute;
-            left: 15px;
+            left: 12px;
             top: 50%;
             transform: translateY(-50%);
             color: #bdc3c7;
-            font-size: 18px;
+            font-size: 16px;
         }
 
         .form-group input {
             width: 100%;
-            padding: 16px 16px 16px 52px;
+            padding: 12px 16px 12px 45px;
             border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 16px;
+            border-radius: 10px;
+            font-size: 15px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
@@ -236,12 +239,12 @@ if (isset($_SESSION['usuario_id'])) {
 
         .btn-primary {
             width: 100%;
-            padding: 18px;
+            padding: 14px;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
             color: white;
             border: none;
-            border-radius: 14px;
-            font-size: 16px;
+            border-radius: 12px;
+            font-size: 15px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -323,7 +326,7 @@ if (isset($_SESSION['usuario_id'])) {
 
         .forgot-password {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 15px;
         }
 
         .forgot-password a {
