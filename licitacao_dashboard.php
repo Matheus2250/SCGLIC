@@ -619,7 +619,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 
         <!-- Filtros e Busca -->
         <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <form id="formFiltrosLicitacao" method="GET" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
+            <form id="formFiltrosLicitacao" method="GET" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 15px; align-items: end;">
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #495057;">Buscar</label>
                     <input type="text" name="busca" value="<?php echo htmlspecialchars($filtro_busca); ?>" 
@@ -638,16 +638,6 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
                     </select>
                 </div>
                 
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #495057;">Por página</label>
-                    <select name="por_pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px;">
-                        <option value="10" <?php echo $licitacoes_por_pagina == 10 ? 'selected' : ''; ?>>10</option>
-                        <option value="25" <?php echo $licitacoes_por_pagina == 25 ? 'selected' : ''; ?>>25</option>
-                        <option value="50" <?php echo $licitacoes_por_pagina == 50 ? 'selected' : ''; ?>>50</option>
-                        <option value="100" <?php echo $licitacoes_por_pagina == 100 ? 'selected' : ''; ?>>100</option>
-                    </select>
-                </div>
-                
                 <div style="display: flex; gap: 10px;">
                     <button type="submit" class="btn-primary" style="padding: 8px 16px;">
                         <i data-lucide="search"></i> Filtrar
@@ -656,6 +646,9 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
                         <i data-lucide="x"></i> Limpar
                     </a>
                 </div>
+                
+                <!-- Campo oculto para preservar o valor de por_pagina -->
+                <input type="hidden" name="por_pagina" value="<?php echo $licitacoes_por_pagina; ?>">
             </form>
         </div>
 
@@ -746,13 +739,26 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 
             <!-- Informações de Paginação -->
             <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
-                <div style="color: #7f8c8d; font-size: 14px;">
-                    <?php 
-                    $inicio = ($pagina_atual - 1) * $licitacoes_por_pagina + 1;
-                    $fim = min($pagina_atual * $licitacoes_por_pagina, $total_licitacoes);
-                    ?>
-                    Mostrando <?php echo $inicio; ?> a <?php echo $fim; ?> de <?php echo $total_licitacoes; ?> licitações<br>
-                    Valor total estimado (página atual): <?php echo formatarMoeda(array_sum(array_column($licitacoes_recentes, 'valor_estimado'))); ?>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="color: #7f8c8d; font-size: 14px;">
+                        <?php 
+                        $inicio = ($pagina_atual - 1) * $licitacoes_por_pagina + 1;
+                        $fim = min($pagina_atual * $licitacoes_por_pagina, $total_licitacoes);
+                        ?>
+                        Mostrando <?php echo $inicio; ?> a <?php echo $fim; ?> de <?php echo $total_licitacoes; ?> licitações<br>
+                        Valor total estimado (página atual): <?php echo formatarMoeda(array_sum(array_column($licitacoes_recentes, 'valor_estimado'))); ?>
+                    </div>
+                    
+                    <!-- Seletor de itens por página -->
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-size: 14px; color: #495057; font-weight: 600;">Itens por página:</label>
+                        <select onchange="alterarItensPorPagina(this.value)" style="padding: 6px 8px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;">
+                            <option value="10" <?php echo $licitacoes_por_pagina == 10 ? 'selected' : ''; ?>>10</option>
+                            <option value="25" <?php echo $licitacoes_por_pagina == 25 ? 'selected' : ''; ?>>25</option>
+                            <option value="50" <?php echo $licitacoes_por_pagina == 50 ? 'selected' : ''; ?>>50</option>
+                            <option value="100" <?php echo $licitacoes_por_pagina == 100 ? 'selected' : ''; ?>>100</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <?php if ($total_paginas > 1): ?>
@@ -1591,6 +1597,16 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
         
         // Compatibilidade com arquivo JS externo
         window.contratacoesPCA = window.dadosContratacoes;
+        
+        /**
+         * Alterar quantidade de itens por página
+         */
+        function alterarItensPorPagina(novoValor) {
+            const url = new URL(window.location);
+            url.searchParams.set('por_pagina', novoValor);
+            url.searchParams.set('pagina', '1'); // Voltar para a primeira página
+            window.location.href = url.toString();
+        }
     </script>
     <script src="assets/licitacao-dashboard.js"></script>
     <script src="assets/notifications.js"></script>

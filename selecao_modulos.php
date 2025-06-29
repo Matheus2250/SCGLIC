@@ -6,23 +6,6 @@ verificarLogin();
 
 $pdo = conectarDB();
 
-// Buscar estatísticas rápidas para os cards
-$stats_planejamento = $pdo->query("
-    SELECT 
-        COUNT(DISTINCT numero_dfd) as total_dfds,
-        MAX(valor_total_contratacao) as valor_total,
-        COUNT(DISTINCT CASE WHEN situacao_execucao = 'Não iniciado' THEN numero_dfd END) as pendentes
-    FROM pca_dados 
-    WHERE numero_dfd IS NOT NULL
-")->fetch();
-
-$stats_licitacao = $pdo->query("
-    SELECT 
-        COUNT(*) as total_licitacoes,
-        COUNT(CASE WHEN situacao = 'EM_ANDAMENTO' THEN 1 END) as em_andamento,
-        COUNT(CASE WHEN situacao = 'HOMOLOGADO' THEN 1 END) as homologadas
-    FROM licitacoes
-")->fetch();
 ?>
 
 <!DOCTYPE html>
@@ -177,33 +160,6 @@ $stats_licitacao = $pdo->query("
             margin-bottom: 25px;
         }
 
-        .modulo-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-top: 25px;
-            padding-top: 25px;
-            border-top: 1px solid #ecf0f1;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-number {
-            display: block;
-            font-size: 24px;
-            font-weight: 700;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #95a5a6;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
 
         .usuario-info {
             background: rgba(255, 255, 255, 0.1);
@@ -269,10 +225,6 @@ $stats_licitacao = $pdo->query("
                 padding: 30px 20px;
             }
 
-            .modulo-stats {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
 
             .usuario-info {
                 flex-direction: column;
@@ -322,20 +274,6 @@ $stats_licitacao = $pdo->query("
                         Gerencie o Plano de Contratações Anual (PCA), controle DFDs, 
                         acompanhe cronogramas e monitore o andamento das contratações planejadas.
                     </p>
-                    <div class="modulo-stats">
-                        <div class="stat-item">
-                            <span class="stat-number"><?php echo number_format($stats_planejamento['total_dfds'] ?? 0); ?></span>
-                            <span class="stat-label">DFDs Cadastrados</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number"><?php echo $stats_planejamento['pendentes'] ?? 0; ?></span>
-                            <span class="stat-label">Pendentes</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number"><?php echo abreviarValor($stats_planejamento['valor_total'] ?? 0); ?></span>
-                            <span class="stat-label">Valor Total</span>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Módulo Licitação -->
@@ -348,20 +286,6 @@ $stats_licitacao = $pdo->query("
                         Controle o processo licitatório, acompanhe pregões, gerencie contratos 
                         e monitore o andamento das licitações em todas as suas fases.
                     </p>
-                    <div class="modulo-stats">
-                        <div class="stat-item">
-                            <span class="stat-number"><?php echo number_format($stats_licitacao['total_licitacoes'] ?? 0); ?></span>
-                            <span class="stat-label">Total Licitações</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number"><?php echo $stats_licitacao['em_andamento'] ?? 0; ?></span>
-                            <span class="stat-label">Em Andamento</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number"><?php echo $stats_licitacao['homologadas'] ?? 0; ?></span>
-                            <span class="stat-label">Homologadas</span>
-                        </div>
-                    </div>
                 </div>
             </div>
 

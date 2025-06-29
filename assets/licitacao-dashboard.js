@@ -2690,3 +2690,25 @@ document.addEventListener('DOMContentLoaded', function() {
         inicializarLucideIcons();
     }, 200);
 });
+
+/**
+ * Alterar quantidade de itens por página no contexto AJAX
+ */
+function alterarItensPorPaginaAjax(novoValor) {
+    const formFiltros = document.getElementById('formFiltrosLicitacao');
+    if (formFiltros) {
+        // Criar um FormData baseado no formulário atual
+        const formData = new FormData(formFiltros);
+        formData.set('por_pagina', novoValor);
+        formData.set('pagina', '1'); // Voltar para primeira página
+        
+        // Fazer filtro AJAX
+        filtrarLicitacoes(formData);
+    } else {
+        // Fallback para recarga da página se não estiver em contexto AJAX
+        const url = new URL(window.location);
+        url.searchParams.set('por_pagina', novoValor);
+        url.searchParams.set('pagina', '1');
+        window.location.href = url.toString();
+    }
+}

@@ -41,25 +41,9 @@
 </td>
 <td style="font-weight: 600; color: #27ae60;"><?php echo formatarMoeda($licitacao['valor_estimado'] ?? 0); ?></td>
 <td>
-<?php
-                        $situacao = $licitacao['situacao'] ?? 'EM_ANDAMENTO';
-                        $cor_badge = [
-                            'EM_ANDAMENTO' => '#ffc107',
-                            'HOMOLOGADO' => '#28a745',
-                            'FRACASSADO' => '#dc3545',
-                            'REVOGADO' => '#6c757d'
-                        ][$situacao] ?? '#ffc107';
-                        
-                        $texto_situacao = [
-                            'EM_ANDAMENTO' => 'Em Andamento',
-                            'HOMOLOGADO' => 'Homologado',
-                            'FRACASSADO' => 'Fracassado',
-                            'REVOGADO' => 'Revogado'
-                        ][$situacao] ?? 'Em Andamento';
-                        ?>
-                        <span style="background: <?php echo $cor_badge; ?>; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
-                            <?php echo $texto_situacao; ?>
-                        </span>
+<span class="status-badge status-<?php echo strtolower(str_replace('_', '-', $licitacao['situacao'])); ?>">
+<?php echo str_replace('_', ' ', $licitacao['situacao']); ?>
+</span>
 </td>
 <td><?php echo htmlspecialchars($licitacao['pregoeiro'] ?? 'Não definido'); ?></td>
 <td><?php echo $licitacao['data_abertura'] ? formatarData($licitacao['data_abertura']) : '-'; ?></td>
@@ -98,10 +82,32 @@
 </tbody>
 </table>
 
-            <!-- Paginação -->
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+            <!-- Informações de Paginação -->
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="color: #7f8c8d; font-size: 14px;">
+                        <?php 
+                        $inicio = ($pagina_atual - 1) * $licitacoes_por_pagina + 1;
+                        $fim = min($pagina_atual * $licitacoes_por_pagina, $total_licitacoes);
+                        ?>
+                        Mostrando <?php echo $inicio; ?> a <?php echo $fim; ?> de <?php echo $total_licitacoes; ?> licitações<br>
+                        Valor total estimado (página atual): <?php echo formatarMoeda(array_sum(array_column($licitacoes_recentes, 'valor_estimado'))); ?>
+                    </div>
+                    
+                    <!-- Seletor de itens por página -->
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-size: 14px; color: #495057; font-weight: 600;">Itens por página:</label>
+                        <select onchange="alterarItensPorPaginaAjax(this.value)" style="padding: 6px 8px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;">
+                            <option value="10" <?php echo $licitacoes_por_pagina == 10 ? 'selected' : ''; ?>>10</option>
+                            <option value="25" <?php echo $licitacoes_por_pagina == 25 ? 'selected' : ''; ?>>25</option>
+                            <option value="50" <?php echo $licitacoes_por_pagina == 50 ? 'selected' : ''; ?>>50</option>
+                            <option value="100" <?php echo $licitacoes_por_pagina == 100 ? 'selected' : ''; ?>>100</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <?php if ($total_paginas > 1): ?>
-                <div class="pagination-container" style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+                <div class="pagination">
                     <?php
                     $url_base = "?ajax=filtrar_licitacoes&";
                     if (!empty($filtro_busca)) $url_base .= "busca=" . urlencode($filtro_busca) . "&";
