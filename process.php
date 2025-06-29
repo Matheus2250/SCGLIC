@@ -546,28 +546,75 @@ case 'criar_licitacao':
         $licitacao_id = $pdo->lastInsertId();
         registrarLog('CRIAR_LICITACAO', "Criou licitação: {$dados['nup']}", 'licitacoes', $licitacao_id);
 
-        setMensagem("Licitação criada com sucesso!");
-        header('Location: licitacao_dashboard.php');
-        exit;
+        // Verificar se é uma requisição AJAX
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+                  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+        $expectsJson = strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false;
+
+        if ($isAjax || $expectsJson) {
+            // Resposta JSON para requisições AJAX
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => 'Licitação criada com sucesso!',
+                'licitacao_id' => $licitacao_id
+            ]);
+            exit;
+        } else {
+            // Resposta tradicional para requisições normais
+            setMensagem("Licitação criada com sucesso!");
+            header('Location: licitacao_dashboard.php');
+            exit;
+        }
 
     } catch (Exception $e) {
         // Log do erro com mais detalhes
         error_log("Erro ao criar licitação: " . $e->getMessage());
         error_log("Stack trace: " . $e->getTraceAsString());
 
-        // Para debug, mostrar na tela
-        setMensagem('Erro ao criar licitação: ' . $e->getMessage(), 'erro');
-        header('Location: licitacao_dashboard.php');
-        exit;
+        // Verificar se é uma requisição AJAX
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+                  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+        $expectsJson = strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false;
+
+        if ($isAjax || $expectsJson) {
+            // Resposta JSON para requisições AJAX
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Erro ao criar licitação: ' . $e->getMessage()
+            ]);
+            exit;
+        } else {
+            // Resposta tradicional para requisições normais
+            setMensagem('Erro ao criar licitação: ' . $e->getMessage(), 'erro');
+            header('Location: licitacao_dashboard.php');
+            exit;
+        }
     } catch (Error $e) {
         // Capturar erros fatais também
         error_log("Erro fatal ao criar licitação: " . $e->getMessage());
         error_log("Stack trace: " . $e->getTraceAsString());
 
-        // Para debug, mostrar na tela
-        setMensagem('Erro fatal ao processar requisição', 'erro');
-        header('Location: licitacao_dashboard.php');
-        exit;
+        // Verificar se é uma requisição AJAX
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+                  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+        $expectsJson = strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false;
+
+        if ($isAjax || $expectsJson) {
+            // Resposta JSON para requisições AJAX
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Erro fatal ao processar requisição'
+            ]);
+            exit;
+        } else {
+            // Resposta tradicional para requisições normais
+            setMensagem('Erro fatal ao processar requisição', 'erro');
+            header('Location: licitacao_dashboard.php');
+            exit;
+        }
     }
 
 case 'editar_licitacao':

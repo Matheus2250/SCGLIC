@@ -1468,16 +1468,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
             fetch('process.php', {
                 method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: formData
             })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        // Mostrar mensagem de sucesso
+                        if (typeof showNotification === 'function') {
+                            showNotification(data.message || 'Licitação criada com sucesso!', 'success');
+                        } else {
+                            alert(data.message || 'Licitação criada com sucesso!');
+                        }
+                        
                         // Fechar modal e recarregar página
                         fecharModal('modalCriarLicitacao');
-                        window.location.reload();
+                        
+                        // Aguardar um pouco antes de recarregar para mostrar a notificação
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
                     } else {
-                        alert(data.message || 'Erro ao criar licitação');
+                        // Mostrar erro
+                        if (typeof showNotification === 'function') {
+                            showNotification(data.message || 'Erro ao criar licitação', 'error');
+                        } else {
+                            alert(data.message || 'Erro ao criar licitação');
+                        }
+                        
                         // Restaurar botão
                         submitBtn.innerHTML = originalText;
                         submitBtn.disabled = false;
