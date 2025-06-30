@@ -251,17 +251,8 @@ function consultarAndamentos(nup) {
                 if (data.total === 0) {
                     conteudoElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;"><i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px;"></i><h3 style="margin: 0 0 10px 0;">Nenhum andamento encontrado</h3><p style="margin: 0;">Não há dados de andamentos para este NUP.</p></div>';
                 } else {
-                    // Gerar HTML simplificado para evitar erros de sintaxe
-                    let html = '<div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><h4>NUP: ' + nup + '</h4><p>Total: ' + data.total + ' registros | Dias: ' + (data.total_dias_geral || 0) + '</p></div>';
-
-                    if (data.resumo_tempo_por_unidade) {
-                        html += '<div style="background: #f3e5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><h4>Resumo por Unidade</h4>';
-                        for (const [unidade, dias] of Object.entries(data.resumo_tempo_por_unidade)) {
-                            html += '<div style="display: inline-block; margin: 5px; padding: 10px; background: white; border-radius: 6px;"><strong>' + unidade + '</strong>: ' + dias + ' dias</div>';
-                        }
-                        html += '</div>';
-                    }
-
+                    // Gerar HTML rico com timeline dos andamentos
+                    let html = generateAndamentosTimeline(data, nup);
                     conteudoElement.innerHTML = html;
                 }
             } else {
@@ -277,6 +268,114 @@ function consultarAndamentos(nup) {
                 lucide.createIcons();
             }
         });
+}
+
+/**
+ * Gerar HTML para timeline de andamentos
+ */
+function generateAndamentosTimeline(data, nup) {
+    let html = '';
+    
+    // Cabeçalho com resumo
+    const processo = data.data[0];
+    html += `
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 10px 0; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="file-text"></i> NUP: ${nup}
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                <div>
+                    <strong>Total de Andamentos:</strong><br>
+                    ${data.total_andamentos_individuais || 0}
+                </div>
+                <div>
+                    <strong>Período:</strong><br>
+                    ${processo?.primeira_data ? formatarDataHora(processo.primeira_data) : 'N/A'} até ${processo?.ultima_data ? formatarDataHora(processo.ultima_data) : 'N/A'}
+                </div>
+                <div>
+                    <strong>Unidades Envolvidas:</strong><br>
+                    ${processo?.unidades_envolvidas?.length || 0}
+                </div>
+                <div>
+                    <strong>Tempo Total:</strong><br>
+                    ${data.total_dias_geral || 0} dias
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Resumo por unidade (se disponível)
+    if (data.resumo_tempo_por_unidade) {
+        html += '<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">';
+        html += '<h4 style="margin: 0 0 15px 0; color: #495057;"><i data-lucide="clock"></i> Tempo por Unidade</h4>';
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">';
+        
+        for (const [unidade, tempoData] of Object.entries(data.resumo_tempo_por_unidade)) {
+            const dias = tempoData.dias || tempoData;
+            const periodos = tempoData.total_periodos || 1;
+            const media = tempoData.media_dias_por_periodo || (dias / periodos);
+            
+            html += `
+                <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #007cba;">
+                    <div style="font-weight: 600; color: #007cba; margin-bottom: 5px;">${unidade}</div>
+                    <div style="font-size: 14px; color: #6c757d;">
+                        ${dias} dias total<br>
+                        ${periodos} período(s)<br>
+                        Média: ${media.toFixed(1)} dias
+                    </div>
+                </div>
+            `;
+        }
+        html += '</div></div>';
+    }
+    
+    // Timeline de andamentos
+    if (processo?.andamentos && processo.andamentos.length > 0) {
+        html += '<div style="background: white; padding: 20px; border-radius: 8px;">';
+        html += '<h4 style="margin: 0 0 20px 0; color: #495057;"><i data-lucide="git-commit"></i> Timeline de Andamentos</h4>';
+        html += '<div style="position: relative;">';
+        
+        // Linha vertical da timeline
+        html += '<div style="position: absolute; left: 20px; top: 0; bottom: 0; width: 2px; background: #dee2e6;"></div>';
+        
+        processo.andamentos.forEach((andamento, index) => {
+            const isFirst = index === 0;
+            const isLast = index === processo.andamentos.length - 1;
+            
+            html += `
+                <div style="position: relative; padding-left: 60px; margin-bottom: ${isLast ? '0' : '20px'};">
+                    <div style="position: absolute; left: 11px; top: 5px; width: 18px; height: 18px; background: #007cba; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007cba;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div style="font-weight: 600; color: #007cba;">${andamento.unidade}</div>
+                            <div style="font-size: 12px; color: #6c757d; white-space: nowrap; margin-left: 15px;">
+                                ${formatarDataHora(andamento.data_hora)}
+                            </div>
+                        </div>
+                        <div style="color: #495057; margin-bottom: 5px;">${andamento.descricao}</div>
+                        ${andamento.usuario ? `<div style="font-size: 12px; color: #6c757d;"><i data-lucide="user"></i> ${andamento.usuario}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div></div>';
+    }
+    
+    return html;
+}
+
+/**
+ * Formatar data e hora para exibição
+ */
+function formatarDataHora(dataHora) {
+    if (!dataHora) return 'N/A';
+    try {
+        const date = new Date(dataHora);
+        return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+    } catch (e) {
+        return dataHora;
+    }
 }
 
 /**
@@ -341,7 +440,8 @@ function initAndamentos() {
                         alert('Andamentos importados com sucesso!\n\n' +
                             'NUP: ' + (data.data.nup || nup) + '\n' +
                             'Processo ID: ' + (data.data.processo_id || 'N/A') + '\n' +
-                            'Total de andamentos: ' + (data.data.total_andamentos || '0') + '\n' +
+                            'Total esperados: ' + (data.data.total_esperados || '0') + '\n' +
+                            'Total processados: ' + (data.data.total_processados || '0') + '\n' +
                             'Ação: ' + (data.data.acao || 'Importação'));
 
                         // Fechar modal e limpar formulário
