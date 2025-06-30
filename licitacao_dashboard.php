@@ -1600,18 +1600,30 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 </div>
 
 <!-- Modal para Visualizar Andamentos -->
-<div id="modalVisualizarAndamentos" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width: 900px;">
-        <div class="modal-header">
-            <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
-                <i data-lucide="clock"></i> Andamentos do Processo
-            </h3>
-            <span class="close" onclick="fecharModal('modalVisualizarAndamentos')">&times;</span>
+<div id="modalVisualizarAndamentos" class="modal modern-modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header gradient-header">
+            <div class="header-info">
+                <h3 class="modal-title">
+                    <i data-lucide="clock"></i>
+                    Timeline do Processo
+                </h3>
+                <p class="modal-subtitle" id="nup-display">NUP: Carregando...</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-report" onclick="gerarRelatorioAndamentos()" title="Gerar Relatório">
+                    <i data-lucide="file-text"></i>
+                    Relatório
+                </button>
+                <button class="close-button" onclick="fecharModal('modalVisualizarAndamentos')">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
         </div>
         <div class="modal-body" id="conteudoAndamentos">
-            <div style="text-align: center; padding: 20px;">
-                <i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 1s linear infinite;"></i>
-                <p>Carregando andamentos...</p>
+            <div class="loading-timeline">
+                <i data-lucide="loader"></i>
+                <p>Carregando timeline do processo...</p>
             </div>
         </div>
     </div>

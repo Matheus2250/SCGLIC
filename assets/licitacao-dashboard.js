@@ -3454,3 +3454,138 @@ function consultarAndamentosModerno(nup) {
         andamentosManager.loadAndamentos(nup);
     }
 }
+
+/**
+ * Função para gerar relatório de andamentos
+ */
+function gerarRelatorioAndamentos() {
+    const nupElement = document.getElementById('nup-display');
+    if (!nupElement || !nupElement.textContent) {
+        alert('Erro: NUP não encontrado. Abra primeiro a timeline de um processo.');
+        return;
+    }
+    
+    // Extrair NUP do texto "NUP: 25000.123456/2023-15"
+    const nupText = nupElement.textContent;
+    const nupMatch = nupText.match(/NUP:\s*(.+)/);
+    if (!nupMatch) {
+        alert('Erro: Não foi possível extrair o NUP.');
+        return;
+    }
+    
+    const nup = nupMatch[1].trim();
+    
+    // Criar modal de configuração do relatório
+    const modal = document.createElement('div');
+    modal.id = 'modalRelatorioAndamentos';
+    modal.className = 'modal';
+    modal.style.display = 'block';
+    
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i data-lucide="file-text"></i> Relatório de Andamentos</h3>
+                <span class="close" onclick="fecharModalRelatorioAndamentos()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <strong>Processo:</strong> ${nup}
+                </div>
+                
+                <form id="formRelatorioAndamentos">
+                    <div class="form-group">
+                        <label>Período (opcional)</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label style="font-size: 12px; color: #666;">Data Inicial</label>
+                                <input type="date" name="data_inicial" id="rel_data_inicial_and">
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #666;">Data Final</label>
+                                <input type="date" name="data_final" id="rel_data_final_and">
+                            </div>
+                        </div>
+                        <small style="color: #666;">Deixe em branco para incluir todos os andamentos</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Formato de Saída</label>
+                        <select name="formato" required>
+                            <option value="html">Visualizar (HTML)</option>
+                            <option value="excel">Excel (CSV)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="incluir_graficos" checked> 
+                            Incluir gráficos e estatísticas
+                        </label>
+                    </div>
+                    
+                    <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: flex-end;">
+                        <button type="button" onclick="fecharModalRelatorioAndamentos()" class="btn-secondary">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            <i data-lucide="download"></i>
+                            Gerar Relatório
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Definir data final como hoje
+    document.getElementById('rel_data_final_and').value = new Date().toISOString().split('T')[0];
+    
+    // Inicializar ícones Lucide
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+    
+    // Event listener para o form
+    document.getElementById('formRelatorioAndamentos').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const params = new URLSearchParams();
+        
+        // Adicionar NUP
+        params.append('nup', nup);
+        
+        // Adicionar outros parâmetros
+        for (const [key, value] of formData) {
+            if (value) {
+                params.append(key, value);
+            }
+        }
+        
+        const formato = formData.get('formato');
+        const url = 'relatorios/gerar_relatorio_andamentos.php?' + params.toString();
+        
+        // Abrir relatório
+        if (formato === 'html') {
+            window.open(url, '_blank');
+        } else {
+            // Para Excel, fazer download
+            window.location.href = url;
+        }
+        
+        // Fechar modal
+        fecharModalRelatorioAndamentos();
+    });
+}
+
+/**
+ * Fechar modal de relatório de andamentos
+ */
+function fecharModalRelatorioAndamentos() {
+    const modal = document.getElementById('modalRelatorioAndamentos');
+    if (modal) {
+        modal.remove();
+    }
+}
