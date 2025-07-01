@@ -118,6 +118,7 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contratações Atrasadas - Sistema CGLIC</title>
     <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/dark-mode.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
         body {
@@ -870,6 +871,9 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
                     <p>Monitoramento de contratações com atrasos e pendências - <strong>PCA 2025</strong></p>
                 </div>
                 <div class="header-actions">
+                    <button id="theme-toggle" class="btn-voltar theme-toggle-btn" title="Alternar modo escuro/claro (Ctrl+Shift+D)" style="margin-right: 15px;">
+                        <i data-lucide="moon"></i> <span>Modo Escuro</span>
+                    </button>
                     <a href="dashboard.php" class="btn-voltar">
                         <i data-lucide="arrow-left"></i> Voltar ao Dashboard
                     </a>
@@ -1312,5 +1316,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     </style>
+    <script src="assets/dark-mode.js"></script>
 </body>
 </html>

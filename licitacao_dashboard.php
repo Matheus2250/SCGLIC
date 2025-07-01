@@ -250,6 +250,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     <title>Dashboard Licitações - Sistema CGLIC</title>
     <link rel="stylesheet" href="assets/style.css">
     <link rel="stylesheet" href="assets/licitacao-dashboard.css">
+    <link rel="stylesheet" href="assets/dark-mode.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -554,6 +555,9 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
                         <?php endif; ?>
                     </div>
                 </div>
+                <a href="perfil_usuario.php" class="logout-btn" style="text-decoration: none; margin-bottom: 10px;">
+                    <i data-lucide="user"></i> <span>Meu Perfil</span>
+                </a>
                 <button class="logout-btn" onclick="window.location.href='logout.php'">
                     <i data-lucide="log-out"></i> <span>Sair</span>
                 </button>
@@ -1660,6 +1664,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
             window.location.href = url.toString();
         }
     </script>
+    <script src="assets/dark-mode.js"></script>
     <script src="assets/licitacao-dashboard.js"></script>
     <script src="assets/notifications.js"></script>
 </body>

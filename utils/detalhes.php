@@ -38,25 +38,21 @@ $licitacao = $stmt_licitacao->fetch();
 ?>
 
 <!-- Abas -->
-<div class="abas">
-    <button class="aba ativa" onclick="
-        document.getElementById('aba-pca').style.display='block';
-        document.getElementById('aba-licitacao').style.display='none';
-        this.classList.add('ativa');
-        this.parentNode.querySelector('.aba:nth-child(2)').classList.remove('ativa');
-    ">Dados do PCA</button>
-    <?php if ($licitacao): ?>
-    <button class="aba" onclick="
-        document.getElementById('aba-pca').style.display='none';
-        document.getElementById('aba-licitacao').style.display='block';
-        this.classList.add('ativa');
-        this.parentNode.querySelector('.aba:nth-child(1)').classList.remove('ativa');
-    ">Dados da Licitação</button>
-    <?php endif; ?>
+<div class="abas-container">
+    <div class="abas">
+        <button class="aba ativa" onclick="trocarAba('pca', this)">
+            <i data-lucide="file-text"></i> Dados do PCA
+        </button>
+        <?php if ($licitacao): ?>
+        <button class="aba" onclick="trocarAba('licitacao', this)">
+            <i data-lucide="gavel"></i> Dados da Licitação
+        </button>
+        <?php endif; ?>
+    </div>
 </div>
     
     <!-- Conteúdo PCA -->
-    <div id="aba-pca" class="conteudo-aba">
+    <div id="aba-pca" class="conteudo-aba" style="display: block;">
         <h4>Informações Gerais</h4>
         <div class="info-grid">
             <div class="info-item">
@@ -124,13 +120,13 @@ $licitacao = $stmt_licitacao->fetch();
                     $total_geral += $item['valor_total'];
                 ?>
                 <tr>
-                    <td><?php echo $index + 1; ?></td>
-                    <td><?php echo htmlspecialchars($item['codigo_material_servico']); ?></td>
-                    <td><?php echo htmlspecialchars($item['descricao_material_servico']); ?></td>
-                    <td><?php echo htmlspecialchars($item['unidade_fornecimento']); ?></td>
-                    <td><?php echo $item['quantidade']; ?></td>
-                    <td><?php echo formatarMoeda($item['valor_unitario']); ?></td>
-                    <td><?php echo formatarMoeda($item['valor_total']); ?></td>
+                    <td data-label="Item"><?php echo $index + 1; ?></td>
+                    <td data-label="Código"><?php echo htmlspecialchars($item['codigo_material_servico']); ?></td>
+                    <td data-label="Descrição"><?php echo htmlspecialchars($item['descricao_material_servico']); ?></td>
+                    <td data-label="Unidade"><?php echo htmlspecialchars($item['unidade_fornecimento']); ?></td>
+                    <td data-label="Quantidade"><?php echo $item['quantidade']; ?></td>
+                    <td data-label="Valor Unit."><?php echo formatarMoeda($item['valor_unitario']); ?></td>
+                    <td data-label="Valor Total"><?php echo formatarMoeda($item['valor_total']); ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -309,3 +305,369 @@ function trocarAba(aba, botao) {
     botao.classList.add('ativa');
 }
 </script>
+
+<style>
+/* Layout Responsivo e Dark Mode para Modal de Detalhes */
+.abas-container {
+    margin-bottom: 20px;
+}
+
+.abas {
+    display: flex;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 4px;
+    gap: 4px;
+    border: 1px solid var(--border-light);
+}
+
+.aba {
+    flex: 1;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    min-height: 44px;
+}
+
+.aba:hover {
+    background: var(--border-light);
+    color: var(--text-secondary);
+}
+
+.aba.ativa {
+    background: var(--button-primary);
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,123,255,0.3);
+}
+
+.conteudo-aba {
+    display: none;
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid var(--border-light);
+}
+
+.conteudo-aba.ativo {
+    display: block;
+}
+
+.conteudo-aba h4 {
+    margin: 0 0 16px 0;
+    color: var(--text-primary);
+    font-size: 18px;
+    border-bottom: 2px solid var(--border-light);
+    padding-bottom: 8px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.info-item {
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    border-left: 3px solid var(--button-primary);
+}
+
+.info-item label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.info-item span {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.texto-completo {
+    background: var(--bg-secondary);
+    padding: 16px;
+    border-radius: 6px;
+    border-left: 3px solid var(--status-success);
+    margin: 16px 0;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.info-rodape {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-light);
+}
+
+.info-rodape small {
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.mt-20 {
+    margin-top: 20px;
+}
+
+/* Tabela de Detalhes */
+.conteudo-aba .tabela-detalhes {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    background: var(--bg-card) !important;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 4px var(--shadow-card);
+    position: relative;
+    left: 0 !important;
+    right: 0 !important;
+}
+
+.conteudo-aba .tabela-detalhes th,
+.conteudo-aba .tabela-detalhes td {
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary) !important;
+    font-size: 13px;
+    background: var(--bg-card) !important;
+}
+
+.conteudo-aba .tabela-detalhes th {
+    background: var(--bg-table-header) !important;
+    font-weight: 600;
+    color: var(--text-primary) !important;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.conteudo-aba .tabela-detalhes tbody tr {
+    background: var(--bg-card) !important;
+}
+
+.conteudo-aba .tabela-detalhes tbody tr:hover {
+    background: var(--bg-table-row-hover) !important;
+}
+
+.conteudo-aba .tabela-detalhes tbody tr:hover td {
+    background: var(--bg-table-row-hover) !important;
+}
+
+.conteudo-aba .tabela-detalhes tfoot th {
+    background: var(--bg-secondary) !important;
+    font-weight: 700;
+    border-top: 2px solid var(--button-primary);
+    color: var(--text-primary) !important;
+}
+
+/* Reset para garantir alinhamento correto */
+.conteudo-aba h4 + .tabela-detalhes {
+    margin-left: 0;
+    margin-right: 0;
+    clear: both;
+    display: table;
+}
+
+/* Responsivo para tabela */
+@media (max-width: 768px) {
+    .conteudo-aba .tabela-detalhes {
+        font-size: 12px;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    .tabela-detalhes th,
+    .tabela-detalhes td {
+        padding: 8px 6px;
+    }
+    
+    .tabela-detalhes th:nth-child(2),
+    .tabela-detalhes td:nth-child(2) {
+        display: none; /* Ocultar código em mobile */
+    }
+    
+    .tabela-detalhes th:nth-child(3),
+    .tabela-detalhes td:nth-child(3) {
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .tabela-detalhes {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        border: none;
+    }
+    
+    .tabela-detalhes thead,
+    .tabela-detalhes tbody,
+    .tabela-detalhes th,
+    .tabela-detalhes td,
+    .tabela-detalhes tr {
+        display: block;
+    }
+    
+    .tabela-detalhes thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    
+    .tabela-detalhes tr {
+        border: 1px solid var(--border-light);
+        border-radius: 8px;
+        margin-bottom: 10px;
+        padding: 12px;
+        background: var(--bg-card);
+    }
+    
+    .tabela-detalhes td {
+        border: none;
+        position: relative;
+        padding-left: 25%;
+        padding-bottom: 8px;
+        padding-top: 8px;
+        white-space: normal;
+    }
+    
+    .tabela-detalhes td:before {
+        content: attr(data-label) ": ";
+        position: absolute;
+        left: 6px;
+        width: 20%;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-muted);
+        font-size: 11px;
+        text-transform: uppercase;
+    }
+}
+
+/* Dark Mode Específico para Tabela */
+[data-theme="dark"] .conteudo-aba .tabela-detalhes {
+    background: #2d3748 !important;
+    border-color: #4a5568 !important;
+}
+
+[data-theme="dark"] .conteudo-aba .tabela-detalhes th {
+    background: linear-gradient(135deg, #2d3748, #4a5568) !important;
+    color: #ffffff !important;
+    border-bottom-color: #4a5568 !important;
+}
+
+[data-theme="dark"] .conteudo-aba .tabela-detalhes td {
+    background: #2d3748 !important;
+    color: #f7fafc !important;
+    border-bottom-color: #4a5568 !important;
+}
+
+[data-theme="dark"] .conteudo-aba .tabela-detalhes tbody tr {
+    background: #2d3748 !important;
+}
+
+[data-theme="dark"] .conteudo-aba .tabela-detalhes tbody tr:hover {
+    background: #4a5568 !important;
+}
+
+[data-theme="dark"] .conteudo-aba .tabela-detalhes tbody tr:hover td {
+    background: #4a5568 !important;
+}
+
+[data-theme="dark"] .conteudo-aba .tabela-detalhes tfoot th {
+    background: #4a5568 !important;
+    color: #ffffff !important;
+    border-top-color: #3182ce !important;
+    border-bottom-color: #4a5568 !important;
+}
+
+/* Dark Mode */
+[data-theme="dark"] .abas {
+    background: #2d3748;
+    border-color: #4a5568;
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-homologado,
+.badge-success {
+    background: var(--status-success);
+    color: white;
+}
+
+.badge-em_andamento,
+.badge-andamento,
+.badge-warning {
+    background: var(--status-warning);
+    color: white;
+}
+
+.badge-cancelado,
+.badge-suspenso,
+.badge-danger {
+    background: var(--status-danger);
+    color: white;
+}
+
+.badge-publicado,
+.badge-info {
+    background: var(--status-info);
+    color: white;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .abas {
+        flex-direction: column;
+    }
+    
+    .aba {
+        justify-content: flex-start;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .conteudo-aba {
+        padding: 16px;
+    }
+    
+    .info-item {
+        padding: 10px;
+    }
+}
+</style>

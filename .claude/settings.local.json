@@ -34,7 +34,9 @@
       "Bash(wc:*)",
       "Bash(file:*)",
       "Bash(sed:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": []
   }

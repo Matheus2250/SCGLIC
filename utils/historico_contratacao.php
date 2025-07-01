@@ -74,42 +74,42 @@ $stmt_licitacao->execute([$numero_contratacao]);
 $licitacao = $stmt_licitacao->fetch();
 ?>
 
-<div style="padding: 20px;">
+<div class="historico-container">
     <!-- Cabeçalho com informações básicas -->
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-        <h3 style="margin: 0 0 15px 0; color: #2c3e50;">
-            <i data-lucide="history" style="width: 24px; height: 24px; vertical-align: middle; margin-right: 8px;"></i>
+    <div class="info-header">
+        <h3 class="header-title">
+            <i data-lucide="history"></i>
             Histórico - DFD <?php echo htmlspecialchars($numero_dfd); ?>
         </h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-            <div>
-                <small style="color: #666;">Contratação:</small><br>
-                <strong><?php echo htmlspecialchars($contratacao['numero_contratacao']); ?></strong>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Contratação:</label>
+                <span><?php echo htmlspecialchars($contratacao['numero_contratacao']); ?></span>
             </div>
-            <div>
-                <small style="color: #666;">Situação Atual:</small><br>
-                <strong style="color: <?php echo $contratacao['situacao_execucao'] == 'Concluído' ? '#27ae60' : '#f39c12'; ?>">
+            <div class="info-item">
+                <label>Situação Atual:</label>
+                <span class="status-badge status-<?php echo $contratacao['situacao_execucao'] == 'Concluído' ? 'success' : 'warning'; ?>">
                     <?php echo htmlspecialchars($contratacao['situacao_execucao'] ?: 'Não iniciado'); ?>
-                </strong>
+                </span>
             </div>
-            <div>
-                <small style="color: #666;">Área:</small><br>
-                <strong><?php echo htmlspecialchars(agruparArea($contratacao['area_requisitante'])); ?></strong>
+            <div class="info-item">
+                <label>Área:</label>
+                <span><?php echo htmlspecialchars(agruparArea($contratacao['area_requisitante'])); ?></span>
             </div>
-            <div>
-                <small style="color: #666;">Valor Total:</small><br>
-                <strong><?php echo formatarMoeda($contratacao['valor_total_contratacao']); ?></strong>
+            <div class="info-item">
+                <label>Valor Total:</label>
+                <span><?php echo formatarMoeda($contratacao['valor_total_contratacao']); ?></span>
             </div>
         </div>
     </div>
 
     <!-- Timeline de Estados -->
     <?php if (!empty($estados)): ?>
-    <h4 style="margin-bottom: 15px; color: #2c3e50;">
-        <i data-lucide="clock" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"></i>
+    <h4 class="section-title">
+        <i data-lucide="clock"></i>
         Linha do Tempo
     </h4>
-    <div style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+    <div class="timeline-container">
         <?php 
         $total_dias = 0;
         foreach ($estados as $index => $estado): 
@@ -127,37 +127,37 @@ $licitacao = $stmt_licitacao->fetch();
             }
         ?>
         
-        <div style="display: flex; align-items: center; margin-bottom: <?php echo $index == count($estados) - 1 ? '0' : '20px'; ?>;">
+        <div class="timeline-item">
             <!-- Ícone e linha -->
-            <div style="position: relative; margin-right: 20px;">
-                <div style="width: 40px; height: 40px; background: <?php echo $cor; ?>; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <i data-lucide="<?php echo $icone; ?>" style="width: 20px; height: 20px; color: white;"></i>
+            <div class="timeline-icon-container">
+                <div class="timeline-icon" style="background: <?php echo $cor; ?>;">
+                    <i data-lucide="<?php echo $icone; ?>"></i>
                 </div>
                 <?php if ($index < count($estados) - 1): ?>
-                <div style="position: absolute; top: 40px; left: 19px; width: 2px; height: 40px; background: #dee2e6;"></div>
+                <div class="timeline-line"></div>
                 <?php endif; ?>
             </div>
             
             <!-- Conteúdo -->
-            <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div>
-                        <h5 style="margin: 0; font-size: 16px; color: #2c3e50;">
+            <div class="timeline-content">
+                <div class="timeline-info">
+                    <div class="timeline-main">
+                        <h5 class="timeline-title">
                             <?php echo htmlspecialchars($estado['situacao_execucao']); ?>
                         </h5>
-                        <small style="color: #666;">
+                        <small class="timeline-date">
                             <?php echo formatarData($estado['data_inicio']); ?>
                             <?php if (!$estado['ativo'] && $estado['data_fim']): ?>
                                 → <?php echo formatarData($estado['data_fim']); ?>
                             <?php endif; ?>
                         </small>
                     </div>
-                    <div style="text-align: right;">
-                        <span style="font-size: 18px; font-weight: bold; color: <?php echo $cor; ?>;">
+                    <div class="timeline-duration">
+                        <span class="duration-text" style="color: <?php echo $cor; ?>;">
                             <?php echo $dias_no_estado; ?> <?php echo $dias_no_estado == 1 ? 'dia' : 'dias'; ?>
                         </span>
                         <?php if ($estado['ativo']): ?>
-                            <br><small style="color: #28a745;">(em andamento)</small>
+                            <small class="status-active">(em andamento)</small>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -169,11 +169,11 @@ $licitacao = $stmt_licitacao->fetch();
 
     <!-- Mudanças Relevantes -->
     <?php if (!empty($historico)): ?>
-    <h4 style="margin-bottom: 15px; color: #2c3e50;">
-        <i data-lucide="activity" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"></i>
+    <h4 class="section-title">
+        <i data-lucide="activity"></i>
         Alterações Recentes
     </h4>
-    <div style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px;">
+    <div class="changes-container">
         <?php 
         $campos_nome = [
             'situacao_execucao' => 'Situação',
@@ -198,22 +198,22 @@ $licitacao = $stmt_licitacao->fetch();
                 $valor_novo = formatarData($valor_novo);
             }
         ?>
-        <div style="padding: 10px 0; border-bottom: 1px solid #f8f9fa;">
-            <div style="display: flex; justify-content: space-between; align-items: start;">
-                <div style="flex: 1;">
-                    <strong style="color: #2c3e50;"><?php echo $nome_campo; ?></strong>
-                    <div style="margin-top: 5px; font-size: 14px;">
-                        <span style="color: #dc3545; text-decoration: line-through;">
+        <div class="change-item">
+            <div class="change-content">
+                <div class="change-main">
+                    <strong class="change-field"><?php echo $nome_campo; ?></strong>
+                    <div class="change-values">
+                        <span class="value-old">
                             <?php echo htmlspecialchars($valor_anterior ?: 'Vazio'); ?>
                         </span>
-                        <span style="margin: 0 10px; color: #666;">→</span>
-                        <span style="color: #28a745; font-weight: 600;">
+                        <span class="change-arrow">→</span>
+                        <span class="value-new">
                             <?php echo htmlspecialchars($valor_novo ?: 'Vazio'); ?>
                         </span>
                     </div>
                 </div>
-                <div style="text-align: right;">
-                    <small style="color: #666;">
+                <div class="change-meta">
+                    <small class="change-date">
                         <?php echo date('d/m/Y H:i', strtotime($item['data_alteracao'])); ?>
                         <?php if ($item['usuario_nome']): ?>
                             <br>por <?php echo htmlspecialchars($item['usuario_nome']); ?>
@@ -225,37 +225,37 @@ $licitacao = $stmt_licitacao->fetch();
         <?php endforeach; ?>
     </div>
     <?php else: ?>
-    <div style="background: #f8f9fa; padding: 30px; text-align: center; border-radius: 8px; color: #666;">
-        <i data-lucide="info" style="width: 32px; height: 32px; margin-bottom: 10px;"></i>
-        <p style="margin: 0;">Nenhuma alteração registrada ainda.</p>
+    <div class="empty-state">
+        <i data-lucide="info"></i>
+        <p>Nenhuma alteração registrada ainda.</p>
     </div>
     <?php endif; ?>
 
     <!-- Informações da Licitação -->
     <?php if ($licitacao): ?>
-    <h4 style="margin-top: 30px; margin-bottom: 15px; color: #2c3e50;">
-        <i data-lucide="gavel" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"></i>
+    <h4 class="section-title" style="margin-top: 30px;">
+        <i data-lucide="gavel"></i>
         Licitação Vinculada
     </h4>
-    <div style="background: #e8f5e9; border: 1px solid #4caf50; border-radius: 8px; padding: 15px;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-            <div>
-                <small style="color: #666;">NUP:</small><br>
-                <strong><?php echo htmlspecialchars($licitacao['nup']); ?></strong>
+    <div class="licitacao-info">
+        <div class="info-grid">
+            <div class="info-item">
+                <label>NUP:</label>
+                <span><?php echo htmlspecialchars($licitacao['nup']); ?></span>
             </div>
-            <div>
-                <small style="color: #666;">Modalidade:</small><br>
-                <strong><?php echo htmlspecialchars($licitacao['modalidade']); ?></strong>
+            <div class="info-item">
+                <label>Modalidade:</label>
+                <span><?php echo htmlspecialchars($licitacao['modalidade']); ?></span>
             </div>
-            <div>
-                <small style="color: #666;">Situação:</small><br>
-                <strong style="color: <?php echo $licitacao['situacao'] == 'HOMOLOGADO' ? '#27ae60' : '#f39c12'; ?>">
+            <div class="info-item">
+                <label>Situação:</label>
+                <span class="status-badge status-<?php echo $licitacao['situacao'] == 'HOMOLOGADO' ? 'success' : 'warning'; ?>">
                     <?php echo str_replace('_', ' ', $licitacao['situacao']); ?>
-                </strong>
+                </span>
             </div>
-            <div>
-                <small style="color: #666;">Criada em:</small><br>
-                <strong><?php echo formatarData($licitacao['criado_em']); ?></strong>
+            <div class="info-item">
+                <label>Criada em:</label>
+                <span><?php echo formatarData($licitacao['criado_em']); ?></span>
             </div>
         </div>
     </div>
@@ -268,3 +268,369 @@ if (typeof lucide !== 'undefined') {
     lucide.createIcons();
 }
 </script>
+
+<style>
+/* Layout Responsivo e Dark Mode para Modal de Histórico */
+.historico-container {
+    padding: 20px;
+    color: var(--text-primary);
+}
+
+/* Cabeçalho */
+.info-header {
+    background: var(--bg-secondary);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-light);
+}
+
+.header-title {
+    margin: 0 0 15px 0;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.header-title i {
+    width: 24px;
+    height: 24px;
+}
+
+/* Grid de informações */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.info-item {
+    padding: 12px;
+    background: var(--bg-card);
+    border-radius: 6px;
+    border-left: 3px solid var(--button-primary);
+}
+
+.info-item label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.info-item span {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Status badges */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-success {
+    background: var(--status-success);
+    color: white;
+}
+
+.status-warning {
+    background: var(--status-warning);
+    color: white;
+}
+
+/* Títulos de seção */
+.section-title {
+    margin: 30px 0 15px 0;
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid var(--border-light);
+    padding-bottom: 8px;
+}
+
+.section-title i {
+    width: 20px;
+    height: 20px;
+}
+
+/* Timeline */
+.timeline-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.timeline-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+
+.timeline-icon-container {
+    position: relative;
+    margin-right: 20px;
+    flex-shrink: 0;
+}
+
+.timeline-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.timeline-icon i {
+    width: 20px;
+    height: 20px;
+}
+
+.timeline-line {
+    position: absolute;
+    top: 40px;
+    left: 19px;
+    width: 2px;
+    height: 40px;
+    background: var(--border-color);
+}
+
+.timeline-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.timeline-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.timeline-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.timeline-title {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.timeline-date {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.timeline-duration {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.duration-text {
+    font-size: 18px;
+    font-weight: bold;
+    display: block;
+}
+
+.status-active {
+    color: var(--status-success);
+    font-size: 11px;
+    display: block;
+    margin-top: 2px;
+}
+
+/* Mudanças */
+.changes-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.change-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.change-item:last-child {
+    border-bottom: none;
+}
+
+.change-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.change-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.change-field {
+    color: var(--text-primary);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.change-values {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.value-old {
+    color: var(--status-danger);
+    text-decoration: line-through;
+}
+
+.change-arrow {
+    margin: 0 10px;
+    color: var(--text-muted);
+    font-weight: bold;
+}
+
+.value-new {
+    color: var(--status-success);
+    font-weight: 600;
+}
+
+.change-meta {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.change-date {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+/* Estado vazio */
+.empty-state {
+    background: var(--bg-secondary);
+    padding: 30px;
+    text-align: center;
+    border-radius: 8px;
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 10px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Licitação vinculada */
+.licitacao-info {
+    background: linear-gradient(135deg, var(--status-success), rgba(39, 174, 96, 0.1));
+    border: 1px solid var(--status-success);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+[data-theme="dark"] .licitacao-info {
+    background: linear-gradient(135deg, #2d5016, rgba(56, 161, 105, 0.1));
+    border-color: #38a169;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .historico-container {
+        padding: 16px;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .info-header {
+        padding: 16px;
+    }
+    
+    .timeline-info {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .timeline-duration {
+        text-align: left;
+    }
+    
+    .change-content {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .change-meta {
+        text-align: left;
+    }
+    
+    .section-title {
+        font-size: 16px;
+    }
+    
+    .header-title {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .timeline-icon-container {
+        margin-right: 12px;
+    }
+    
+    .timeline-icon {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .timeline-icon i {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .timeline-line {
+        left: 15px;
+        top: 32px;
+    }
+    
+    .duration-text {
+        font-size: 16px;
+    }
+}
+</style>

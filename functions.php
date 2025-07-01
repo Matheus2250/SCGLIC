@@ -934,4 +934,55 @@ function testarBancoPCA($ano = 2025) {
         return ['sucesso' => false, 'erro' => $e->getMessage()];
     }
 }
+
+/**
+ * Função para mostrar tempo relativo (ex: "há 2 horas")
+ */
+function timeAgo($datetime, $full = false) {
+    if (empty($datetime)) return 'Nunca';
+    
+    try {
+        $now = new DateTime();
+        $ago = new DateTime($datetime);
+        $diff = $now->diff($ago);
+
+        // Calcular semanas sem modificar o objeto DateInterval
+        $weeks = floor($diff->d / 7);
+        $days = $diff->d - ($weeks * 7);
+
+        // Array com os valores calculados (não usando propriedades dinâmicas)
+        $timeUnits = array(
+            'y' => $diff->y,
+            'm' => $diff->m, 
+            'w' => $weeks,
+            'd' => $days,
+            'h' => $diff->h,
+            'i' => $diff->i,
+            's' => $diff->s,
+        );
+
+        $labels = array(
+            'y' => 'ano',
+            'm' => 'mês', 
+            'w' => 'semana',
+            'd' => 'dia',
+            'h' => 'hora',
+            'i' => 'minuto',
+            's' => 'segundo',
+        );
+        
+        $string = array();
+        foreach ($timeUnits as $unit => $value) {
+            if ($value > 0) {
+                $label = $labels[$unit];
+                $string[$unit] = $value . ' ' . $label . ($value > 1 ? 's' : '');
+            }
+        }
+
+        if (!$full) $string = array_slice($string, 0, 1);
+        return $string ? 'há ' . implode(', ', $string) : 'agora mesmo';
+    } catch (Exception $e) {
+        return 'Data inválida';
+    }
+}
 ?>
