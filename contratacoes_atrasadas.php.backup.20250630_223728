@@ -1,13 +1,4 @@
 <?php
-/**
- * Contratações Atrasadas - Sistema CGLIC
- * 
- * MODIFICADO: 01/01/2025 - Implementação Opção 1
- * ALTERAÇÃO: Filtro para considerar APENAS PCA 2025
- * MOTIVO: Eliminar inconsistências de dados de anos finalizados (2022-2024) e futuros (2026)
- * IMPLEMENTAÇÃO: JOIN com pca_importacoes WHERE ano_pca = 2025
- */
-
 require_once 'config.php';
 require_once 'functions.php';
 
@@ -15,14 +6,8 @@ verificarLogin();
 
 $pdo = conectarDB();
 
-// Buscar áreas para o filtro (agrupadas) - SOMENTE PCA 2025
-$areas_sql = "SELECT DISTINCT p.area_requisitante 
-              FROM pca_dados p
-              INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
-              WHERE pi.ano_pca = 2025
-              AND p.area_requisitante IS NOT NULL 
-              AND p.area_requisitante != '' 
-              ORDER BY p.area_requisitante";
+// Buscar áreas para o filtro (agrupadas)
+$areas_sql = "SELECT DISTINCT area_requisitante FROM pca_dados WHERE area_requisitante IS NOT NULL AND area_requisitante != '' ORDER BY area_requisitante";
 $areas_result = $pdo->query($areas_sql);
 $areas_agrupadas = [];
 
@@ -42,62 +27,58 @@ $where_area = '';
 $params_area = [];
 if (!empty($filtro_area)) {
     if ($filtro_area === 'GM.') {
-        $where_area = " AND (p.area_requisitante LIKE 'GM%' OR p.area_requisitante LIKE 'GM.%')";
+        $where_area = " AND (area_requisitante LIKE 'GM%' OR area_requisitante LIKE 'GM.%')";
     } else {
-        $where_area = " AND p.area_requisitante LIKE ?";
+        $where_area = " AND area_requisitante LIKE ?";
         $params_area[] = $filtro_area . '%';
     }
 }
 
-// CONTRATAÇÕES VENCIDAS (agrupadas por DFD) - SOMENTE PCA 2025
+// CONTRATAÇÕES VENCIDAS (agrupadas por DFD)
 $sql_vencidas = "SELECT DISTINCT 
-    p.numero_contratacao,
-    p.numero_dfd,
-    p.titulo_contratacao,
-    p.area_requisitante,
-    p.data_inicio_processo,
-    p.data_conclusao_processo,
-    p.situacao_execucao,
-    p.valor_total_contratacao,
-    p.prioridade,
-    DATEDIFF(CURDATE(), p.data_conclusao_processo) as dias_atraso
-    FROM pca_dados p
-    INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
-    WHERE pi.ano_pca = 2025
-    AND p.data_conclusao_processo < CURDATE()
-    AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')
-    AND p.numero_dfd IS NOT NULL 
-    AND p.numero_dfd != ''
+    numero_contratacao,
+    numero_dfd,
+    titulo_contratacao,
+    area_requisitante,
+    data_inicio_processo,
+    data_conclusao_processo,
+    situacao_execucao,
+    valor_total_contratacao,
+    prioridade,
+    DATEDIFF(CURDATE(), data_conclusao_processo) as dias_atraso
+    FROM pca_dados 
+    WHERE data_conclusao_processo < CURDATE()
+    AND (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao = 'Não iniciado')
+    AND numero_dfd IS NOT NULL 
+    AND numero_dfd != ''
     $where_area
-    GROUP BY p.numero_dfd
+    GROUP BY numero_dfd
     ORDER BY dias_atraso DESC";
 
 $stmt_vencidas = $pdo->prepare($sql_vencidas);
 $stmt_vencidas->execute($params_area);
 $contratacoes_vencidas = $stmt_vencidas->fetchAll();
 
-// CONTRATAÇÕES NÃO INICIADAS (agrupadas por DFD) - SOMENTE PCA 2025
+// CONTRATAÇÕES NÃO INICIADAS (agrupadas por DFD)  
 $sql_nao_iniciadas = "SELECT DISTINCT 
-    p.numero_contratacao,
-    p.numero_dfd,
-    p.titulo_contratacao,
-    p.area_requisitante,
-    p.data_inicio_processo,
-    p.data_conclusao_processo,
-    p.situacao_execucao,
-    p.valor_total_contratacao,
-    p.prioridade,
-    DATEDIFF(CURDATE(), p.data_inicio_processo) as dias_atraso_inicio
-    FROM pca_dados p
-    INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
-    WHERE pi.ano_pca = 2025
-    AND p.data_inicio_processo < CURDATE() 
-    AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')
-    AND p.data_conclusao_processo >= CURDATE()
-    AND p.numero_dfd IS NOT NULL 
-    AND p.numero_dfd != ''
+    numero_contratacao,
+    numero_dfd,
+    titulo_contratacao,
+    area_requisitante,
+    data_inicio_processo,
+    data_conclusao_processo,
+    situacao_execucao,
+    valor_total_contratacao,
+    prioridade,
+    DATEDIFF(CURDATE(), data_inicio_processo) as dias_atraso_inicio
+    FROM pca_dados 
+    WHERE data_inicio_processo < CURDATE() 
+    AND (situacao_execucao IS NULL OR situacao_execucao = '' OR situacao_execucao = 'Não iniciado')
+    AND data_conclusao_processo >= CURDATE()
+    AND numero_dfd IS NOT NULL 
+    AND numero_dfd != ''
     $where_area
-    GROUP BY p.numero_dfd
+    GROUP BY numero_dfd
     ORDER BY dias_atraso_inicio DESC";
 
 $stmt_nao_iniciadas = $pdo->prepare($sql_nao_iniciadas);
@@ -867,7 +848,7 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             <div class="header-content">
                 <div class="header-left">
                     <h1><i data-lucide="alert-triangle"></i> Contratações Atrasadas</h1>
-                    <p>Monitoramento de contratações com atrasos e pendências - <strong>PCA 2025</strong></p>
+                    <p>Monitoramento de contratações com atrasos e pendências</p>
                 </div>
                 <div class="header-actions">
                     <a href="dashboard.php" class="btn-voltar">

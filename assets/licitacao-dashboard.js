@@ -260,17 +260,8 @@ function consultarAndamentos(nup) {
                 if (data.total === 0) {
                     conteudoElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;"><i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px;"></i><h3 style="margin: 0 0 10px 0;">Nenhum andamento encontrado</h3><p style="margin: 0;">Não há dados de andamentos para este NUP.</p></div>';
                 } else {
-                    // Gerar HTML simplificado para evitar erros de sintaxe
-                    let html = '<div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><h4>NUP: ' + nup + '</h4><p>Total: ' + data.total + ' registros | Dias: ' + (data.total_dias_geral || 0) + '</p></div>';
-
-                    if (data.resumo_tempo_por_unidade) {
-                        html += '<div style="background: #f3e5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><h4>Resumo por Unidade</h4>';
-                        for (const [unidade, dias] of Object.entries(data.resumo_tempo_por_unidade)) {
-                            html += '<div style="display: inline-block; margin: 5px; padding: 10px; background: white; border-radius: 6px;"><strong>' + unidade + '</strong>: ' + dias + ' dias</div>';
-                        }
-                        html += '</div>';
-                    }
-
+                    // Gerar HTML rico com timeline dos andamentos
+                    let html = generateAndamentosTimeline(data, nup);
                     conteudoElement.innerHTML = html;
                 }
             } else {
@@ -286,6 +277,114 @@ function consultarAndamentos(nup) {
                 lucide.createIcons();
             }
         });
+}
+
+/**
+ * Gerar HTML para timeline de andamentos
+ */
+function generateAndamentosTimeline(data, nup) {
+    let html = '';
+    
+    // Cabeçalho com resumo
+    const processo = data.data[0];
+    html += `
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 10px 0; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="file-text"></i> NUP: ${nup}
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                <div>
+                    <strong>Total de Andamentos:</strong><br>
+                    ${data.total_andamentos_individuais || 0}
+                </div>
+                <div>
+                    <strong>Período:</strong><br>
+                    ${processo?.primeira_data ? formatarDataHora(processo.primeira_data) : 'N/A'} até ${processo?.ultima_data ? formatarDataHora(processo.ultima_data) : 'N/A'}
+                </div>
+                <div>
+                    <strong>Unidades Envolvidas:</strong><br>
+                    ${processo?.unidades_envolvidas?.length || 0}
+                </div>
+                <div>
+                    <strong>Tempo Total:</strong><br>
+                    ${data.total_dias_geral || 0} dias
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Resumo por unidade (se disponível)
+    if (data.resumo_tempo_por_unidade) {
+        html += '<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">';
+        html += '<h4 style="margin: 0 0 15px 0; color: #495057;"><i data-lucide="clock"></i> Tempo por Unidade</h4>';
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">';
+        
+        for (const [unidade, tempoData] of Object.entries(data.resumo_tempo_por_unidade)) {
+            const dias = tempoData.dias !== undefined ? tempoData.dias : 0;
+            const periodos = tempoData.total_periodos || 1;
+            const media = tempoData.media_dias_por_periodo !== undefined ? tempoData.media_dias_por_periodo : (dias / periodos);
+            
+            html += `
+                <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #007cba;">
+                    <div style="font-weight: 600; color: #007cba; margin-bottom: 5px;">${unidade}</div>
+                    <div style="font-size: 14px; color: #6c757d;">
+                        ${dias} dias total<br>
+                        ${periodos} estadia(s) na unidade<br>
+                        Média: ${media.toFixed(1)} dias por estadia
+                    </div>
+                </div>
+            `;
+        }
+        html += '</div></div>';
+    }
+    
+    // Timeline de andamentos
+    if (processo?.andamentos && processo.andamentos.length > 0) {
+        html += '<div style="background: white; padding: 20px; border-radius: 8px;">';
+        html += '<h4 style="margin: 0 0 20px 0; color: #495057;"><i data-lucide="git-commit"></i> Timeline de Andamentos</h4>';
+        html += '<div style="position: relative;">';
+        
+        // Linha vertical da timeline
+        html += '<div style="position: absolute; left: 20px; top: 0; bottom: 0; width: 2px; background: #dee2e6;"></div>';
+        
+        processo.andamentos.forEach((andamento, index) => {
+            const isFirst = index === 0;
+            const isLast = index === processo.andamentos.length - 1;
+            
+            html += `
+                <div style="position: relative; padding-left: 60px; margin-bottom: ${isLast ? '0' : '20px'};">
+                    <div style="position: absolute; left: 11px; top: 5px; width: 18px; height: 18px; background: #007cba; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007cba;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div style="font-weight: 600; color: #007cba;">${andamento.unidade}</div>
+                            <div style="font-size: 12px; color: #6c757d; white-space: nowrap; margin-left: 15px;">
+                                ${formatarDataHora(andamento.data_hora)}
+                            </div>
+                        </div>
+                        <div style="color: #495057; margin-bottom: 5px;">${andamento.descricao}</div>
+                        ${andamento.usuario ? `<div style="font-size: 12px; color: #6c757d;"><i data-lucide="user"></i> ${andamento.usuario}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div></div>';
+    }
+    
+    return html;
+}
+
+/**
+ * Formatar data e hora para exibição
+ */
+function formatarDataHora(dataHora) {
+    if (!dataHora) return 'N/A';
+    try {
+        const date = new Date(dataHora);
+        return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+    } catch (e) {
+        return dataHora;
+    }
 }
 
 /**
@@ -350,7 +449,8 @@ function initAndamentos() {
                         alert('Andamentos importados com sucesso!\n\n' +
                             'NUP: ' + (data.data.nup || nup) + '\n' +
                             'Processo ID: ' + (data.data.processo_id || 'N/A') + '\n' +
-                            'Total de andamentos: ' + (data.data.total_andamentos || '0') + '\n' +
+                            'Total esperados: ' + (data.data.total_esperados || '0') + '\n' +
+                            'Total processados: ' + (data.data.total_processados || '0') + '\n' +
                             'Ação: ' + (data.data.acao || 'Importação'));
 
                         // Fechar modal e limpar formulário
@@ -2739,5 +2839,762 @@ function alterarItensPorPaginaAjax(novoValor) {
         url.searchParams.set('por_pagina', novoValor);
         url.searchParams.set('pagina', '1');
         window.location.href = url.toString();
+    }
+}
+
+// ==================== SISTEMA MODERNO DE ANDAMENTOS COM PAGINAÇÃO ====================
+
+/**
+ * Classe para gerenciar a timeline de andamentos com paginação
+ */
+class AndamentosManager {
+    constructor() {
+        this.currentPage = 1;
+        this.itemsPerPage = 50;
+        this.allAndamentos = [];
+        this.filteredAndamentos = [];
+        this.totalItems = 0;
+        this.totalPages = 0;
+        this.isLoading = false;
+        this.currentNup = '';
+        this.currentFilters = {
+            dataInicio: '',
+            dataFim: '',
+            unidade: '',
+            busca: ''
+        };
+        this.tempoUnidadeChart = null;
+    }
+
+    /**
+     * Carregar andamentos via API
+     */
+    async loadAndamentos(nup) {
+        try {
+            this.showLoading();
+            this.currentNup = nup;
+            
+            const response = await fetch(`api/consultar_andamentos.php?nup=${encodeURIComponent(nup)}&calcular_tempo=true`);
+            const data = await response.json();
+            
+            if (data.success && data.data && data.data.length > 0) {
+                const processoData = data.data[0];
+                this.allAndamentos = processoData.andamentos || [];
+                this.filteredAndamentos = [...this.allAndamentos];
+                this.totalItems = this.allAndamentos.length;
+                this.totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                
+                // Renderizar primeira página
+                this.renderPage(1);
+                
+                // Criar gráfico de tempo por unidade após renderizar
+                setTimeout(() => {
+                    if (processoData.tempo_por_unidade) {
+                        this.createTempoUnidadeChart(processoData.tempo_por_unidade);
+                    }
+                }, 100);
+                
+            } else {
+                this.showEmptyState();
+            }
+        } catch (error) {
+            console.error('Erro ao carregar andamentos:', error);
+            this.showError('Erro ao carregar andamentos. Tente novamente.');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Mostrar estado de carregamento
+     */
+    showLoading() {
+        this.isLoading = true;
+        const container = document.getElementById('conteudoAndamentos');
+        if (container) {
+            container.innerHTML = `
+                <div class="loading-timeline">
+                    <i data-lucide="loader"></i>
+                    <p>Carregando timeline do processo...</p>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+    }
+
+    /**
+     * Esconder estado de carregamento
+     */
+    hideLoading() {
+        this.isLoading = false;
+    }
+
+    /**
+     * Renderizar página específica
+     */
+    renderPage(page) {
+        if (page < 1 || page > this.totalPages) return;
+        
+        this.currentPage = page;
+        const startIndex = (page - 1) * this.itemsPerPage;
+        const endIndex = startIndex + this.itemsPerPage;
+        const pageItems = this.filteredAndamentos.slice(startIndex, endIndex);
+        
+        this.renderTimeline(pageItems);
+    }
+
+    /**
+     * Renderizar timeline
+     */
+    renderTimeline(andamentos) {
+        const timelineHtml = this.generateTimelineHtml(andamentos);
+        const filtersHtml = this.generateFiltersHtml();
+        const chartHtml = this.generateChartHtml();
+        const paginationHtml = this.generatePaginationHtml();
+        
+        const container = document.getElementById('conteudoAndamentos');
+        if (container) {
+            container.innerHTML = `
+                <div class="andamentos-header">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i data-lucide="clock"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-number">${this.calculateTotalDaysFromFiltered()}</div>
+                                <div class="stat-label">Dias Estimados</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i data-lucide="activity"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-number">${this.filteredAndamentos.length}</div>
+                                <div class="stat-label">Andamentos</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i data-lucide="layers"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-number">${this.currentPage}</div>
+                                <div class="stat-label">Página Atual</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i data-lucide="filter"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-number">${andamentos.length}</div>
+                                <div class="stat-label">Exibindo</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${filtersHtml}
+                ${chartHtml}
+                
+                <div class="timeline-container">
+                    <div class="timeline-scroll">
+                        ${timelineHtml}
+                    </div>
+                </div>
+                
+                ${paginationHtml}
+            `;
+            
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            
+            // Inicializar eventos dos filtros
+            this.initFilterEvents();
+        }
+    }
+
+    /**
+     * Gerar HTML da timeline
+     */
+    generateTimelineHtml(andamentos) {
+        if (!andamentos || andamentos.length === 0) {
+            return `
+                <div class="empty-timeline">
+                    <i data-lucide="inbox"></i>
+                    <h3>Nenhum andamento encontrado</h3>
+                    <p>Não há andamentos para esta página ou filtro aplicado.</p>
+                </div>
+            `;
+        }
+
+        let html = '';
+        andamentos.forEach((andamento, index) => {
+            const isImportant = andamento.descricao && andamento.descricao.toLowerCase().includes('homolog');
+            const isSuccess = andamento.descricao && andamento.descricao.toLowerCase().includes('finaliz');
+            
+            let iconClass = '';
+            if (isImportant) iconClass = 'timeline-icon-important';
+            else if (isSuccess) iconClass = 'timeline-icon-success';
+            
+            html += `
+                <div class="timeline-item fade-in" style="animation-delay: ${index * 0.1}s">
+                    <div class="timeline-icon ${iconClass}">
+                        <i data-lucide="${this.getIconForAndamento(andamento)}"></i>
+                    </div>
+                    <div class="timeline-card">
+                        <div class="timeline-header">
+                            <div class="timeline-meta">
+                                <div class="timeline-date">
+                                    <i data-lucide="calendar"></i>
+                                    ${this.formatDateTime(andamento.data_hora)}
+                                </div>
+                                ${andamento.usuario ? `
+                                <div class="timeline-user">
+                                    <i data-lucide="user"></i>
+                                    ${andamento.usuario}
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div>
+                                <span class="unidade-badge">${andamento.unidade || 'N/A'}</span>
+                                <span class="tempo-badge">${this.getTempoEstimado(andamento)}</span>
+                            </div>
+                        </div>
+                        <p class="timeline-description">${andamento.descricao || 'Sem descrição'}</p>
+                    </div>
+                </div>
+            `;
+        });
+
+        return html;
+    }
+
+    /**
+     * Gerar HTML dos filtros
+     */
+    generateFiltersHtml() {
+        return `
+            <div class="filters-container">
+                <button class="filters-toggle" onclick="andamentosManager.toggleFilters()">
+                    <span><i data-lucide="filter"></i> Filtros Avançados</span>
+                    <i data-lucide="chevron-down" id="filter-chevron"></i>
+                </button>
+                
+                <div class="filters-content" id="filters-content" style="display: none;">
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label>Data Inicial</label>
+                            <input type="date" id="filter-data-inicio" value="${this.currentFilters.dataInicio}">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Data Final</label>
+                            <input type="date" id="filter-data-fim" value="${this.currentFilters.dataFim}">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Unidade</label>
+                            <select id="filter-unidade">
+                                <option value="">Todas as Unidades</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Buscar Texto</label>
+                            <input type="text" id="filter-busca" placeholder="Buscar na descrição..." value="${this.currentFilters.busca}">
+                        </div>
+                        
+                        <div class="filter-actions">
+                            <button class="btn-primary" onclick="andamentosManager.applyFilters()">
+                                <i data-lucide="search"></i> Aplicar
+                            </button>
+                            <button class="btn-secondary" onclick="andamentosManager.clearFilters()">
+                                <i data-lucide="x"></i> Limpar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Gerar HTML do gráfico
+     */
+    generateChartHtml() {
+        return `
+            <div class="chart-section">
+                <h4 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="bar-chart"></i> Tempo por Unidade
+                </h4>
+                <canvas id="tempo-unidade-chart" width="400" height="200"></canvas>
+            </div>
+        `;
+    }
+
+    /**
+     * Gerar HTML da paginação
+     */
+    generatePaginationHtml() {
+        const showingStart = (this.currentPage - 1) * this.itemsPerPage + 1;
+        const showingEnd = Math.min(this.currentPage * this.itemsPerPage, this.filteredAndamentos.length);
+        
+        return `
+            <div class="pagination-controls">
+                <div class="pagination-info">
+                    Mostrando <strong>${showingStart}-${showingEnd}</strong> de <strong>${this.filteredAndamentos.length}</strong> andamentos
+                </div>
+                
+                <div class="pagination-buttons">
+                    <button class="btn-pagination" onclick="andamentosManager.previousPage()" ${this.currentPage <= 1 ? 'disabled' : ''}>
+                        <i data-lucide="chevron-left"></i>
+                        Anterior
+                    </button>
+                    
+                    <span class="page-indicator">
+                        Página <strong>${this.currentPage}</strong> de <strong>${this.totalPages}</strong>
+                    </span>
+                    
+                    <button class="btn-pagination" onclick="andamentosManager.nextPage()" ${this.currentPage >= this.totalPages ? 'disabled' : ''}>
+                        Próximo
+                        <i data-lucide="chevron-right"></i>
+                    </button>
+                    
+                    ${this.currentPage < this.totalPages ? `
+                    <button class="btn-load-more" onclick="andamentosManager.loadMore()">
+                        <i data-lucide="plus-circle"></i>
+                        Carregar mais ${Math.min(this.itemsPerPage, this.filteredAndamentos.length - (this.currentPage * this.itemsPerPage))}
+                    </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Funcionalidades de navegação
+     */
+    previousPage() {
+        if (this.currentPage > 1) {
+            this.renderPage(this.currentPage - 1);
+        }
+    }
+
+    nextPage() {
+        if (this.currentPage < this.totalPages) {
+            this.renderPage(this.currentPage + 1);
+        }
+    }
+
+    loadMore() {
+        const nextPage = this.currentPage + 1;
+        if (nextPage <= this.totalPages) {
+            // Implementar carregamento incremental
+            const startIndex = (nextPage - 1) * this.itemsPerPage;
+            const endIndex = startIndex + this.itemsPerPage;
+            const nextItems = this.filteredAndamentos.slice(startIndex, endIndex);
+            
+            this.appendToTimeline(nextItems);
+            this.currentPage = nextPage;
+            this.updatePaginationControls();
+        }
+    }
+
+    /**
+     * Adicionar itens à timeline existente
+     */
+    appendToTimeline(newItems) {
+        const timelineScroll = document.querySelector('.timeline-scroll');
+        if (timelineScroll && newItems.length > 0) {
+            const newHtml = this.generateTimelineHtml(newItems);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = newHtml;
+            
+            while (tempDiv.firstChild) {
+                timelineScroll.appendChild(tempDiv.firstChild);
+            }
+            
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+    }
+
+    /**
+     * Atualizar controles de paginação
+     */
+    updatePaginationControls() {
+        const paginationContainer = document.querySelector('.pagination-controls');
+        if (paginationContainer) {
+            paginationContainer.outerHTML = this.generatePaginationHtml();
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+    }
+
+    /**
+     * Funcionalidades de filtro
+     */
+    toggleFilters() {
+        const content = document.getElementById('filters-content');
+        const chevron = document.getElementById('filter-chevron');
+        
+        if (content) {
+            const isVisible = content.style.display !== 'none';
+            content.style.display = isVisible ? 'none' : 'block';
+            
+            if (chevron) {
+                chevron.setAttribute('data-lucide', isVisible ? 'chevron-down' : 'chevron-up');
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+        }
+    }
+
+    applyFilters() {
+        this.currentFilters = {
+            dataInicio: document.getElementById('filter-data-inicio')?.value || '',
+            dataFim: document.getElementById('filter-data-fim')?.value || '',
+            unidade: document.getElementById('filter-unidade')?.value || '',
+            busca: document.getElementById('filter-busca')?.value || ''
+        };
+        
+        this.filteredAndamentos = this.allAndamentos.filter(andamento => {
+            // Filtro por data
+            if (this.currentFilters.dataInicio) {
+                const dataAndamento = new Date(andamento.data_hora);
+                const dataInicio = new Date(this.currentFilters.dataInicio);
+                if (dataAndamento < dataInicio) return false;
+            }
+            
+            if (this.currentFilters.dataFim) {
+                const dataAndamento = new Date(andamento.data_hora);
+                const dataFim = new Date(this.currentFilters.dataFim + 'T23:59:59');
+                if (dataAndamento > dataFim) return false;
+            }
+            
+            // Filtro por unidade
+            if (this.currentFilters.unidade && andamento.unidade !== this.currentFilters.unidade) {
+                return false;
+            }
+            
+            // Filtro por busca
+            if (this.currentFilters.busca) {
+                const busca = this.currentFilters.busca.toLowerCase();
+                const descricao = (andamento.descricao || '').toLowerCase();
+                const usuario = (andamento.usuario || '').toLowerCase();
+                if (!descricao.includes(busca) && !usuario.includes(busca)) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+        
+        this.totalPages = Math.ceil(this.filteredAndamentos.length / this.itemsPerPage);
+        this.renderPage(1);
+    }
+
+    clearFilters() {
+        this.currentFilters = { dataInicio: '', dataFim: '', unidade: '', busca: '' };
+        this.filteredAndamentos = [...this.allAndamentos];
+        this.totalPages = Math.ceil(this.filteredAndamentos.length / this.itemsPerPage);
+        this.renderPage(1);
+    }
+
+    // Métodos utilitários
+    calculateTotalDaysFromFiltered() {
+        return Math.ceil((this.filteredAndamentos.length * 2) / 3); // Estimativa
+    }
+
+    formatDateTime(dateTimeStr) {
+        if (!dateTimeStr) return 'Data não informada';
+        try {
+            const date = new Date(dateTimeStr);
+            return date.toLocaleDateString('pt-BR') + ' às ' + date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+        } catch (e) {
+            return dateTimeStr;
+        }
+    }
+
+    getIconForAndamento(andamento) {
+        const desc = (andamento.descricao || '').toLowerCase();
+        if (desc.includes('homolog') || desc.includes('aprovad')) return 'check-circle';
+        if (desc.includes('analise') || desc.includes('análise')) return 'search';
+        if (desc.includes('enviad') || desc.includes('encaminh')) return 'send';
+        if (desc.includes('recebid') || desc.includes('entrada')) return 'inbox';
+        return 'file-text';
+    }
+
+    getTempoEstimado(andamento) {
+        // Estimativa baseada no tipo de andamento
+        const desc = (andamento.descricao || '').toLowerCase();
+        if (desc.includes('analise')) return '2-5 dias';
+        if (desc.includes('enviad')) return '1 dia';
+        if (desc.includes('homolog')) return '3-7 dias';
+        return '1-3 dias';
+    }
+
+    initFilters(unidades) {
+        const unidadeSelect = document.getElementById('filter-unidade');
+        if (unidadeSelect && unidades) {
+            unidades.forEach(unidade => {
+                const option = document.createElement('option');
+                option.value = unidade;
+                option.textContent = unidade;
+                unidadeSelect.appendChild(option);
+            });
+        }
+    }
+
+    initFilterEvents() {
+        // Aplicar filtros em tempo real para busca
+        const buscaInput = document.getElementById('filter-busca');
+        if (buscaInput) {
+            let timeout;
+            buscaInput.addEventListener('input', () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => this.applyFilters(), 500);
+            });
+        }
+    }
+
+    createTempoUnidadeChart(tempoData) {
+        const canvas = document.getElementById('tempo-unidade-chart');
+        if (canvas && typeof Chart !== 'undefined') {
+            const ctx = canvas.getContext('2d');
+            
+            if (this.tempoUnidadeChart) {
+                this.tempoUnidadeChart.destroy();
+            }
+            
+            const labels = Object.keys(tempoData);
+            const data = Object.values(tempoData).map(u => u.dias || 0);
+            
+            this.tempoUnidadeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Dias por Unidade',
+                        data: data,
+                        backgroundColor: [
+                            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'
+                        ],
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            title: { display: true, text: 'Dias' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Unidades' }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    showEmptyState() {
+        const container = document.getElementById('conteudoAndamentos');
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-timeline">
+                    <i data-lucide="inbox"></i>
+                    <h3>Nenhum andamento encontrado</h3>
+                    <p>Não foram encontrados andamentos para este processo.</p>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+    }
+
+    showError(message) {
+        const container = document.getElementById('conteudoAndamentos');
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-timeline">
+                    <i data-lucide="alert-circle"></i>
+                    <h3>Erro ao carregar</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+    }
+}
+
+// Instância global do gerenciador de andamentos
+let andamentosManager = new AndamentosManager();
+
+/**
+ * Função para consultar andamentos com nova interface (substituir a função existente)
+ */
+function consultarAndamentosModerno(nup) {
+    console.log('Consultando andamentos para NUP:', nup);
+    
+    // Atualizar NUP no modal
+    const nupDisplay = document.getElementById('nup-display');
+    if (nupDisplay) {
+        nupDisplay.textContent = `NUP: ${nup}`;
+    }
+    
+    // Abrir modal moderno
+    const modal = document.getElementById('modalVisualizarAndamentos');
+    if (modal) {
+        modal.classList.add('modern-modal');
+        modal.style.display = 'block';
+        
+        // Carregar andamentos
+        andamentosManager.loadAndamentos(nup);
+    }
+}
+
+/**
+ * Função para gerar relatório de andamentos
+ */
+function gerarRelatorioAndamentos() {
+    const nupElement = document.getElementById('nup-display');
+    if (!nupElement || !nupElement.textContent) {
+        alert('Erro: NUP não encontrado. Abra primeiro a timeline de um processo.');
+        return;
+    }
+    
+    // Extrair NUP do texto "NUP: 25000.123456/2023-15"
+    const nupText = nupElement.textContent;
+    const nupMatch = nupText.match(/NUP:\s*(.+)/);
+    if (!nupMatch) {
+        alert('Erro: Não foi possível extrair o NUP.');
+        return;
+    }
+    
+    const nup = nupMatch[1].trim();
+    
+    // Criar modal de configuração do relatório
+    const modal = document.createElement('div');
+    modal.id = 'modalRelatorioAndamentos';
+    modal.className = 'modal';
+    modal.style.display = 'block';
+    
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i data-lucide="file-text"></i> Relatório de Andamentos</h3>
+                <span class="close" onclick="fecharModalRelatorioAndamentos()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <strong>Processo:</strong> ${nup}
+                </div>
+                
+                <form id="formRelatorioAndamentos">
+                    <div class="form-group">
+                        <label>Período (opcional)</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label style="font-size: 12px; color: #666;">Data Inicial</label>
+                                <input type="date" name="data_inicial" id="rel_data_inicial_and">
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #666;">Data Final</label>
+                                <input type="date" name="data_final" id="rel_data_final_and">
+                            </div>
+                        </div>
+                        <small style="color: #666;">Deixe em branco para incluir todos os andamentos</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Formato de Saída</label>
+                        <select name="formato" required>
+                            <option value="html">Visualizar (HTML)</option>
+                            <option value="excel">Excel (CSV)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="incluir_graficos" checked> 
+                            Incluir gráficos e estatísticas
+                        </label>
+                    </div>
+                    
+                    <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: flex-end;">
+                        <button type="button" onclick="fecharModalRelatorioAndamentos()" class="btn-secondary">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            <i data-lucide="download"></i>
+                            Gerar Relatório
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Definir data final como hoje
+    document.getElementById('rel_data_final_and').value = new Date().toISOString().split('T')[0];
+    
+    // Inicializar ícones Lucide
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+    
+    // Event listener para o form
+    document.getElementById('formRelatorioAndamentos').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const params = new URLSearchParams();
+        
+        // Adicionar NUP
+        params.append('nup', nup);
+        
+        // Adicionar outros parâmetros
+        for (const [key, value] of formData) {
+            if (value) {
+                params.append(key, value);
+            }
+        }
+        
+        const formato = formData.get('formato');
+        const url = 'relatorios/gerar_relatorio_andamentos.php?' + params.toString();
+        
+        // Abrir relatório
+        if (formato === 'html') {
+            window.open(url, '_blank');
+        } else {
+            // Para Excel, fazer download
+            window.location.href = url;
+        }
+        
+        // Fechar modal
+        fecharModalRelatorioAndamentos();
+    });
+}
+
+/**
+ * Fechar modal de relatório de andamentos
+ */
+function fecharModalRelatorioAndamentos() {
+    const modal = document.getElementById('modalRelatorioAndamentos');
+    if (modal) {
+        modal.remove();
     }
 }

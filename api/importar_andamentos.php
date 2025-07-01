@@ -106,44 +106,80 @@ try {
     // Preparar dados para inserção
     $nup = trim($data['nup']);
     $processo_id = trim($data['processo_id']);
-    $timestamp = $data['timestamp'];
     $total_andamentos = (int)$data['total_andamentos'];
-    $andamentos_json = json_encode($data['andamentos'], JSON_UNESCAPED_UNICODE);
+    $andamentos = $data['andamentos'];
     
-    // Verificar se já existe registro para este NUP/processo_id
+    // Verificar se já existem andamentos para este NUP
     $stmt_check = $pdo->prepare("
-        SELECT id, timestamp, total_andamentos 
-        FROM processo_andamentos 
-        WHERE nup = ? AND processo_id = ?
+        SELECT COUNT(*) as total 
+        FROM historico_andamentos 
+        WHERE nup = ?
     ");
-    $stmt_check->execute([$nup, $processo_id]);
-    $registro_existente = $stmt_check->fetch();
+    $stmt_check->execute([$nup]);
+    $total_existente = $stmt_check->fetch()['total'];
     
-    $acao = 'inserido';
+    $pdo->beginTransaction();
     
-    if ($registro_existente) {
-        // Atualizar registro existente
-        $stmt = $pdo->prepare("
-            UPDATE processo_andamentos 
-            SET timestamp = ?, total_andamentos = ?, andamentos_json = ?, atualizado_em = NOW()
-            WHERE nup = ? AND processo_id = ?
+    try {
+        $acao = 'inseridos';
+        $andamentos_processados = 0;
+        
+        if ($total_existente > 0) {
+            // Limpar andamentos existentes para este NUP antes de inserir novos
+            $stmt_delete = $pdo->prepare("DELETE FROM historico_andamentos WHERE nup = ?");
+            $stmt_delete->execute([$nup]);
+            $acao = 'atualizados';
+        }
+        
+        // Preparar statement para inserção
+        $stmt_insert = $pdo->prepare("
+            INSERT INTO historico_andamentos (nup, processo_id, data_hora, unidade, usuario, descricao) 
+            VALUES (?, ?, ?, ?, ?, ?)
         ");
-        $stmt->execute([$timestamp, $total_andamentos, $andamentos_json, $nup, $processo_id]);
-        $acao = 'atualizado';
-        $processo_andamento_id = $registro_existente['id'];
-    } else {
-        // Inserir novo registro
-        $stmt = $pdo->prepare("
-            INSERT INTO processo_andamentos (nup, processo_id, timestamp, total_andamentos, andamentos_json)
-            VALUES (?, ?, ?, ?, ?)
-        ");
-        $stmt->execute([$nup, $processo_id, $timestamp, $total_andamentos, $andamentos_json]);
-        $processo_andamento_id = $pdo->lastInsertId();
+        
+        // Processar cada andamento individualmente
+        foreach ($andamentos as $andamento) {
+            // Validar campos obrigatórios do andamento
+            if (!isset($andamento['data_hora']) || !isset($andamento['unidade']) || !isset($andamento['descricao'])) {
+                throw new Exception('Andamento com campos obrigatórios ausentes (data_hora, unidade, descricao)');
+            }
+            
+            // Converter data_hora para formato MySQL
+            $data_hora_original = $andamento['data_hora'];
+            try {
+                // Assumindo formato "dd/mm/yyyy hh:mm"
+                $data_obj = DateTime::createFromFormat('d/m/Y H:i', $data_hora_original);
+                if (!$data_obj) {
+                    throw new Exception("Formato de data inválido: {$data_hora_original}");
+                }
+                $data_hora_mysql = $data_obj->format('Y-m-d H:i:s');
+            } catch (Exception $e) {
+                throw new Exception("Erro ao converter data '{$data_hora_original}': " . $e->getMessage());
+            }
+            
+            // Inserir andamento
+            $stmt_insert->execute([
+                $nup,
+                $processo_id,
+                $data_hora_mysql,
+                trim($andamento['unidade']),
+                isset($andamento['usuario']) ? trim($andamento['usuario']) : null,
+                trim($andamento['descricao'])
+            ]);
+            
+            $andamentos_processados++;
+        }
+        
+        $pdo->commit();
+        
+    } catch (Exception $e) {
+        $pdo->rollback();
+        throw $e;
     }
     
     // Log da operação
     $usuario_nome = $_SESSION['usuario_nome'] ?? 'Sistema';
-    $log_message = "Andamentos {$acao} para NUP: {$nup}, Processo: {$processo_id}, Total: {$total_andamentos}";
+    $log_message = "Andamentos {$acao} para NUP: {$nup}, Processo: {$processo_id}, Total processados: {$andamentos_processados}";
     
     // Registrar log se função existir
     if (function_exists('registrarLog')) {
@@ -155,10 +191,10 @@ try {
         'success' => true,
         'message' => "Andamentos {$acao} com sucesso!",
         'data' => [
-            'id' => $processo_andamento_id,
             'nup' => $nup,
             'processo_id' => $processo_id,
-            'total_andamentos' => $total_andamentos,
+            'total_esperados' => $total_andamentos,
+            'total_processados' => $andamentos_processados,
             'acao' => $acao,
             'timestamp_importacao' => date('Y-m-d H:i:s')
         ]

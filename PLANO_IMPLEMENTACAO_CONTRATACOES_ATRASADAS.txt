@@ -1,0 +1,358 @@
+================================================================================
+                    PLANO DE IMPLEMENTAÇÃO - CONTRATAÇÕES ATRASADAS
+                            Sistema CGLIC - Ministério da Saúde
+================================================================================
+
+VERSÃO: 1.0
+DATA: 01/01/2025
+RESPONSÁVEL TÉCNICO: Equipe de Desenvolvimento
+SOLICITANTE: Coordenação CGLIC
+
+================================================================================
+1. PROBLEMA IDENTIFICADO
+================================================================================
+
+SITUAÇÃO ATUAL:
+O sistema de "Contratações Atrasadas" está considerando dados de TODOS os anos 
+do PCA (2022, 2023, 2024, 2025, 2026), o que gera inconsistências lógicas:
+
+• PCA 2024: Já finalizou em dezembro/2024 - NÃO pode estar "atrasado"
+• PCA 2026: Ainda não iniciou - NÃO pode estar "atrasado" 
+• PCA 2025: Único relevante para análise de atrasos atuais
+• Mistura de dados: PCA 2025 contém itens com execução prevista para 2024-2026
+
+IMPACTO:
+- Relatórios com dados inconsistentes
+- Análises equivocadas de performance
+- Dificuldade na tomada de decisões gerenciais
+- Perda de credibilidade dos indicadores
+
+================================================================================
+2. ANÁLISE TÉCNICA
+================================================================================
+
+ARQUIVO AFETADO:
+contratacoes_atrasadas.php (1.297 linhas)
+
+QUERIES PROBLEMÁTICAS:
+Linha 10-11: 
+```sql
+SELECT DISTINCT area_requisitante FROM pca_dados 
+WHERE area_requisitante IS NOT NULL
+```
+❌ Busca em TODA a tabela pca_dados (todos os anos)
+
+Linhas 38-56: Contratações Vencidas
+```sql
+FROM pca_dados 
+WHERE data_conclusao_processo < CURDATE()
+```
+❌ Considera todos os PCAs independente do ano de origem
+
+Linhas 63-82: Contratações Não Iniciadas  
+```sql
+FROM pca_dados 
+WHERE data_inicio_processo < CURDATE()
+```
+❌ Mesma inconsistência - mistura todos os anos
+
+ESTRUTURA DE DADOS:
+- Tabela: pca_dados (dados unificados)
+- Tabela: pca_importacoes (controle por ano)
+- Relacionamento: pca_dados.importacao_id = pca_importacoes.id
+- Campo chave: pca_importacoes.ano_pca
+
+================================================================================
+3. SOLUÇÕES PROPOSTAS
+================================================================================
+
+OPÇÃO 1: FILTRO POR IMPORTAÇÃO 2025 (RECOMENDADA)
+- Filtrar apenas dados originados do PCA 2025
+- Mantém lógica de datas atual
+- Implementação simples e segura
+
+Query corrigida:
+```sql
+SELECT DISTINCT p.* 
+FROM pca_dados p
+INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id 
+WHERE pi.ano_pca = 2025
+AND p.data_conclusao_processo < CURDATE()
+```
+
+OPÇÃO 2: FILTRO POR DATA DE EXECUÇÃO
+- Considerar apenas execuções planejadas para 2025
+- Mais restritivo, pode excluir itens válidos
+- Requer análise detalhada dos dados
+
+OPÇÃO 3: FILTRO HÍBRIDO (MAIS PRECISA)
+- Combinar filtro de ano PCA + validação de datas
+- Máxima precisão nos resultados
+- Implementação mais complexa
+
+================================================================================
+4. PLANO DE IMPLEMENTAÇÃO
+================================================================================
+
+FASE 1: PREPARAÇÃO (1 dia)
+□ Backup do arquivo atual
+□ Análise detalhada dos dados PCA 2025
+□ Validação da estrutura de relacionamentos
+□ Preparação do ambiente de testes
+
+FASE 2: DESENVOLVIMENTO (2 dias)
+□ Modificação da query de áreas (linha 10)
+□ Atualização query contratações vencidas (linhas 38-56)
+□ Correção query contratações não iniciadas (linhas 63-82)
+□ Ajuste dos filtros e parâmetros
+□ Testes unitários das queries
+
+FASE 3: VALIDAÇÃO (1 dia)
+□ Comparação resultados antes/depois
+□ Validação lógica dos atrasos
+□ Teste com diferentes filtros de área
+□ Verificação de performance das queries
+
+FASE 4: IMPLEMENTAÇÃO (0.5 dia)
+□ Deploy em produção
+□ Monitoramento inicial
+□ Validação com usuários finais
+□ Documentação das mudanças
+
+TEMPO TOTAL ESTIMADO: 4,5 dias úteis
+
+================================================================================
+5. QUERIES CORRIGIDAS (IMPLEMENTAÇÃO TÉCNICA)
+================================================================================
+
+NOVA QUERY - ÁREAS (para filtro):
+```sql
+SELECT DISTINCT p.area_requisitante 
+FROM pca_dados p
+INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
+WHERE pi.ano_pca = 2025
+AND p.area_requisitante IS NOT NULL 
+AND p.area_requisitante != '' 
+ORDER BY p.area_requisitante
+```
+
+NOVA QUERY - CONTRATAÇÕES VENCIDAS:
+```sql
+SELECT DISTINCT 
+    p.numero_contratacao,
+    p.numero_dfd,
+    p.titulo_contratacao,
+    p.area_requisitante,
+    p.data_inicio_processo,
+    p.data_conclusao_processo,
+    p.situacao_execucao,
+    p.valor_total_contratacao,
+    p.prioridade,
+    DATEDIFF(CURDATE(), p.data_conclusao_processo) as dias_atraso
+FROM pca_dados p
+INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id 
+WHERE pi.ano_pca = 2025
+AND p.data_conclusao_processo < CURDATE()
+AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')
+AND p.numero_dfd IS NOT NULL 
+AND p.numero_dfd != ''
+$where_area
+GROUP BY p.numero_dfd
+ORDER BY dias_atraso DESC
+```
+
+NOVA QUERY - CONTRATAÇÕES NÃO INICIADAS:
+```sql
+SELECT DISTINCT 
+    p.numero_contratacao,
+    p.numero_dfd,
+    p.titulo_contratacao,
+    p.area_requisitante,
+    p.data_inicio_processo,
+    p.data_conclusao_processo,
+    p.situacao_execucao,
+    p.valor_total_contratacao,
+    p.prioridade,
+    DATEDIFF(CURDATE(), p.data_inicio_processo) as dias_atraso_inicio
+FROM pca_dados p
+INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id 
+WHERE pi.ano_pca = 2025
+AND p.data_inicio_processo < CURDATE() 
+AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')
+AND p.data_conclusao_processo >= CURDATE()
+AND p.numero_dfd IS NOT NULL 
+AND p.numero_dfd != ''
+$where_area
+GROUP BY p.numero_dfd
+ORDER BY dias_atraso_inicio DESC
+```
+
+================================================================================
+6. BENEFÍCIOS ESPERADOS
+================================================================================
+
+IMEDIATOS:
+• Eliminação de inconsistências nos relatórios
+• Dados de atraso logicamente corretos
+• Foco apenas no PCA vigente (2025)
+• Análises mais precisas e confiáveis
+
+MÉDIO PRAZO:
+• Melhoria na tomada de decisões
+• Maior credibilidade dos indicadores
+• Relatórios gerenciais mais assertivos
+• Otimização do acompanhamento de contratos
+
+LONGO PRAZO:
+• Base sólida para análises futuras
+• Padrão replicável para próximos PCAs
+• Sistema mais robusto e confiável
+
+================================================================================
+7. RISCOS E MITIGAÇÕES
+================================================================================
+
+RISCO: Redução abrupta dos números exibidos
+MITIGAÇÃO: Comunicação prévia sobre a correção + comparativo antes/depois
+
+RISCO: Queries mais complexas (performance)
+MITIGAÇÃO: Testes de performance + otimização de índices se necessário
+
+RISCO: Usuários acostumados com dados antigos
+MITIGAÇÃO: Treinamento + documentação das mudanças
+
+================================================================================
+8. VALIDAÇÃO E TESTES
+================================================================================
+
+CENÁRIOS DE TESTE:
+□ Verificar se contratações 2024 foram excluídas
+□ Confirmar que apenas PCA 2025 aparece
+□ Validar cálculo correto de dias de atraso
+□ Testar filtros por área requisitante
+□ Verificar exportação de dados
+
+CRITÉRIOS DE ACEITAÇÃO:
+□ Zero contratações de PCAs históricos (2022-2024)
+□ Zero contratações de PCA futuro (2026)
+□ Apenas contratações PCA 2025 com datas válidas
+□ Performance das queries mantida (<2 segundos)
+□ Filtros funcionando corretamente
+
+================================================================================
+9. CRONOGRAMA DETALHADO
+================================================================================
+
+DIA 1 (Preparação):
+09:00 - Backup e análise de dados
+11:00 - Estudo da estrutura atual
+14:00 - Definição da abordagem técnica
+16:00 - Preparação ambiente de testes
+
+DIA 2 (Desenvolvimento Parte 1):
+09:00 - Modificação query de áreas
+11:00 - Atualização query vencidas
+14:00 - Testes unitários
+16:00 - Ajustes e correções
+
+DIA 3 (Desenvolvimento Parte 2):
+09:00 - Modificação query não iniciadas
+11:00 - Integração completa
+14:00 - Testes de integração
+16:00 - Otimização de performance
+
+DIA 4 (Validação):
+09:00 - Testes completos do sistema
+11:00 - Comparação com dados antigos
+14:00 - Validação lógica dos resultados
+16:00 - Preparação para deploy
+
+DIA 5 (Implementação - meio período):
+09:00 - Deploy em produção
+10:00 - Testes pós-deploy
+11:00 - Monitoramento inicial
+12:00 - Documentação final
+
+================================================================================
+10. RECURSOS NECESSÁRIOS
+================================================================================
+
+RECURSOS HUMANOS:
+• 1 Desenvolvedor Senior (PHP/MySQL)
+• 1 Analista de Sistemas (validação)
+• 1 Usuário CGLIC (testes)
+
+RECURSOS TÉCNICOS:
+• Acesso ao servidor de desenvolvimento
+• Backup da base de dados
+• Ferramentas de monitoramento de queries
+
+RECURSOS DE TEMPO:
+• 4,5 dias úteis (36 horas de trabalho)
+• Janela de manutenção para deploy (30 minutos)
+
+================================================================================
+11. MÉTRICAS DE SUCESSO
+================================================================================
+
+ANTES DA CORREÇÃO:
+- Contratações listadas: TODAS (2022-2026)
+- Inconsistências lógicas: PRESENTES
+- Confiabilidade dos dados: BAIXA
+
+APÓS A CORREÇÃO:
+- Contratações listadas: APENAS PCA 2025
+- Inconsistências lógicas: ELIMINADAS  
+- Confiabilidade dos dados: ALTA
+- Redução estimada: 60-80% nos números (mais preciso)
+
+INDICADORES:
+□ 100% das contratações pertencem ao PCA 2025
+□ 0% de contratações de anos finalizados (2022-2024)
+□ 0% de contratações de anos futuros (2026)
+□ Tempo de resposta das queries < 2 segundos
+□ Usuários validam a correção dos dados
+
+================================================================================
+12. APROVAÇÕES NECESSÁRIAS
+================================================================================
+
+TÉCNICA:
+□ Coordenador de TI
+□ Desenvolvedor Responsável
+
+FUNCIONAL:
+□ Coordenação CGLIC
+□ Usuários do Sistema
+□ Gestores das Áreas
+
+GERENCIAL:
+□ Chefe Imediato
+□ Coordenação Geral
+
+================================================================================
+13. CONCLUSÃO
+================================================================================
+
+A implementação deste plano corrigirá uma inconsistência crítica no sistema de 
+monitoramento de contratações atrasadas, garantindo que apenas dados relevantes 
+e logicamente válidos sejam exibidos.
+
+A correção é ESSENCIAL para:
+• Manter a credibilidade do sistema
+• Fornecer informações precisas para tomada de decisão
+• Eliminar confusões e questionamentos sobre os dados
+• Estabelecer uma base sólida para análises futuras
+
+RECOMENDAÇÃO: APROVAÇÃO IMEDIATA PARA IMPLEMENTAÇÃO
+
+A correção é de baixo risco técnico, alto impacto positivo e implementação 
+rápida, devendo ser priorizada para execução na próxima janela de manutenção.
+
+================================================================================
+                                FIM DO DOCUMENTO
+================================================================================
+
+Documento preparado para apresentação gerencial
+Sistema CGLIC - Ministério da Saúde
+Data: 01/01/2025

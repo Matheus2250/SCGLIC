@@ -177,7 +177,7 @@ $stmt_count->execute($params);
 $total_licitacoes = $stmt_count->fetch()['total'];
 $total_paginas = ceil($total_licitacoes / $licitacoes_por_pagina);
 
-// Buscar licitações da página atual
+// Buscar licitações da página atual (sem JOIN com historico_andamentos por enquanto)
 $sql = "SELECT 
             l.*, 
             u.nome as usuario_criador_nome,
@@ -192,6 +192,32 @@ $sql = "SELECT
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $licitacoes_recentes = $stmt->fetchAll();
+
+// Buscar contagem de andamentos separadamente para evitar problema de collation
+if (!empty($licitacoes_recentes)) {
+    $nups = array_column($licitacoes_recentes, 'nup');
+    $placeholders = str_repeat('?,', count($nups) - 1) . '?';
+    
+    try {
+        $sql_andamentos = "SELECT nup, COUNT(*) as total 
+                          FROM historico_andamentos 
+                          WHERE nup IN ($placeholders) 
+                          GROUP BY nup";
+        $stmt_andamentos = $pdo->prepare($sql_andamentos);
+        $stmt_andamentos->execute($nups);
+        $contagens_andamentos = $stmt_andamentos->fetchAll(PDO::FETCH_KEY_PAIR);
+        
+        // Adicionar contagem aos resultados
+        foreach ($licitacoes_recentes as &$licitacao) {
+            $licitacao['total_andamentos'] = $contagens_andamentos[$licitacao['nup']] ?? 0;
+        }
+    } catch (Exception $e) {
+        // Se houver erro com a tabela de andamentos, definir como 0
+        foreach ($licitacoes_recentes as &$licitacao) {
+            $licitacao['total_andamentos'] = 0;
+        }
+    }
+}
 
 // Buscar contratações disponíveis do PCA para o dropdown - dos anos atuais (2025-2026)
 $contratacoes_pca = $pdo->query("
@@ -679,6 +705,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 <th>Situação</th>
 <th>Pregoeiro</th>
 <th>Data Abertura</th>
+<th>Andamentos</th>
 <th>Ações</th>
 </tr>
 </thead>
@@ -705,6 +732,15 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 </td>
 <td><?php echo htmlspecialchars($licitacao['pregoeiro'] ?: 'Não Definido'); ?></td>
 <td><?php echo $licitacao['data_abertura'] ? formatarData($licitacao['data_abertura']) : '-'; ?></td>
+<td style="text-align: center;">
+    <?php if ($licitacao['total_andamentos'] > 0): ?>
+        <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+            <?php echo $licitacao['total_andamentos']; ?>
+        </span>
+    <?php else: ?>
+        <span style="color: #bbb; font-size: 12px;">-</span>
+    <?php endif; ?>
+</td>
 <td>
 <div style="display: flex; gap: 5px; flex-wrap: wrap;">
 <!-- Botão Ver Detalhes (sempre visível) -->
@@ -1568,18 +1604,30 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 </div>
 
 <!-- Modal para Visualizar Andamentos -->
-<div id="modalVisualizarAndamentos" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width: 900px;">
-        <div class="modal-header">
-            <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
-                <i data-lucide="clock"></i> Andamentos do Processo
-            </h3>
-            <span class="close" onclick="fecharModal('modalVisualizarAndamentos')">&times;</span>
+<div id="modalVisualizarAndamentos" class="modal modern-modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header gradient-header">
+            <div class="header-info">
+                <h3 class="modal-title">
+                    <i data-lucide="clock"></i>
+                    Timeline do Processo
+                </h3>
+                <p class="modal-subtitle" id="nup-display">NUP: Carregando...</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-report" onclick="gerarRelatorioAndamentos()" title="Gerar Relatório">
+                    <i data-lucide="file-text"></i>
+                    Relatório
+                </button>
+                <button class="close-button" onclick="fecharModal('modalVisualizarAndamentos')">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
         </div>
         <div class="modal-body" id="conteudoAndamentos">
-            <div style="text-align: center; padding: 20px;">
-                <i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 1s linear infinite;"></i>
-                <p>Carregando andamentos...</p>
+            <div class="loading-timeline">
+                <i data-lucide="loader"></i>
+                <p>Carregando timeline do processo...</p>
             </div>
         </div>
     </div>
