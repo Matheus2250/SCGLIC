@@ -388,7 +388,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                         <?php endif; ?>
                     </div>
                 </div>
-                <a href="perfil_usuario.php" class="logout-btn" style="text-decoration: none; margin-bottom: 10px;">
+                <a href="perfil_usuario.php" class="logout-btn" style="text-decoration: none; margin-bottom: 10px; background: #27ae60 !important;">
                     <i data-lucide="user"></i> <span>Meu Perfil</span>
                 </a>
                 <button class="logout-btn" onclick="window.location.href='logout.php'">

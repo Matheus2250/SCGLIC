@@ -219,7 +219,7 @@ if (!empty($licitacoes_recentes)) {
     }
 }
 
-// Buscar contratações disponíveis do PCA para o dropdown - dos anos atuais (2025-2026)
+// Buscar contratações disponíveis do PCA para o dropdown - todos os anos (2022-2026)
 $contratacoes_pca = $pdo->query("
     SELECT DISTINCT
         p.numero_contratacao,
@@ -233,9 +233,9 @@ $contratacoes_pca = $pdo->query("
     WHERE p.numero_contratacao IS NOT NULL
     AND p.numero_contratacao != ''
     AND TRIM(p.numero_contratacao) != ''
-    AND pi.ano_pca IN (2025, 2026)
-    ORDER BY p.numero_contratacao DESC
-    LIMIT 500
+    AND pi.ano_pca IN (2022, 2023, 2024, 2025, 2026)
+    ORDER BY pi.ano_pca DESC, p.numero_contratacao ASC
+    LIMIT 2000
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // Debug básico
@@ -555,7 +555,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
                         <?php endif; ?>
                     </div>
                 </div>
-                <a href="perfil_usuario.php" class="logout-btn" style="text-decoration: none; margin-bottom: 10px;">
+                <a href="perfil_usuario.php" class="logout-btn" style="text-decoration: none; margin-bottom: 10px; background: #27ae60 !important;">
                     <i data-lucide="user"></i> <span>Meu Perfil</span>
                 </a>
                 <button class="logout-btn" onclick="window.location.href='logout.php'">

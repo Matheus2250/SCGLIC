@@ -102,9 +102,9 @@ if ($_POST) {
     
     // Se não for AJAX, definir mensagem para exibir na página
     if ($response['success']) {
-        definirMensagem($response['message'], 'success');
+        setMensagem($response['message'], 'success');
     } else {
-        definirMensagem($response['message'], 'error');
+        setMensagem($response['message'], 'error');
     }
     
     header('Location: perfil_usuario.php');
@@ -834,6 +834,18 @@ try {
                     <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">
                         <strong>Modo Escuro:</strong> Interface com fundo escuro que reduz o cansaço visual durante uso prolongado.
                     </p>
+                </div>
+                
+                <div style="background: var(--bg-secondary); padding: 20px; border-radius: 12px; margin-top: 20px;">
+                    <h4 style="margin: 0 0 15px 0; color: var(--text-primary);">
+                        <i data-lucide="layout-dashboard"></i> Configurações do Dashboard
+                    </h4>
+                    <p style="margin: 0 0 15px 0; color: var(--text-secondary); font-size: 14px;">
+                        Personalize widgets, densidade da interface e outras configurações do dashboard.
+                    </p>
+                    <a href="dashboard_config.php" class="btn-primary" style="display: inline-flex; text-decoration: none;">
+                        <i data-lucide="settings"></i> Configurar Dashboard
+                    </a>
                 </div>
             </div>
         </div>

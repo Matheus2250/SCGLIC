@@ -462,6 +462,24 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             color: #f39c12;
         }
 
+        /* MODO ESCURO - Headers das Seções */
+        [data-theme="dark"] .section-title h2 {
+            color: #ffffff !important;
+        }
+
+        [data-theme="dark"] .section-title.danger h2 {
+            color: #ffffff !important;
+        }
+
+        [data-theme="dark"] .section-title.warning h2 {
+            color: #ffffff !important;
+        }
+
+        [data-theme="dark"] .section-title .count-badge {
+            background: #4a5568 !important;
+            color: #ffffff !important;
+        }
+
         .section-subtitle {
             color: #6c757d;
             font-size: 14px;
@@ -548,6 +566,14 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             white-space: nowrap;
         }
 
+        /* MODO ESCURO - Area Badge */
+        [data-theme="dark"] .area-badge {
+            background: #3b82f6 !important; /* Azul mais claro */
+            color: #ffffff !important;
+            border: 1px solid #3b82f6 !important;
+            font-weight: 700 !important; /* Fonte mais negrita */
+        }
+
         .data-info {
             display: flex;
             flex-direction: column;
@@ -582,6 +608,21 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             border: 1px solid #f39c12;
         }
 
+        /* MODO ESCURO - Dias Badge */
+        [data-theme="dark"] .dias-badge.danger {
+            background: #ef4444 !important; /* Vermelho mais claro */
+            color: #ffffff !important;
+            border: 1px solid #ef4444 !important;
+            font-weight: 700 !important; /* Fonte mais negrita */
+        }
+
+        [data-theme="dark"] .dias-badge.warning {
+            background: #f59e0b !important; /* Laranja mais claro */
+            color: #ffffff !important;
+            border: 1px solid #f59e0b !important;
+            font-weight: 700 !important; /* Fonte mais negrita */
+        }
+
         .valor-cell {
             font-weight: 600;
             color: #28a745;
@@ -596,6 +637,14 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             text-transform: uppercase;
             background: #f8d7da;
             color: #721c24;
+        }
+
+        /* MODO ESCURO - Situacao Badge */
+        [data-theme="dark"] .situacao-badge {
+            background: #ef4444 !important; /* Vermelho mais claro */
+            color: #ffffff !important;
+            border: 1px solid #ef4444 !important;
+            font-weight: 700 !important; /* Fonte mais negrita */
         }
 
         .prioridade-badge {
@@ -619,6 +668,28 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
         .prioridade-badge.baixa {
             background: #d1ecf1;
             color: #0c5460;
+        }
+
+        /* MODO ESCURO - Prioridade Badge */
+        [data-theme="dark"] .prioridade-badge.alta {
+            background: #ef4444 !important; /* Vermelho mais claro */
+            color: #ffffff !important;
+            border: 1px solid #ef4444 !important;
+            font-weight: 700 !important; /* Fonte mais negrita */
+        }
+
+        [data-theme="dark"] .prioridade-badge.media {
+            background: #f59e0b !important; /* Laranja mais claro */
+            color: #ffffff !important;
+            border: 1px solid #f59e0b !important;
+            font-weight: 700 !important; /* Fonte mais negrita */
+        }
+
+        [data-theme="dark"] .prioridade-badge.baixa {
+            background: #06b6d4 !important; /* Cyan mais claro */
+            color: #ffffff !important;
+            border: 1px solid #06b6d4 !important;
+            font-weight: 700 !important; /* Fonte mais negrita */
         }
 
         /* Mensagem vazia */
@@ -871,9 +942,6 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
                     <p>Monitoramento de contratações com atrasos e pendências - <strong>PCA 2025</strong></p>
                 </div>
                 <div class="header-actions">
-                    <button id="theme-toggle" class="btn-voltar theme-toggle-btn" title="Alternar modo escuro/claro (Ctrl+Shift+D)" style="margin-right: 15px;">
-                        <i data-lucide="moon"></i> <span>Modo Escuro</span>
-                    </button>
                     <a href="dashboard.php" class="btn-voltar">
                         <i data-lucide="arrow-left"></i> Voltar ao Dashboard
                     </a>

@@ -4,8 +4,6 @@ require_once 'functions.php';
 
 verificarLogin();
 
-$pdo = conectarDB();
-
 ?>
 
 <!DOCTYPE html>

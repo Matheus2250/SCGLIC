@@ -615,7 +615,7 @@ function gerarHTMLArea($dados, $incluir_graficos, $params) {
                         $performance_texto = $row['taxa_conclusao'] > 80 ? 'Excelente' : ($row['taxa_conclusao'] > 50 ? 'Bom' : 'Precisa Melhorar');
                     ?>
                     <tr>
-                        <td><strong><?php echo htmlspecialchars($row['area_agrupada']); ?></strong></td>
+                        <td><strong><?php echo htmlspecialchars(nomeAreaEspecifico($row['area_requisitante'])); ?></strong></td>
                         <td style="text-align: center;"><?php echo $row['total_dfds']; ?></td>
                         <td style="text-align: center;"><?php echo $row['concluidas']; ?></td>
                         <td style="text-align: center;"><?php echo $row['em_andamento']; ?></td>
@@ -659,7 +659,7 @@ function gerarHTMLArea($dados, $incluir_graficos, $params) {
             new Chart(document.getElementById('chartArea'), {
                 type: 'bar',
                 data: {
-                    labels: <?php echo json_encode(array_map(function($item) { return agruparArea($item['area_requisitante']); }, $dados)); ?>,
+                    labels: <?php echo json_encode(array_map(function($item) { return nomeAreaEspecifico($item['area_requisitante']); }, $dados)); ?>,
                     datasets: [{
                         label: 'Total de DFDs',
                         data: <?php echo json_encode(array_column($dados, 'total_dfds')); ?>,
@@ -1210,7 +1210,7 @@ function gerarExcelArea($dados) {
     
     foreach ($dados as $row) {
         $linha = [
-            $row['area_agrupada'],
+            nomeAreaEspecifico($row['area_requisitante']),
             $row['total_dfds'],
             $row['total_contratacoes'],
             $row['concluidas'],

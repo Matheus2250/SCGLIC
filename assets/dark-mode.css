@@ -1060,3 +1060,347 @@
   color: var(--text-primary) !important;
   border-color: var(--border-color) !important;
 }
+
+/* ==================== CORREÇÕES ESPECÍFICAS - CONTRATAÇÕES ATRASADAS ==================== */
+
+/* 1. HEADER DA PÁGINA - gradiente vermelho mais escuro */
+[data-theme="dark"] .page-header {
+  background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .page-header h1,
+[data-theme="dark"] .page-header p {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .page-header::before {
+  background: rgba(255,255,255,0.03) !important;
+}
+
+/* 2. CARDS DE FILTROS - fundo escuro */
+[data-theme="dark"] .filtros-card {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .filtros-header h3 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .filtro-group label {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .filtro-group select {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-input) !important;
+}
+
+/* 3. STATS CARDS - fundo escuro corrigido */
+[data-theme="dark"] .stat-card {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .stat-value {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .stat-label {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .stat-details {
+  border-top-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .stat-detail-value {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .stat-detail-label {
+  color: var(--text-muted) !important;
+}
+
+/* 4. TABS CONTAINER - fundo escuro */
+[data-theme="dark"] .tabs-container {
+  background-color: var(--bg-card) !important;
+}
+
+[data-theme="dark"] .tabs-header {
+  background-color: var(--bg-card) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .tab-button {
+  color: var(--text-secondary) !important;
+  border-bottom-color: transparent !important;
+}
+
+[data-theme="dark"] .tab-button:hover {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .tab-button.active {
+  color: var(--text-primary) !important;
+  border-bottom-color: #dc3545 !important;
+}
+
+[data-theme="dark"] .tab-badge {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .tab-button.active .tab-badge {
+  background-color: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+/* 5. SEÇÕES DE DADOS - fundo escuro */
+[data-theme="dark"] .data-section {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .section-header {
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .section-title h2 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .section-subtitle {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .count-badge {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* CORREÇÃO ESPECÍFICA - HEADERS DAS ABAS VENCIDAS/NÃO INICIADAS */
+[data-theme="dark"] .section-title.danger h2 {
+  color: #ef4444 !important; /* Vermelho claro para "Vencidas" */
+}
+
+[data-theme="dark"] .section-title.warning h2 {
+  color: #f59e0b !important; /* Laranja claro para "Não Iniciadas" */
+}
+
+/* Força todos os H2 dentro das seções de dados */
+[data-theme="dark"] .data-section h2,
+[data-theme="dark"] .tab-content h2,
+[data-theme="dark"] .section-header h2 {
+  color: var(--text-primary) !important;
+}
+
+/* Títulos específicos das abas com ícones */
+[data-theme="dark"] .section-title.danger,
+[data-theme="dark"] .section-title.warning {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .section-title.danger h2,
+[data-theme="dark"] .section-title.warning h2 {
+  color: var(--text-primary) !important;
+}
+
+/* 6. TABELAS - header e conteúdo escuro */
+[data-theme="dark"] .data-table th {
+  background: var(--bg-table-header) !important;
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .data-table td {
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border-light) !important;
+}
+
+[data-theme="dark"] .data-table tbody tr:hover {
+  background-color: var(--bg-table-row-hover) !important;
+}
+
+/* 7. BADGES ESPECÍFICOS - cores escuras adequadas */
+
+/* DFD Number */
+[data-theme="dark"] .dfd-number {
+  color: #60a5fa !important; /* Azul claro para destaque */
+}
+
+/* Título da contratação */
+[data-theme="dark"] .titulo-cell {
+  color: var(--text-primary) !important;
+}
+
+/* Badge da área - ESCURECER MAIS */
+[data-theme="dark"] .area-badge {
+  background-color: #1e3a8a !important; /* Azul ainda mais escuro */
+  color: #ffffff !important;
+  border: 1px solid #1e3a8a !important;
+}
+
+/* Badges de dias (atraso) - ESCURECER MAIS */
+[data-theme="dark"] .dias-badge.danger {
+  background-color: #991b1b !important; /* Vermelho mais escuro */
+  color: #ffffff !important;
+  border-color: #991b1b !important;
+}
+
+[data-theme="dark"] .dias-badge.warning {
+  background-color: #b45309 !important; /* Laranja mais escuro */
+  color: #ffffff !important;
+  border-color: #b45309 !important;
+}
+
+/* Badge de situação - ESCURECER MAIS */
+[data-theme="dark"] .situacao-badge {
+  background-color: #7f1d1d !important; /* Vermelho mais escuro */
+  color: #ffffff !important;
+  border: 1px solid #7f1d1d !important;
+}
+
+/* Badges de prioridade - ESCURECER MAIS */
+[data-theme="dark"] .prioridade-badge.alta {
+  background-color: #7f1d1d !important; /* Vermelho mais escuro */
+  color: #ffffff !important;
+  border: 1px solid #7f1d1d !important;
+}
+
+[data-theme="dark"] .prioridade-badge.media {
+  background-color: #92400e !important; /* Laranja mais escuro */
+  color: #ffffff !important;
+  border: 1px solid #92400e !important;
+}
+
+[data-theme="dark"] .prioridade-badge.baixa {
+  background-color: #164e63 !important; /* Cyan mais escuro */
+  color: #ffffff !important;
+  border: 1px solid #164e63 !important;
+}
+
+/* FORÇA TODOS OS BADGES NA TABELA - REGRA GERAL */
+[data-theme="dark"] .data-table .area-badge,
+[data-theme="dark"] .data-table .dias-badge,
+[data-theme="dark"] .data-table .situacao-badge,
+[data-theme="dark"] .data-table .prioridade-badge {
+  filter: brightness(0.6) !important; /* Escurece todos os badges */
+  color: #ffffff !important;
+}
+
+/* Valor da contratação */
+[data-theme="dark"] .valor-cell {
+  color: #22c55e !important; /* Verde claro */
+}
+
+/* 8. LABELS DE DADOS */
+[data-theme="dark"] .data-label {
+  color: var(--text-muted) !important;
+}
+
+/* 9. EMPTY MESSAGE */
+[data-theme="dark"] .empty-message {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .empty-title {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .empty-text {
+  color: var(--text-secondary) !important;
+}
+
+/* 10. BOTÕES - manter cores originais mas ajustar hover */
+[data-theme="dark"] .btn-voltar {
+  background: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-voltar:hover {
+  background: rgba(255,255,255,0.2) !important;
+}
+
+[data-theme="dark"] .btn-exportar {
+  background: linear-gradient(135deg, #166534, #15803d) !important;
+}
+
+[data-theme="dark"] .btn-exportar:hover {
+  background: linear-gradient(135deg, #15803d, #16a34a) !important;
+}
+
+/* 11. CONTAINER PRINCIPAL */
+[data-theme="dark"] .page-container {
+  background-color: var(--bg-primary) !important;
+}
+
+/* ==================== CORREÇÕES ADICIONAIS - FORÇA TOTAL ==================== */
+
+/* FORÇAR TODOS OS BADGES - MÁXIMA PRIORIDADE */
+[data-theme="dark"] span.area-badge,
+[data-theme="dark"] span.dias-badge,
+[data-theme="dark"] span.situacao-badge,
+[data-theme="dark"] span.prioridade-badge {
+  background-color: #1f2937 !important; /* Cinza escuro uniforme */
+  color: #ffffff !important;
+  border: 1px solid #374151 !important;
+  filter: none !important; /* Remove filtros que podem clarear */
+}
+
+/* BADGES ESPECÍFICOS COM CORES ESCURAS */
+[data-theme="dark"] span.dias-badge.danger {
+  background-color: #7f1d1d !important; /* Vermelho muito escuro */
+  border-color: #7f1d1d !important;
+}
+
+[data-theme="dark"] span.dias-badge.warning {
+  background-color: #92400e !important; /* Laranja muito escuro */
+  border-color: #92400e !important;
+}
+
+[data-theme="dark"] span.prioridade-badge.alta {
+  background-color: #7f1d1d !important; /* Vermelho muito escuro */
+  border-color: #7f1d1d !important;
+}
+
+[data-theme="dark"] span.prioridade-badge.media {
+  background-color: #92400e !important; /* Laranja muito escuro */
+  border-color: #92400e !important;
+}
+
+[data-theme="dark"] span.prioridade-badge.baixa {
+  background-color: #164e63 !important; /* Cyan muito escuro */
+  border-color: #164e63 !important;
+}
+
+/* FORÇAR HEADERS DAS ABAS - SOBRESCREVER ESTILOS INLINE */
+[data-theme="dark"] div[class*="section-title"] h2,
+[data-theme="dark"] .section-header h2,
+[data-theme="dark"] h2[style],
+[data-theme="dark"] .data-section h2 {
+  color: #ffffff !important;
+  background: none !important;
+}
+
+/* FORÇAR ÍCONES NOS HEADERS */
+[data-theme="dark"] .section-title i,
+[data-theme="dark"] .section-header i {
+  color: #ffffff !important;
+}
+
+/* SOBRESCREVER QUALQUER ESTILO INLINE DE COR */
+[data-theme="dark"] [style*="color:"] {
+  color: var(--text-primary) !important;
+}
+
+/* SOBRESCREVER ESTILOS INLINE DE BACKGROUND */
+[data-theme="dark"] [style*="background:"],
+[data-theme="dark"] [style*="background-color:"] {
+  background-color: var(--bg-card) !important;
+}

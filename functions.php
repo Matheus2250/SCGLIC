@@ -70,6 +70,41 @@ function agruparArea($area) {
     return $area;
 }
 
+// Função para exibir áreas com nomes mais específicos (para gráficos)
+function nomeAreaEspecifico($area) {
+    if (empty($area)) return 'SEM ÁREA';
+    
+    $area = trim($area);
+    
+    // Casos especiais - unificar variações GM
+    if (strpos($area, 'GM') === 0) {
+        return 'GM.';
+    }
+    
+    // Para SAA, manter até a segunda parte se existir
+    if (strpos($area, 'SAA.') === 0) {
+        $partes = explode('.', $area);
+        if (count($partes) >= 2 && !empty(trim($partes[1]))) {
+            return trim($partes[0]) . '.' . trim($partes[1]);
+        }
+        return 'SAA.';
+    }
+    
+    // Para outras áreas, se tem ponto, pega até a segunda parte
+    if (strpos($area, '.') !== false) {
+        $partes = explode('.', $area);
+        if (count($partes) >= 2 && !empty(trim($partes[1]))) {
+            // Se a segunda parte tem mais de 2 caracteres, incluir
+            if (strlen(trim($partes[1])) > 2) {
+                return trim($partes[0]) . '.' . trim($partes[1]);
+            }
+        }
+        return trim($partes[0]) . '.';
+    }
+    
+    return $area;
+}
+
 // Função para limpar encoding de strings
 function limparEncoding($texto) {
     if (!is_string($texto)) return $texto;
@@ -108,6 +143,12 @@ function limpar($data) {
 function formatarData($data) {
     if (empty($data)) return '';
     return date('d/m/Y', strtotime($data));
+}
+
+// Formatar data e hora para exibição
+function formatarDataHora($dataHora) {
+    if (empty($dataHora)) return '';
+    return date('d/m/Y H:i', strtotime($dataHora));
 }
 
 // Formatar data para banco - CORRIGIDA
