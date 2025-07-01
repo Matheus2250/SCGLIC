@@ -139,6 +139,9 @@ $licitacoes_por_pagina = isset($_GET['por_pagina']) ? max(10, min(100, intval($_
 $pagina_atual = isset($_GET['pagina']) ? max(1, intval($_GET['pagina'])) : 1;
 $offset = ($pagina_atual - 1) * $licitacoes_por_pagina;
 
+// Detectar seção ativa baseada na URL ou seção padrão
+$secao_ativa = $_GET['secao'] ?? 'lista-licitacoes';
+
 // Filtros opcionais
 $filtro_situacao = $_GET['situacao_filtro'] ?? '';
 $filtro_busca = $_GET['busca'] ?? '';
@@ -463,14 +466,14 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
             <nav class="sidebar-nav">
     <div class="nav-section">
         <div class="nav-section-title">Visão Geral</div>
-        <button class="nav-item active" onclick="showSection('dashboard')">
+        <button class="nav-item <?php echo $secao_ativa === 'dashboard' ? 'active' : ''; ?>" onclick="showSection('dashboard')">
             <i data-lucide="bar-chart-3"></i> <span>Dashboard</span>
         </button>
     </div>
 
     <div class="nav-section">
         <div class="nav-section-title">Gerenciar</div>
-        <button class="nav-item" onclick="showSection('lista-licitacoes')">
+        <button class="nav-item <?php echo $secao_ativa === 'lista-licitacoes' ? 'active' : ''; ?>" onclick="showSection('lista-licitacoes')">
             <i data-lucide="list"></i> <span>Lista de Licitações</span>
         </button>
         <?php if (isVisitante()): ?>
@@ -486,7 +489,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     <?php if (temPermissao('licitacao_relatorios')): ?>
     <div class="nav-section">
         <div class="nav-section-title">Relatórios</div>
-        <button class="nav-item" onclick="showSection('relatorios')">
+        <button class="nav-item <?php echo $secao_ativa === 'relatorios' ? 'active' : ''; ?>" onclick="showSection('relatorios')">
             <i data-lucide="file-text"></i> <span>Relatórios</span>
         </button>
     </div>
@@ -534,7 +537,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
         <main class="main-content" id="mainContent">
             <?php echo getMensagem(); ?>
 
-            <div id="dashboard" class="content-section active">
+            <div id="dashboard" class="content-section <?php echo $secao_ativa === 'dashboard' ? 'active' : ''; ?>">
                 <div class="dashboard-header">
                     <h1><i data-lucide="bar-chart-3"></i> Dashboard de Licitações</h1>
                     <p>Visão geral do processo licitatório e indicadores de desempenho</p>
@@ -594,7 +597,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 </div>
             </div>
 
-            <div id="lista-licitacoes" class="content-section">
+            <div id="lista-licitacoes" class="content-section <?php echo $secao_ativa === 'lista-licitacoes' ? 'active' : ''; ?>">
     <div class="dashboard-header">
         <h1><i data-lucide="list"></i> Lista de Licitações</h1>
         <p>Visualize e gerencie todas as licitações cadastradas</p>
@@ -764,11 +767,12 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
                 <?php if ($total_paginas > 1): ?>
                 <div class="pagination">
                     <?php
-                    // Construir URL base preservando filtros
+                    // Construir URL base preservando filtros e seção ativa
                     $url_params = [];
                     if (!empty($filtro_busca)) $url_params['busca'] = $filtro_busca;
                     if (!empty($filtro_situacao)) $url_params['situacao_filtro'] = $filtro_situacao;
                     if ($licitacoes_por_pagina != 10) $url_params['por_pagina'] = $licitacoes_por_pagina;
+                    $url_params['secao'] = $secao_ativa; // Manter seção ativa na paginação
                     $url_base = 'licitacao_dashboard.php?' . http_build_query($url_params);
                     $url_base .= empty($url_params) ? '?' : '&';
                     ?>
@@ -1074,7 +1078,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     </div>
 </div>
 
-            <div id="relatorios" class="content-section">
+            <div id="relatorios" class="content-section <?php echo $secao_ativa === 'relatorios' ? 'active' : ''; ?>">
     <div class="dashboard-header">
         <h1><i data-lucide="file-text"></i> Relatórios</h1>
         <p>Relatórios detalhados sobre o processo licitatório</p>

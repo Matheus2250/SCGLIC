@@ -137,6 +137,18 @@ function showSection(sectionId) {
         activeButton.classList.add('active');
     }
     
+    // Atualizar URL para manter seção ativa na paginação
+    const url = new URL(window.location);
+    const secaoAtual = url.searchParams.get('secao');
+    
+    // Só resetar página se estivermos mudando de seção
+    if (secaoAtual !== sectionId) {
+        url.searchParams.set('secao', sectionId);
+        url.searchParams.set('pagina', '1');
+        window.location.href = url.toString();
+        return; // Sair da função já que estamos navegando
+    }
+    
     // Carregar dados específicos da seção
     if (sectionId === 'backup-sistema') {
         atualizarEstatisticasBackup();

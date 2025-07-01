@@ -130,11 +130,20 @@ function showSection(sectionId) {
     document.getElementById(sectionId).classList.add('active');
 
     // Ativar nav-item clicado
-    // Event.target pode não ser o elemento que queremos se o clique for no ícone.
-    // Usar o elemento com a função onclick.
     const clickedElement = event.target.closest('.nav-item');
     if (clickedElement) {
         clickedElement.classList.add('active');
+    }
+
+    // Atualizar URL para manter seção ativa na paginação
+    const url = new URL(window.location);
+    const secaoAtual = url.searchParams.get('secao');
+    
+    // Só resetar página se estivermos mudando de seção
+    if (secaoAtual !== sectionId) {
+        url.searchParams.set('secao', sectionId);
+        url.searchParams.set('pagina', '1');
+        window.history.pushState({}, '', url);
     }
 }
 

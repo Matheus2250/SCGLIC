@@ -64,7 +64,20 @@ sort($areas_agrupadas);
 // Buscar dados com filtros
 $where = [];
 $params = [];
+// Detectar seção ativa baseada na presença de filtros ou paginação
 $secao_ativa = $_GET['secao'] ?? 'dashboard';
+
+// Se há filtros ou paginação de contratações, a seção ativa deve ser 'lista-contratacoes'
+if (!isset($_GET['secao']) && (
+    isset($_GET['numero_contratacao']) || 
+    isset($_GET['situacao_execucao']) || 
+    isset($_GET['categoria']) || 
+    isset($_GET['area_requisitante']) || 
+    isset($_GET['pagina']) ||
+    isset($_GET['limite'])
+)) {
+    $secao_ativa = 'lista-contratacoes';
+}
 
 if (!empty($_GET['numero_contratacao'])) {
     $where[] = "p.numero_dfd LIKE ?";
@@ -102,13 +115,19 @@ if ($where) {
 }
 
 // Query para contar total de registros - SEGURA (usa tabela dinâmica)
+// Configuração de paginação
+$limite = isset($_GET['limite']) ? max(10, min(100, intval($_GET['limite']))) : 20;
+$pagina = isset($_GET['pagina']) ? max(1, intval($_GET['pagina'])) : 1;
+
 $sqlCount = "SELECT COUNT(DISTINCT numero_dfd) as total FROM $tabela_pca p WHERE $where_ano numero_dfd IS NOT NULL AND numero_dfd != '' $whereClause";
 $stmtCount = $pdo->prepare($sqlCount);
 $stmtCount->execute($params);
 $totalRegistros = $stmtCount->fetch()['total'];
 
-// Criar objeto de paginação
-$pagination = createPagination($totalRegistros, $pagina, $limite, $_GET);
+// Criar objeto de paginação com seção ativa
+$queryParams = $_GET;
+$queryParams['secao'] = $secao_ativa; // Garantir que a seção seja mantida na paginação
+$pagination = createPagination($totalRegistros, $pagina, $limite, $queryParams);
 
 // Query principal otimizada e segura - usa tabela dinâmica baseada no ano
 $sql = "SELECT 
