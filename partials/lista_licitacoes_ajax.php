@@ -13,6 +13,7 @@
     <table>
 <thead>
 <tr>
+<th>🐛 Debug</th>
 <th>NUP</th>
 <th>Número da contratação</th>
 <th>Modalidade</th>
@@ -21,12 +22,22 @@
 <th>Situação</th>
 <th>Pregoeiro</th>
 <th>Data Abertura</th>
+<th>Andamentos</th>
 <th>Ações</th>
 </tr>
 </thead>
 <tbody>
-<?php foreach ($licitacoes_recentes as $licitacao): ?>
+<?php 
+$contador_linha_ajax = 0;
+foreach ($licitacoes_recentes as $licitacao): 
+    $contador_linha_ajax++;
+?>
 <tr>
+<td style="background: #ffe6e6; font-size: 10px; text-align: center;">
+    ID:<?php echo $licitacao['id']; ?><br>
+    Linha:<?php echo $contador_linha_ajax; ?><br>
+    <small>AJAX</small>
+</td>
 <td>
 <strong><?php echo htmlspecialchars($licitacao['nup']); ?></strong>
 </td>
@@ -47,6 +58,15 @@
 </td>
 <td><?php echo htmlspecialchars($licitacao['pregoeiro'] ?? 'Não definido'); ?></td>
 <td><?php echo $licitacao['data_abertura'] ? formatarData($licitacao['data_abertura']) : '-'; ?></td>
+<td style="text-align: center;">
+    <?php if (isset($licitacao['total_andamentos']) && $licitacao['total_andamentos'] > 0): ?>
+        <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+            <?php echo $licitacao['total_andamentos']; ?>
+        </span>
+    <?php else: ?>
+        <span style="color: #bbb; font-size: 12px;">-</span>
+    <?php endif; ?>
+</td>
 <td>
 <div style="display: flex; gap: 5px; flex-wrap: wrap;">
 <!-- Botão Ver Detalhes (sempre visível) -->

@@ -9,6 +9,7 @@ verificarLogin();
 
 $pdo = conectarDB();
 
+
 // Verificar se é uma requisição AJAX para filtros
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'filtrar_licitacoes') {
     // Processar filtros (mesmo código que já existe)
@@ -28,7 +29,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'filtrar_licitacoes') {
     }
 
     if (!empty($filtro_busca)) {
-        $where_conditions[] = "(l.nup LIKE ? OR l.objeto LIKE ? OR l.pregoeiro LIKE ? OR COALESCE(l.numero_contratacao, p.numero_contratacao) LIKE ?)";
+        $where_conditions[] = "(l.nup LIKE ? OR l.objeto LIKE ? OR l.pregoeiro LIKE ? OR l.numero_contratacao LIKE ?)";
         $busca_param = "%$filtro_busca%";
         $params[] = $busca_param;
         $params[] = $busca_param;
@@ -38,35 +39,98 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'filtrar_licitacoes') {
 
     $where_clause = implode(' AND ', $where_conditions);
 
-    // Contar total
+    // Contar total - NOVA ABORDAGEM sem JOIN problemático
     $sql_count = "SELECT COUNT(*) as total 
                   FROM licitacoes l 
                   LEFT JOIN usuarios u ON l.usuario_id = u.id
-                  LEFT JOIN pca_dados p ON l.pca_dados_id = p.id
                   WHERE $where_clause";
     $stmt_count = $pdo->prepare($sql_count);
     $stmt_count->execute($params);
     $total_licitacoes = $stmt_count->fetch()['total'];
 
-    // Buscar licitações
+    // Buscar licitações - NOVA ABORDAGEM sem JOIN problemático
     $sql_licitacoes = "SELECT 
-        l.*,
+        l.id,
+        l.nup,
+        l.numero_contratacao,
+        l.modalidade,
+        l.tipo,
+        l.objeto,
+        l.valor_estimado,
+        l.valor_homologado,
+        l.economia,
+        l.situacao,
+        l.pregoeiro,
+        l.data_entrada_dipli,
+        l.data_abertura,
+        l.data_homologacao,
+        l.data_publicacao,
+        l.resp_instrucao,
+        l.area_demandante,
+        l.qtd_itens,
+        l.link,
+        l.observacoes,
+        l.usuario_id,
+        l.pca_dados_id,
+        l.criado_em,
+        l.atualizado_em,
         u.nome as usuario_nome,
-        COALESCE(l.numero_contratacao, p.numero_contratacao) as numero_contratacao_final
+        COALESCE(l.numero_contratacao, 
+                (SELECT p.numero_contratacao FROM pca_dados p WHERE p.id = l.pca_dados_id LIMIT 1)
+        ) as numero_contratacao_final
         FROM licitacoes l
         LEFT JOIN usuarios u ON l.usuario_id = u.id
-        LEFT JOIN pca_dados p ON l.pca_dados_id = p.id
         WHERE $where_clause
-        ORDER BY l.criado_em DESC
+        ORDER BY l.id DESC
         LIMIT $licitacoes_por_pagina OFFSET $offset";
     
     $stmt_licitacoes = $pdo->prepare($sql_licitacoes);
     $stmt_licitacoes->execute($params);
     $licitacoes_recentes = $stmt_licitacoes->fetchAll();
+    
+
+    // Buscar contagem de andamentos separadamente (igual à seção principal)
+    if (!empty($licitacoes_recentes)) {
+        $nups = array_column($licitacoes_recentes, 'nup');
+        $placeholders = str_repeat('?,', count($nups) - 1) . '?';
+        
+        try {
+            $sql_andamentos = "SELECT nup, COUNT(*) as total 
+                              FROM historico_andamentos 
+                              WHERE nup IN ($placeholders) 
+                              GROUP BY nup";
+            $stmt_andamentos = $pdo->prepare($sql_andamentos);
+            $stmt_andamentos->execute($nups);
+            $contagens_andamentos = $stmt_andamentos->fetchAll(PDO::FETCH_KEY_PAIR);
+            
+            // Adicionar contagem aos resultados
+            foreach ($licitacoes_recentes as $index => &$licitacao) {
+                $licitacao['total_andamentos'] = $contagens_andamentos[$licitacao['nup']] ?? 0;
+            }
+            unset($licitacao); // Limpar referência para evitar bugs
+        } catch (Exception $e) {
+            // Se houver erro com a tabela de andamentos, definir como 0
+            foreach ($licitacoes_recentes as $index => &$licitacao) {
+                $licitacao['total_andamentos'] = 0;
+            }
+            unset($licitacao); // Limpar referência para evitar bugs
+        }
+    }
 
     // Calcular paginação
     $total_paginas = ceil($total_licitacoes / $licitacoes_por_pagina);
 
+    // Garantir que não há duplicações
+    $temp_array = [];
+    $ids_vistos = [];
+    foreach ($licitacoes_recentes as $licitacao) {
+        if (!in_array($licitacao['id'], $ids_vistos)) {
+            $temp_array[] = $licitacao;
+            $ids_vistos[] = $licitacao['id'];
+        }
+    }
+    $licitacoes_recentes = $temp_array;
+    
     // Retornar apenas o HTML dos resultados
     ob_start();
     include_once 'partials/lista_licitacoes_ajax.php'; // Vamos criar este arquivo
@@ -156,7 +220,7 @@ if (!empty($filtro_situacao)) {
 }
 
 if (!empty($filtro_busca)) {
-    $where_conditions[] = "(l.nup LIKE ? OR l.objeto LIKE ? OR l.pregoeiro LIKE ? OR COALESCE(l.numero_contratacao, p.numero_contratacao) LIKE ?)";
+    $where_conditions[] = "(l.nup LIKE ? OR l.objeto LIKE ? OR l.pregoeiro LIKE ? OR l.numero_contratacao LIKE ?)";
     $busca_param = "%$filtro_busca%";
     $params[] = $busca_param;
     $params[] = $busca_param;
@@ -166,32 +230,68 @@ if (!empty($filtro_busca)) {
 
 $where_clause = implode(' AND ', $where_conditions);
 
-// Contar total de licitações (para paginação)
+// Contar total de licitações (para paginação) - NOVA ABORDAGEM sem JOIN problemático
 $sql_count = "SELECT COUNT(*) as total 
               FROM licitacoes l 
               LEFT JOIN usuarios u ON l.usuario_id = u.id
-              LEFT JOIN pca_dados p ON l.pca_dados_id = p.id
               WHERE $where_clause";
 $stmt_count = $pdo->prepare($sql_count);
 $stmt_count->execute($params);
 $total_licitacoes = $stmt_count->fetch()['total'];
 $total_paginas = ceil($total_licitacoes / $licitacoes_por_pagina);
 
-// Buscar licitações da página atual (sem JOIN com historico_andamentos por enquanto)
+// Buscar licitações da página atual - NOVA ABORDAGEM sem JOIN problemático
 $sql = "SELECT 
-            l.*, 
+            l.id,
+            l.nup,
+            l.numero_contratacao,
+            l.modalidade,
+            l.tipo,
+            l.objeto,
+            l.valor_estimado,
+            l.valor_homologado,
+            l.economia,
+            l.situacao,
+            l.pregoeiro,
+            l.data_entrada_dipli,
+            l.data_abertura,
+            l.data_homologacao,
+            l.data_publicacao,
+            l.resp_instrucao,
+            l.area_demandante,
+            l.qtd_itens,
+            l.link,
+            l.observacoes,
+            l.usuario_id,
+            l.pca_dados_id,
+            l.criado_em,
+            l.atualizado_em,
             u.nome as usuario_criador_nome,
-            COALESCE(l.numero_contratacao, p.numero_contratacao) as numero_contratacao_final
+            COALESCE(l.numero_contratacao, 
+                    (SELECT p.numero_contratacao FROM pca_dados p WHERE p.id = l.pca_dados_id LIMIT 1)
+            ) as numero_contratacao_final
         FROM licitacoes l 
         LEFT JOIN usuarios u ON l.usuario_id = u.id
-        LEFT JOIN pca_dados p ON l.pca_dados_id = p.id
         WHERE $where_clause
-        ORDER BY l.criado_em DESC
+        ORDER BY l.id DESC
         LIMIT $licitacoes_por_pagina OFFSET $offset";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $licitacoes_recentes = $stmt->fetchAll();
+
+// Garantir que não há duplicações
+if (!empty($licitacoes_recentes)) {
+    $temp_array = [];
+    $ids_vistos = [];
+    foreach ($licitacoes_recentes as $licitacao) {
+        if (!in_array($licitacao['id'], $ids_vistos)) {
+            $temp_array[] = $licitacao;
+            $ids_vistos[] = $licitacao['id'];
+        }
+    }
+    $licitacoes_recentes = $temp_array;
+}
 
 // Buscar contagem de andamentos separadamente para evitar problema de collation
 if (!empty($licitacoes_recentes)) {
@@ -208,14 +308,16 @@ if (!empty($licitacoes_recentes)) {
         $contagens_andamentos = $stmt_andamentos->fetchAll(PDO::FETCH_KEY_PAIR);
         
         // Adicionar contagem aos resultados
-        foreach ($licitacoes_recentes as &$licitacao) {
+        foreach ($licitacoes_recentes as $index => &$licitacao) {
             $licitacao['total_andamentos'] = $contagens_andamentos[$licitacao['nup']] ?? 0;
         }
+        unset($licitacao); // Limpar referência para evitar bugs
     } catch (Exception $e) {
         // Se houver erro com a tabela de andamentos, definir como 0
-        foreach ($licitacoes_recentes as &$licitacao) {
+        foreach ($licitacoes_recentes as $index => &$licitacao) {
             $licitacao['total_andamentos'] = 0;
         }
+        unset($licitacao); // Limpar referência para evitar bugs
     }
 }
 
@@ -636,6 +738,8 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     <div class="table-container">
         <div class="table-header">
             <h3 class="table-title">Todas as Licitações</h3>
+            
+            
             <div class="table-filters">
                 <?php if (temPermissao('licitacao_criar')): ?>
                 <button onclick="abrirModalCriarLicitacao()" class="btn-primary" style="margin-right: 10px;">
@@ -714,7 +818,11 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 </tr>
 </thead>
 <tbody>
-<?php foreach ($licitacoes_recentes as $licitacao): ?>
+<?php 
+$contador_linha = 0;
+foreach ($licitacoes_recentes as $licitacao): 
+    $contador_linha++;
+?>
 <tr>
 <td>
 <strong><?php echo htmlspecialchars($licitacao['nup']); ?></strong>
@@ -1644,6 +1752,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 
 
     <script>
+        
         // Dados passados do PHP para JavaScript
         window.dadosModalidade = <?php echo json_encode($dados_modalidade); ?>;
         window.dadosPregoeiro = <?php echo json_encode($dados_pregoeiro); ?>;

@@ -958,7 +958,7 @@ function gerarRelatorio(tipo) {
  * Ver detalhes de uma licitação
  */
 function verDetalhes(id) {
-    const modal = document.getElementById('modalDetalhes');
+    const modal = document.getElementById('modalDetalhes-' + id);
     const content = document.getElementById('detalhesContent');
 
     content.innerHTML = '<div style="text-align: center; padding: 40px;"><i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i> Carregando...</div>';
@@ -2080,17 +2080,9 @@ function excluirLicitacao(id, nup) {
             // Sucesso - mostrar feedback positivo
             showNotification(`✅ Licitação ${data.nup || nup} excluída com sucesso!`, 'success');
             
-            // Recarregar a lista de licitações
+            // Recarregar a lista de licitações sempre via refresh da página
             setTimeout(() => {
-                // Se estivermos usando AJAX, recarregar via AJAX
-                if (document.getElementById('formFiltrosLicitacao')) {
-                    const formFiltros = document.getElementById('formFiltrosLicitacao');
-                    const formData = new FormData(formFiltros);
-                    filtrarLicitacoes(formData);
-                } else {
-                    // Senão, recarregar a página
-                    window.location.reload();
-                }
+                window.location.reload();
             }, 1500);
             
         } else {
@@ -2150,6 +2142,7 @@ window.editarLicitacao = editarLicitacao;
 window.verDetalhes = verDetalhes;
 window.gerarRelatorio = gerarRelatorio;
 window.filtrarLicitacoes = filtrarLicitacoes;
+window.adicionarEventListenersPaginacao = adicionarEventListenersPaginacao;
 window.exportarLicitacoes = exportarLicitacoes;
 window.fecharModal = fecharModal;
 
@@ -2704,6 +2697,43 @@ window.inicializarLucideIcons = inicializarLucideIcons;
 // ==================== SISTEMA DE FILTROS AJAX ====================
 
 /**
+ * Adicionar event listeners para paginação AJAX - função auxiliar
+ */
+function adicionarEventListenersPaginacao() {
+    const resultadosDiv = document.getElementById('resultadosLicitacoes');
+    if (!resultadosDiv) return;
+    
+    document.querySelectorAll('.ajax-link').forEach(link => {
+        // Clonar o elemento para remover todos os event listeners antigos
+        const newLink = link.cloneNode(true);
+        link.parentNode.replaceChild(newLink, link);
+        
+        // Adicionar novo event listener
+        newLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            const url = this.getAttribute('data-url');
+            if (url) {
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            resultadosDiv.innerHTML = data.html;
+                            setTimeout(() => {
+                                inicializarLucideIcons();
+                                // Reinicializar recursivamente os event listeners para nova paginação
+                                adicionarEventListenersPaginacao();
+                            }, 100);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro na paginação:', error);
+                    });
+            }
+        });
+    });
+}
+
+/**
  * Filtrar licitações via AJAX
  */
 function filtrarLicitacoes(formData) {
@@ -2735,33 +2765,11 @@ function filtrarLicitacoes(formData) {
             if (data.success) {
                 resultadosDiv.innerHTML = data.html;
                 
-                // Reinicializar ícones Lucide
+                // Reinicializar ícones Lucide e event listeners para paginação
                 setTimeout(() => {
                     inicializarLucideIcons();
+                    adicionarEventListenersPaginacao();
                 }, 100);
-                
-                // Adicionar event listeners para paginação AJAX
-                document.querySelectorAll('.ajax-link').forEach(link => {
-                    link.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        const url = this.getAttribute('data-url');
-                        if (url) {
-                            fetch(url)
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        resultadosDiv.innerHTML = data.html;
-                                        setTimeout(() => {
-                                            inicializarLucideIcons();
-                                        }, 100);
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('Erro na paginação:', error);
-                                });
-                        }
-                    });
-                });
             }
         })
         .catch(error => {
