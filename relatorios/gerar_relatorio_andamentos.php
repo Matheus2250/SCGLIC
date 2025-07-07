@@ -11,7 +11,6 @@ require_once __DIR__ . '/../functions.php';
 verificarLogin();
 
 // Verificar se usuário tem permissão para gerar relatórios
-var_dump($_SESSION);
 if (!isset($_SESSION['usuario_nivel']) || !in_array($_SESSION['usuario_nivel'], [1, 2, 3, 4])) {
     die('Acesso negado. Você não tem permissão para gerar relatórios.');
 }
@@ -80,10 +79,13 @@ try {
     // Calcular estatísticas
     $stats = calcularEstatisticasAndamentos($andamentos);
     
+    // Calcular dados por usuário
+    $dados_usuarios = calcularDadosPorUsuario($andamentos);
+    
     // Gerar relatório baseado no formato
     switch ($formato) {
         case 'html':
-            gerarRelatorioHTML($andamentos, $stats, $incluir_graficos);
+            gerarRelatorioHTML($andamentos, $stats, $dados_usuarios, $incluir_graficos);
             break;
         case 'pdf':
             gerarRelatorioPDF($andamentos, $stats);
@@ -154,11 +156,11 @@ function calcularTempoPorUnidade($andamentos) {
             $dias = $diferenca->days;
             
             if (!isset($tempo_unidades[$unidade_anterior])) {
-                $tempo_unidades[$unidade_anterior] = ['dias' => 0, 'periodos' => 0];
+                $tempo_unidades[$unidade_anterior] = ['dias' => 0, 'tramitacoes' => 0];
             }
             
             $tempo_unidades[$unidade_anterior]['dias'] += $dias;
-            $tempo_unidades[$unidade_anterior]['periodos']++;
+            $tempo_unidades[$unidade_anterior]['tramitacoes']++;
         }
         
         $unidade_anterior = $unidade_atual;
@@ -169,9 +171,81 @@ function calcularTempoPorUnidade($andamentos) {
 }
 
 /**
+ * Calcular dados por usuário
+ */
+function calcularDadosPorUsuario($andamentos) {
+    $dados_usuarios = [];
+    $usuario_anterior = null;
+    $data_anterior = null;
+    
+    foreach ($andamentos as $andamento) {
+        $usuario_atual = $andamento['usuario'] ?: 'Não informado';
+        $data_atual = new DateTime($andamento['data_hora']);
+        
+        // Inicializar usuário se não existir
+        if (!isset($dados_usuarios[$usuario_atual])) {
+            $dados_usuarios[$usuario_atual] = [
+                'usuario' => $usuario_atual,
+                'total_andamentos' => 0,
+                'total_dias' => 0,
+                'primeira_acao' => $andamento['data_hora'],
+                'ultima_acao' => $andamento['data_hora'],
+                'unidades' => [],
+                'periodos' => 0
+            ];
+        }
+        
+        // Contar andamento
+        $dados_usuarios[$usuario_atual]['total_andamentos']++;
+        
+        // Atualizar datas extremas
+        if ($andamento['data_hora'] < $dados_usuarios[$usuario_atual]['primeira_acao']) {
+            $dados_usuarios[$usuario_atual]['primeira_acao'] = $andamento['data_hora'];
+        }
+        if ($andamento['data_hora'] > $dados_usuarios[$usuario_atual]['ultima_acao']) {
+            $dados_usuarios[$usuario_atual]['ultima_acao'] = $andamento['data_hora'];
+        }
+        
+        // Coletar unidades
+        if (!in_array($andamento['unidade'], $dados_usuarios[$usuario_atual]['unidades'])) {
+            $dados_usuarios[$usuario_atual]['unidades'][] = $andamento['unidade'];
+        }
+        
+        // Calcular tempo que ficou com o processo (se mudou de usuário)
+        if ($usuario_anterior && $data_anterior && $usuario_anterior !== $usuario_atual) {
+            $diferenca = $data_anterior->diff($data_atual);
+            $dias = $diferenca->days;
+            
+            if (isset($dados_usuarios[$usuario_anterior])) {
+                $dados_usuarios[$usuario_anterior]['total_dias'] += $dias;
+                $dados_usuarios[$usuario_anterior]['periodos']++;
+            }
+        }
+        
+        $usuario_anterior = $usuario_atual;
+        $data_anterior = $data_atual;
+    }
+    
+    // Calcular médias
+    foreach ($dados_usuarios as $usuario => &$dados) {
+        $dados['media_dias_por_periodo'] = $dados['periodos'] > 0 
+            ? round($dados['total_dias'] / $dados['periodos'], 1) 
+            : 0;
+        $dados['unidades_texto'] = implode(', ', $dados['unidades']);
+    }
+    
+    // Ordenar por total de dias (decrescente)
+    uasort($dados_usuarios, function($a, $b) {
+        return $b['total_dias'] <=> $a['total_dias'];
+    });
+    
+    return $dados_usuarios;
+}
+
+/**
  * Gerar relatório em HTML
  */
-function gerarRelatorioHTML($andamentos, $stats, $incluir_graficos) {
+function gerarRelatorioHTML($andamentos, $stats, $dados_usuarios, $incluir_graficos) {
     $nup = $andamentos[0]['nup'];
     $objeto = $andamentos[0]['objeto'] ?? 'Não informado';
     $modalidade = $andamentos[0]['modalidade'] ?? 'Não informado';
@@ -184,6 +258,8 @@ function gerarRelatorioHTML($andamentos, $stats, $incluir_graficos) {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Relatório de Andamentos - <?php echo htmlspecialchars($nup); ?></title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
         <style>
             body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -233,78 +309,60 @@ function gerarRelatorioHTML($andamentos, $stats, $incluir_graficos) {
                 font-weight: bold;
                 color: #2c3e50;
             }
-            .timeline-container {
+            .grafico-container {
                 background: white;
                 border-radius: 15px;
                 padding: 30px;
                 box-shadow: 0 4px 15px rgba(0,0,0,0.1);
                 margin-bottom: 30px;
             }
-            .timeline-item {
-                display: flex;
-                margin-bottom: 25px;
-                padding-bottom: 25px;
-                border-bottom: 1px solid #eee;
+            .chart-wrapper {
                 position: relative;
+                height: 400px;
+                margin-top: 20px;
             }
-            .timeline-item:last-child {
-                border-bottom: none;
-                margin-bottom: 0;
-                padding-bottom: 0;
+            .tabela-usuarios {
+                background: white;
+                border-radius: 15px;
+                padding: 30px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                margin-bottom: 30px;
             }
-            .timeline-date {
-                min-width: 140px;
-                font-weight: bold;
-                color: #667eea;
-                font-size: 14px;
+            .tabela-usuarios table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
             }
-            .timeline-content {
-                flex: 1;
-                margin-left: 20px;
+            .tabela-usuarios th,
+            .tabela-usuarios td {
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #e5e7eb;
             }
-            .timeline-unidade {
+            .tabela-usuarios th {
+                background: #f8f9fa;
+                font-weight: 600;
+                color: #374151;
+                border-top: 1px solid #e5e7eb;
+            }
+            .tabela-usuarios tr:hover {
+                background: #f8f9fa;
+            }
+            .usuario-badge {
                 background: #667eea;
                 color: white;
-                padding: 4px 12px;
-                border-radius: 20px;
+                padding: 4px 8px;
+                border-radius: 12px;
                 font-size: 12px;
-                font-weight: bold;
-                display: inline-block;
-                margin-bottom: 8px;
+                font-weight: 500;
             }
-            .timeline-usuario {
-                color: #7f8c8d;
-                font-size: 13px;
-                margin-bottom: 5px;
-            }
-            .timeline-descricao {
-                color: #2c3e50;
-                line-height: 1.5;
-            }
-            .tempo-unidades {
-                background: white;
-                border-radius: 15px;
-                padding: 30px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                margin-bottom: 30px;
-            }
-            .tempo-item {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 15px;
-                margin-bottom: 10px;
-                background: #f8f9fa;
-                border-radius: 8px;
-                border-left: 4px solid #667eea;
-            }
-            .tempo-unidade {
-                font-weight: bold;
-                color: #2c3e50;
-            }
-            .tempo-dias {
-                color: #667eea;
-                font-weight: bold;
+            .tempo-badge {
+                background: #e3f2fd;
+                color: #1976d2;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 12px;
+                font-weight: 500;
             }
             @media print {
                 body { background: white; }
@@ -314,11 +372,11 @@ function gerarRelatorioHTML($andamentos, $stats, $incluir_graficos) {
     </head>
     <body>
         <div class="header">
-            <h1>📋 Relatório de Andamentos</h1>
-            <p><strong>NUP:</strong> <?php echo htmlspecialchars($nup); ?></p>
-            <p><strong>Objeto:</strong> <?php echo htmlspecialchars($objeto); ?></p>
-            <p><strong>Modalidade:</strong> <?php echo htmlspecialchars($modalidade); ?></p>
-            <p><strong>Gerado em:</strong> <?php echo date('d/m/Y H:i:s'); ?></p>
+            <h1><i data-lucide="file-text"></i> Relatório de Andamentos</h1>
+            <p><strong><i data-lucide="hash"></i> NUP:</strong> <?php echo htmlspecialchars($nup); ?></p>
+            <p><strong><i data-lucide="target"></i> Objeto:</strong> <?php echo htmlspecialchars($objeto); ?></p>
+            <p><strong><i data-lucide="tag"></i> Modalidade:</strong> <?php echo htmlspecialchars($modalidade); ?></p>
+            <p><strong><i data-lucide="calendar"></i> Gerado em:</strong> <?php echo date('d/m/Y H:i:s'); ?></p>
         </div>
 
         <div class="stats-grid">
@@ -341,39 +399,168 @@ function gerarRelatorioHTML($andamentos, $stats, $incluir_graficos) {
         </div>
 
         <?php if (!empty($stats['tempo_por_unidade'])): ?>
-        <div class="tempo-unidades">
-            <h2>⏱️ Tempo por Unidade</h2>
-            <?php foreach ($stats['tempo_por_unidade'] as $unidade => $tempo): ?>
-            <div class="tempo-item">
-                <div class="tempo-unidade"><?php echo htmlspecialchars($unidade); ?></div>
-                <div class="tempo-dias">
-                    <?php echo $tempo['dias']; ?> dias 
-                    (<?php echo $tempo['periodos']; ?> período<?php echo $tempo['periodos'] > 1 ? 's' : ''; ?>)
-                </div>
+        <div class="grafico-container">
+            <h2><i data-lucide="bar-chart-3"></i> Tempo por Unidade</h2>
+            <div class="chart-wrapper">
+                <canvas id="graficoTempoPorUnidade"></canvas>
             </div>
-            <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
-        <div class="timeline-container">
-            <h2>📅 Timeline Detalhada</h2>
-            <?php foreach ($andamentos as $andamento): ?>
-            <div class="timeline-item">
-                <div class="timeline-date">
-                    <?php echo date('d/m/Y H:i', strtotime($andamento['data_hora'])); ?>
-                </div>
-                <div class="timeline-content">
-                    <div class="timeline-unidade"><?php echo htmlspecialchars($andamento['unidade']); ?></div>
-                    <div class="timeline-usuario">👤 <?php echo htmlspecialchars($andamento['usuario']); ?></div>
-                    <div class="timeline-descricao"><?php echo htmlspecialchars($andamento['descricao']); ?></div>
-                </div>
-            </div>
-            <?php endforeach; ?>
+        <?php if (!empty($dados_usuarios)): ?>
+        <div class="tabela-usuarios">
+            <h2><i data-lucide="users"></i> Análise por Usuário</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th><i data-lucide="user"></i> Usuário</th>
+                        <th><i data-lucide="hash"></i> Andamentos</th>
+                        <th><i data-lucide="clock"></i> Total de Dias</th>
+                        <th><i data-lucide="trending-up"></i> Média por Período</th>
+                        <th><i data-lucide="calendar-days"></i> Primeira Ação</th>
+                        <th><i data-lucide="calendar-check"></i> Última Ação</th>
+                        <th><i data-lucide="building-2"></i> Unidades</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($dados_usuarios as $dados): ?>
+                    <tr>
+                        <td>
+                            <span class="usuario-badge"><?php echo htmlspecialchars($dados['usuario']); ?></span>
+                        </td>
+                        <td><?php echo $dados['total_andamentos']; ?></td>
+                        <td>
+                            <span class="tempo-badge"><?php echo $dados['total_dias']; ?> dias</span>
+                        </td>
+                        <td><?php echo $dados['media_dias_por_periodo']; ?> dias</td>
+                        <td><?php echo date('d/m/Y H:i', strtotime($dados['primeira_acao'])); ?></td>
+                        <td><?php echo date('d/m/Y H:i', strtotime($dados['ultima_acao'])); ?></td>
+                        <td><?php echo htmlspecialchars($dados['unidades_texto']); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
+        <?php endif; ?>
 
         <div style="text-align: center; margin-top: 40px; color: #7f8c8d; font-size: 14px;">
             <p>Sistema CGLIC - Ministério da Saúde | Relatório gerado automaticamente</p>
         </div>
+
+        <?php if (!empty($stats['tempo_por_unidade'])): ?>
+        <script>
+            // Dados para o gráfico
+            const dadosGrafico = {
+                labels: <?php echo json_encode(array_keys($stats['tempo_por_unidade'])); ?>,
+                datasets: [{
+                    label: 'Dias de Tramitação',
+                    data: <?php echo json_encode(array_column($stats['tempo_por_unidade'], 'dias')); ?>,
+                    backgroundColor: [
+                        'rgba(102, 126, 234, 0.8)',
+                        'rgba(118, 75, 162, 0.8)',
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(255, 159, 64, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(102, 126, 234, 1)',
+                        'rgba(118, 75, 162, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            };
+
+            // Configuração do gráfico
+            const config = {
+                type: 'bar',
+                data: dadosGrafico,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Tempo de Tramitação por Unidade',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            },
+                            color: '#2c3e50'
+                        },
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const unidade = context.label;
+                                    const tramitacoes = <?php echo json_encode(array_column($stats['tempo_por_unidade'], 'tramitacoes')); ?>[context.dataIndex];
+                                    return `Tramitações: ${tramitacoes}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Dias',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Unidades',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            };
+
+            // Criar o gráfico
+            const ctx = document.getElementById('graficoTempoPorUnidade');
+            if (ctx) {
+                new Chart(ctx, config);
+            }
+        </script>
+        <?php endif; ?>
+
+        <script>
+            // Inicializar ícones Lucide
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        </script>
     </body>
     </html>
     <?php

@@ -238,6 +238,12 @@ function consultarAndamentos(nup) {
         return;
     }
 
+    // Atualizar NUP no header do modal
+    const nupDisplayElement = document.getElementById('nup-display');
+    if (nupDisplayElement) {
+        nupDisplayElement.textContent = 'NUP: ' + nup;
+    }
+
     // Abrir modal
     modalElement.classList.add('show');
     modalElement.style.display = 'block';
@@ -958,10 +964,16 @@ function gerarRelatorio(tipo) {
  * Ver detalhes de uma licitação
  */
 function verDetalhes(id) {
-    const modal = document.getElementById('modalDetalhes-' + id);
+    const modal = document.getElementById('modalDetalhes');
     const content = document.getElementById('detalhesContent');
 
+    if (!modal || !content) {
+        return;
+    }
+
     content.innerHTML = '<div style="text-align: center; padding: 40px;"><i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i> Carregando...</div>';
+    
+    modal.classList.add('show');
     modal.style.display = 'block';
 
     fetch('api/get_licitacao.php?id=' + id)
@@ -3491,6 +3503,12 @@ function gerarRelatorioAndamentos() {
     }
     
     const nup = nupMatch[1].trim();
+    
+    // Verificar se o NUP não é "Carregando..." ou similar
+    if (nup === 'Carregando...' || nup.toLowerCase().includes('carregando')) {
+        alert('Erro: Aguarde o carregamento dos andamentos antes de gerar o relatório.');
+        return;
+    }
     
     // Criar modal de configuração do relatório
     const modal = document.createElement('div');
