@@ -580,6 +580,101 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
             background: #006ba6;
             border-color: #006ba6;
         }
+        
+        /* Estilos para o modal de Ver Andamentos */
+        .modal.modern-modal .btn-report {
+            background: rgba(34, 197, 94, 0.1);
+            border: 2px solid rgb(34, 197, 94);
+            color: rgb(34, 197, 94);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .modal.modern-modal .btn-report:hover {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgb(22, 163, 74);
+            color: rgb(22, 163, 74);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        
+        .modal.modern-modal .btn-report:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(34, 197, 94, 0.2);
+        }
+        
+        .modal.modern-modal .close-button {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid rgb(239, 68, 68);
+            color: rgb(239, 68, 68);
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            transition: all 0.3s ease;
+        }
+        
+        .modal.modern-modal .close-button:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgb(220, 38, 38);
+            color: rgb(220, 38, 38);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .modal.modern-modal .close-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+        }
+        
+        .modal.modern-modal .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        /* Header discreto para o modal de Ver Andamentos */
+        .modal.modern-modal .modal-header.gradient-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            padding: 20px 25px;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .modal.modern-modal .header-info {
+            flex: 1;
+        }
+        
+        .modal.modern-modal .modal-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .modal.modern-modal .modal-subtitle {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            color: #6c757d;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
