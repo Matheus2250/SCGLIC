@@ -93,9 +93,7 @@ $sql_nao_iniciadas = "SELECT DISTINCT
     WHERE pi.ano_pca = 2025
     AND p.data_inicio_processo < CURDATE() 
     AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')
-    AND p.data_conclusao_processo >= CURDATE()
-    AND p.numero_dfd IS NOT NULL 
-    AND p.numero_dfd != ''
+    AND (p.data_conclusao_processo IS NULL OR p.data_conclusao_processo >= CURDATE())
     $where_area
     GROUP BY p.numero_dfd
     ORDER BY dias_atraso_inicio DESC";
@@ -1084,7 +1082,7 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
                         <tr>
                             <td><span class="dfd-number"><?php echo htmlspecialchars($contratacao['numero_dfd']); ?></span></td>
                             <td class="titulo-cell"><?php echo htmlspecialchars($contratacao['titulo_contratacao']); ?></td>
-                            <td><span class="area-badge"><?php echo htmlspecialchars(agruparArea($contratacao['area_requisitante'])); ?></span></td>
+                            <td><span class="area-badge"><?php echo htmlspecialchars($contratacao['area_requisitante']); ?></span></td>
                             <td>
                                 <div class="data-info">
                                     <span class="data-label">Conclusão</span>

@@ -168,7 +168,7 @@ while ($row = $stmt->fetch()) {
         $row['numero_dfd'],
         $row['numero_contratacao'],
         $row['titulo_contratacao'],
-        agruparArea($row['area_requisitante']),
+        $row['area_requisitante'],
         $row['data_inicio_processo'] ? date('d/m/Y', strtotime($row['data_inicio_processo'])) : '',
         $row['data_conclusao_processo'] ? date('d/m/Y', strtotime($row['data_conclusao_processo'])) : '',
         empty($row['situacao_execucao']) ? 'Não iniciado' : $row['situacao_execucao'],
