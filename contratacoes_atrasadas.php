@@ -15,11 +15,35 @@ verificarLogin();
 
 $pdo = conectarDB();
 
-// Buscar áreas para o filtro (agrupadas) - SOMENTE PCA 2025
+// DEBUG: Verificar se há dados do PCA no banco
+if (DEBUG_MODE) {
+    try {
+        $debug_pca_2025 = $pdo->query("SELECT COUNT(*) FROM pca_dados p INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id WHERE pi.ano_pca = 2025")->fetchColumn();
+        $debug_pca_2024 = $pdo->query("SELECT COUNT(*) FROM pca_dados p INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id WHERE pi.ano_pca = 2024")->fetchColumn();
+        $debug_pca_2023 = $pdo->query("SELECT COUNT(*) FROM pca_dados p INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id WHERE pi.ano_pca = 2023")->fetchColumn();
+        $debug_total_pca = $pdo->query("SELECT COUNT(*) FROM pca_dados")->fetchColumn();
+        $debug_total_importacoes = $pdo->query("SELECT COUNT(*) FROM pca_importacoes")->fetchColumn();
+        $debug_anos_disponiveis = $pdo->query("SELECT GROUP_CONCAT(DISTINCT ano_pca) FROM pca_importacoes")->fetchColumn();
+        
+        echo "<!-- DEBUG GERAL:";
+        echo "\nTotal registros pca_dados: " . $debug_total_pca;
+        echo "\nTotal importações: " . $debug_total_importacoes;
+        echo "\nAnos disponíveis: " . $debug_anos_disponiveis;
+        echo "\nRegistros PCA 2025: " . $debug_pca_2025;
+        echo "\nRegistros PCA 2024: " . $debug_pca_2024;
+        echo "\nRegistros PCA 2023: " . $debug_pca_2023;
+        echo "\nData atual: " . date('Y-m-d');
+        echo "\n-->";
+    } catch (Exception $e) {
+        echo "<!-- DEBUG ERROR: " . $e->getMessage() . " -->";
+    }
+}
+
+// Buscar áreas para o filtro (agrupadas) - PCA 2023-2025
 $areas_sql = "SELECT DISTINCT p.area_requisitante 
               FROM pca_dados p
               INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
-              WHERE pi.ano_pca = 2025
+              WHERE pi.ano_pca IN (2025, 2024, 2023)
               AND p.area_requisitante IS NOT NULL 
               AND p.area_requisitante != '' 
               ORDER BY p.area_requisitante";
@@ -49,7 +73,7 @@ if (!empty($filtro_area)) {
     }
 }
 
-// CONTRATAÇÕES VENCIDAS (agrupadas por DFD) - SOMENTE PCA 2025
+// CONTRATAÇÕES VENCIDAS - QUERY MAIS FLEXÍVEL
 $sql_vencidas = "SELECT DISTINCT 
     p.numero_contratacao,
     p.numero_dfd,
@@ -63,9 +87,10 @@ $sql_vencidas = "SELECT DISTINCT
     DATEDIFF(CURDATE(), p.data_conclusao_processo) as dias_atraso
     FROM pca_dados p
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
-    WHERE pi.ano_pca = 2025
+    WHERE pi.ano_pca IN (2025, 2024, 2023)
+    AND p.data_conclusao_processo IS NOT NULL
     AND p.data_conclusao_processo < CURDATE()
-    AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')
+    AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciado')
     AND p.numero_dfd IS NOT NULL 
     AND p.numero_dfd != ''
     $where_area
@@ -76,7 +101,17 @@ $stmt_vencidas = $pdo->prepare($sql_vencidas);
 $stmt_vencidas->execute($params_area);
 $contratacoes_vencidas = $stmt_vencidas->fetchAll();
 
-// CONTRATAÇÕES NÃO INICIADAS (agrupadas por DFD) - SOMENTE PCA 2025
+// DEBUG: Verificar se há dados vencidas
+if (DEBUG_MODE) {
+    $debug_vencidas = $pdo->query("SELECT COUNT(*) FROM pca_dados p INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id WHERE pi.ano_pca = 2025 AND p.data_conclusao_processo < CURDATE() AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')")->fetchColumn();
+    
+    echo "<!-- DEBUG CONTRATAÇÕES VENCIDAS:";
+    echo "\nTotal que atendem critérios vencidas: " . $debug_vencidas;
+    echo "\nResultado vencidas: " . count($contratacoes_vencidas);
+    echo "\n-->";
+}
+
+// CONTRATAÇÕES NÃO INICIADAS - QUERY MAIS FLEXÍVEL
 $sql_nao_iniciadas = "SELECT DISTINCT 
     p.numero_contratacao,
     p.numero_dfd,
@@ -90,10 +125,12 @@ $sql_nao_iniciadas = "SELECT DISTINCT
     DATEDIFF(CURDATE(), p.data_inicio_processo) as dias_atraso_inicio
     FROM pca_dados p
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
-    WHERE pi.ano_pca = 2025
+    WHERE pi.ano_pca IN (2025, 2024, 2023)
+    AND p.data_inicio_processo IS NOT NULL
     AND p.data_inicio_processo < CURDATE() 
-    AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')
-    AND (p.data_conclusao_processo IS NULL OR p.data_conclusao_processo >= CURDATE())
+    AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciado')
+    AND p.numero_dfd IS NOT NULL 
+    AND p.numero_dfd != ''
     $where_area
     GROUP BY p.numero_dfd
     ORDER BY dias_atraso_inicio DESC";
@@ -937,7 +974,7 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             <div class="header-content">
                 <div class="header-left">
                     <h1><i data-lucide="alert-triangle"></i> Contratações Atrasadas</h1>
-                    <p>Monitoramento de contratações com atrasos e pendências - <strong>PCA 2025</strong></p>
+                    <p>Monitoramento de contratações com atrasos e pendências - <strong>PCA 2023-2025</strong></p>
                 </div>
                 <div class="header-actions">
                     <a href="dashboard.php" class="btn-voltar">
@@ -1160,7 +1197,7 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
                         <tr>
                             <td><span class="dfd-number"><?php echo htmlspecialchars($contratacao['numero_dfd']); ?></span></td>
                             <td class="titulo-cell"><?php echo htmlspecialchars($contratacao['titulo_contratacao']); ?></td>
-                            <td><span class="area-badge"><?php echo htmlspecialchars(agruparArea($contratacao['area_requisitante'])); ?></span></td>
+                            <td><span class="area-badge"><?php echo htmlspecialchars($contratacao['area_requisitante']); ?></span></td>
                             <td>
                                 <div class="data-info">
                                     <span class="data-label">Início</span>
@@ -1196,8 +1233,8 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             <?php else: ?>
             <div class="empty-message">
                 <div class="empty-icon"><i data-lucide="check-circle"></i></div>
-                <h3 class="empty-title">Todas as contratações foram iniciadas!</h3>
-                <p class="empty-text">Não há contratações pendentes de início.</p>
+                <h3 class="empty-title">Nenhuma contratação não iniciada encontrada</h3>
+                <p class="empty-text">Não há contratações pendentes de início ou todas as contratações estão em dia.</p>
             </div>
             <?php endif; ?>
         </div>
@@ -1225,23 +1262,6 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
-
-            // Adicionar animação suave ao scroll
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.opacity = '1';
-                        entry.target.style.transform = 'translateY(0)';
-                    }
-                });
-            }, { threshold: 0.1 });
-
-            document.querySelectorAll('.data-section').forEach(section => {
-                section.style.opacity = '0';
-                section.style.transform = 'translateY(20px)';
-                section.style.transition = 'all 0.5s ease-out';
-                observer.observe(section);
-            });
 
             // Tooltip para células truncadas
             document.querySelectorAll('.titulo-cell').forEach(cell => {
@@ -1293,13 +1313,29 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
 
         // Função para trocar de aba
 function switchTab(tabName) {
+    console.log('Switching to tab:', tabName); // Debug
+    
     // Remover active de todos os botões e conteúdos
-    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+        console.log('Removed active from button:', btn.id);
+    });
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+        console.log('Removed active from content:', content.id);
+    });
     
     // Adicionar active ao botão e conteúdo selecionados
-    document.getElementById('tab-' + tabName).classList.add('active');
-    document.getElementById('content-' + tabName).classList.add('active');
+    const tabButton = document.getElementById('tab-' + tabName);
+    const tabContent = document.getElementById('content-' + tabName);
+    
+    if (tabButton && tabContent) {
+        tabButton.classList.add('active');
+        tabContent.classList.add('active');
+        console.log('Added active to:', tabName);
+    } else {
+        console.error('Tab elements not found:', 'tab-' + tabName, 'content-' + tabName);
+    }
     
     // Recriar ícones Lucide no novo conteúdo
     if (typeof lucide !== 'undefined') {
