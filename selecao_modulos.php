@@ -69,8 +69,8 @@ verificarLogin();
 
         .modulos-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
             margin-bottom: 40px;
         }
 
@@ -115,6 +115,10 @@ verificarLogin();
             background: linear-gradient(90deg, #10b981, #059669);
         }
 
+        .modulo-qualificacao::before {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+        }
+
         .modulo-icon {
             width: 80px;
             height: 80px;
@@ -140,6 +144,14 @@ verificarLogin();
             background: linear-gradient(135deg, #10b981, #059669);
             box-shadow: 
                 0 10px 25px rgba(16, 185, 129, 0.3),
+                0 0 0 4px rgba(255, 255, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .modulo-qualificacao .modulo-icon {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 
+                0 10px 25px rgba(245, 158, 11, 0.3),
                 0 0 0 4px rgba(255, 255, 255, 0.1),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
@@ -285,6 +297,18 @@ verificarLogin();
                         e monitore o andamento das licitações em todas as suas fases.
                     </p>
                 </div>
+
+                <!-- Módulo Qualificação -->
+                <div class="modulo-card modulo-qualificacao" onclick="acessarModulo('qualificacao')">
+                    <div class="modulo-icon">
+                        <i data-lucide="award"></i>
+                    </div>
+                    <h2 class="modulo-title">Qualificação</h2>
+                    <p class="modulo-description">
+                        Gerencie qualificações de fornecedores, avalie capacitação técnica 
+                        e controle documentação para processos licitatórios.
+                    </p>
+                </div>
             </div>
 
             <!-- Informações do Usuário -->
@@ -328,6 +352,8 @@ verificarLogin();
                     window.location.href = 'dashboard.php';
                 } else if (modulo === 'licitacao') {
                     window.location.href = 'licitacao_dashboard.php';
+                } else if (modulo === 'qualificacao') {
+                    window.location.href = 'qualificacao_dashboard.php';
                 }
             }, 500);
         }

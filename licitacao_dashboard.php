@@ -339,9 +339,6 @@ $contratacoes_pca = $pdo->query("
     ORDER BY pi.ano_pca DESC, p.numero_contratacao ASC
     LIMIT 2000
 ")->fetchAll(PDO::FETCH_ASSOC);
-
-// Debug básico
-echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " . count($contratacoes_pca) . ");</script>";
 ?>
 
 <!DOCTYPE html>

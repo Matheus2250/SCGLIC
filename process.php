@@ -834,5 +834,165 @@ case 'editar_licitacao':
 
         echo json_encode($response);
         break;
+
+    case 'criar_qualificacao':
+        verificarLogin();
+        
+        header('Content-Type: application/json');
+        $response = ['success' => false, 'message' => ''];
+        
+        // Log de debug inicial
+        error_log("=== CRIAR QUALIFICAÇÃO - INÍCIO ===");
+        error_log("POST data: " . json_encode($_POST));
+        error_log("Usuário ID: " . $_SESSION['usuario_id']);
+        
+        try {
+            // Validar dados obrigatórios
+            $nup = limpar($_POST['nup'] ?? '');
+            $area_demandante = limpar($_POST['area_demandante'] ?? '');
+            $responsavel = limpar($_POST['responsavel'] ?? '');
+            $modalidade = limpar($_POST['modalidade'] ?? '');
+            $objeto = limpar($_POST['objeto'] ?? '');
+            $palavras_chave = limpar($_POST['palavras_chave'] ?? '');
+            $valor_estimado = limpar($_POST['valor_estimado'] ?? '');
+            $status = limpar($_POST['status'] ?? '');
+            $observacoes = limpar($_POST['observacoes'] ?? '');
+            
+            // Log dos dados capturados
+            error_log("Dados capturados:");
+            error_log("- NUP: '$nup'");
+            error_log("- Área: '$area_demandante'");
+            error_log("- Responsável: '$responsavel'");
+            error_log("- Modalidade: '$modalidade'");
+            error_log("- Valor estimado: '$valor_estimado'");
+            error_log("- Status: '$status'");
+            
+            // Validações
+            if (empty($nup)) {
+                throw new Exception('NUP é obrigatório');
+            }
+            
+            if (empty($area_demandante)) {
+                throw new Exception('Área demandante é obrigatória');
+            }
+            
+            if (empty($responsavel)) {
+                throw new Exception('Responsável é obrigatório');
+            }
+            
+            if (empty($modalidade)) {
+                throw new Exception('Modalidade é obrigatória');
+            }
+            
+            if (empty($objeto)) {
+                throw new Exception('Objeto é obrigatório');
+            }
+            
+            if (empty($status)) {
+                throw new Exception('Status é obrigatório');
+            }
+            
+            // Limpar e converter valor monetário
+            $valor_numerico = 0.00;
+            if (!empty($valor_estimado)) {
+                // Remover formatação completa (R$, espaços, etc)
+                $valor_limpo = trim($valor_estimado);
+                $valor_limpo = preg_replace('/[^\d,.]/', '', $valor_limpo);
+                
+                // Se tem vírgula e ponto, assumir formato brasileiro (1.000,00)
+                if (strpos($valor_limpo, '.') !== false && strpos($valor_limpo, ',') !== false) {
+                    $valor_limpo = str_replace('.', '', $valor_limpo); // Remove separador de milhares
+                    $valor_limpo = str_replace(',', '.', $valor_limpo); // Vírgula vira ponto decimal
+                }
+                // Se tem apenas vírgula, assumir que é decimal brasileiro (100,50)
+                elseif (strpos($valor_limpo, ',') !== false && strpos($valor_limpo, '.') === false) {
+                    $valor_limpo = str_replace(',', '.', $valor_limpo);
+                }
+                // Se tem apenas ponto, pode ser decimal americano (100.50) ou separador de milhares (1.000)
+                elseif (strpos($valor_limpo, '.') !== false && strpos($valor_limpo, ',') === false) {
+                    // Se há mais de um ponto ou ponto não está nos últimos 3 dígitos, é separador de milhares
+                    if (substr_count($valor_limpo, '.') > 1 || !preg_match('/\.\d{2}$/', $valor_limpo)) {
+                        $valor_limpo = str_replace('.', '', $valor_limpo);
+                    }
+                }
+                
+                $valor_numerico = floatval($valor_limpo);
+                
+                // Log para debug
+                error_log("Valor original: '$valor_estimado' -> Valor limpo: '$valor_limpo' -> Valor numérico: $valor_numerico");
+                
+                // Validar se o valor é válido
+                if ($valor_numerico <= 0) {
+                    throw new Exception('Valor estimado deve ser maior que zero');
+                }
+            }
+            
+            // Verificar se NUP já existe
+            $sql_check = "SELECT id FROM qualificacoes WHERE nup = ?";
+            $stmt_check = $pdo->prepare($sql_check);
+            $stmt_check->execute([$nup]);
+            
+            if ($stmt_check->fetch()) {
+                throw new Exception('Este NUP já está cadastrado no sistema');
+            }
+            
+            // Inserir qualificação
+            $sql = "INSERT INTO qualificacoes (
+                nup, 
+                area_demandante, 
+                responsavel, 
+                modalidade, 
+                objeto, 
+                palavras_chave, 
+                valor_estimado, 
+                status, 
+                observacoes, 
+                usuario_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            
+            $stmt = $pdo->prepare($sql);
+            $resultado = $stmt->execute([
+                $nup,
+                $area_demandante,
+                $responsavel,
+                $modalidade,
+                $objeto,
+                $palavras_chave,
+                $valor_numerico,
+                $status,
+                $observacoes,
+                $_SESSION['usuario_id']
+            ]);
+            
+            if (!$resultado) {
+                throw new Exception('Erro ao salvar qualificação no banco de dados');
+            }
+            
+            $qualificacao_id = $pdo->lastInsertId();
+            error_log("Qualificação inserida com sucesso! ID: $qualificacao_id");
+            error_log("Linhas afetadas: " . $stmt->rowCount());
+            
+            // Registrar no log
+            registrarLog('CRIAR_QUALIFICACAO', "Criou qualificação ID: $qualificacao_id - NUP: $nup - Área: $area_demandante", 'qualificacoes', $qualificacao_id);
+            
+            $response['success'] = true;
+            $response['message'] = 'Qualificação cadastrada com sucesso!';
+            $response['id'] = $qualificacao_id;
+            $response['nup'] = $nup;
+            
+        } catch (Exception $e) {
+            $response['success'] = false;
+            $response['message'] = $e->getMessage();
+            
+            // Log do erro
+            error_log("Erro ao criar qualificação: " . $e->getMessage());
+        }
+        
+        echo json_encode($response);
+        break;
+        
+    default:
+        header('Location: index.php');
+        break;
     }
 ?>

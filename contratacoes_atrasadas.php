@@ -39,11 +39,11 @@ if (DEBUG_MODE) {
     }
 }
 
-// Buscar áreas para o filtro (agrupadas) - PCA 2023-2025
+// Buscar áreas para o filtro (agrupadas) - PCA 2025
 $areas_sql = "SELECT DISTINCT p.area_requisitante 
               FROM pca_dados p
               INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
-              WHERE pi.ano_pca IN (2025, 2024, 2023)
+              WHERE pi.ano_pca = 2025
               AND p.area_requisitante IS NOT NULL 
               AND p.area_requisitante != '' 
               ORDER BY p.area_requisitante";
@@ -87,7 +87,7 @@ $sql_vencidas = "SELECT DISTINCT
     DATEDIFF(CURDATE(), p.data_conclusao_processo) as dias_atraso
     FROM pca_dados p
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
-    WHERE pi.ano_pca IN (2025, 2024, 2023)
+    WHERE pi.ano_pca = 2025
     AND p.data_conclusao_processo IS NOT NULL
     AND p.data_conclusao_processo < CURDATE()
     AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciado')
@@ -125,7 +125,7 @@ $sql_nao_iniciadas = "SELECT DISTINCT
     DATEDIFF(CURDATE(), p.data_inicio_processo) as dias_atraso_inicio
     FROM pca_dados p
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
-    WHERE pi.ano_pca IN (2025, 2024, 2023)
+    WHERE pi.ano_pca = 2025
     AND p.data_inicio_processo IS NOT NULL
     AND p.data_inicio_processo < CURDATE() 
     AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciado')
@@ -974,7 +974,7 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             <div class="header-content">
                 <div class="header-left">
                     <h1><i data-lucide="alert-triangle"></i> Contratações Atrasadas</h1>
-                    <p>Monitoramento de contratações com atrasos e pendências - <strong>PCA 2023-2025</strong></p>
+                    <p>Monitoramento de contratações com atrasos e pendências - <strong>PCA 2025</strong></p>
                 </div>
                 <div class="header-actions">
                     <a href="dashboard.php" class="btn-voltar">
