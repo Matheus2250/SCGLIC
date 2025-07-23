@@ -350,60 +350,11 @@ function showNotification(message, type = 'info', duration = 5000) {
 function initializeDashboardCharts() {
     // Aguardar um pouco para garantir que a seção está visível
     setTimeout(() => {
-        initializeQualificationChart();
         initializeStatusChart();
         initializePerformanceChart();
     }, 100);
 }
 
-/**
- * Gráfico de qualificações por categoria
- */
-function initializeQualificationChart() {
-    const ctx = document.getElementById('qualificationChart');
-    if (!ctx || typeof Chart === 'undefined') return;
-    
-    // Destruir gráfico existente se houver
-    if (window.qualificationChartInstance) {
-        window.qualificationChartInstance.destroy();
-    }
-    
-    window.qualificationChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Técnica', 'Econômica', 'Jurídica', 'Ambiental', 'Social'],
-            datasets: [{
-                data: [0, 0, 0, 0, 0],
-                backgroundColor: [
-                    '#f59e0b',
-                    '#d97706',
-                    '#b45309',
-                    '#92400e',
-                    '#78350f'
-                ],
-                borderWidth: 0,
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true,
-                        font: {
-                            size: 12,
-                            family: "'Inter', 'Segoe UI', Roboto, sans-serif"
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
 
 /**
  * Gráfico de status das qualificações
@@ -423,23 +374,16 @@ function initializeStatusChart() {
             labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
             datasets: [
                 {
-                    label: 'Aprovadas',
-                    data: [0, 0, 0, 0, 0, 0],
-                    backgroundColor: '#27ae60',
-                    borderRadius: 4,
-                    borderSkipped: false,
-                },
-                {
-                    label: 'Reprovadas',
-                    data: [0, 0, 0, 0, 0, 0],
-                    backgroundColor: '#e74c3c',
-                    borderRadius: 4,
-                    borderSkipped: false,
-                },
-                {
-                    label: 'Pendentes',
+                    label: 'Em Análise',
                     data: [0, 0, 0, 0, 0, 0],
                     backgroundColor: '#f59e0b',
+                    borderRadius: 4,
+                    borderSkipped: false,
+                },
+                {
+                    label: 'Concluído',
+                    data: [0, 0, 0, 0, 0, 0],
+                    backgroundColor: '#27ae60',
                     borderRadius: 4,
                     borderSkipped: false,
                 }
@@ -700,6 +644,35 @@ document.addEventListener('DOMContentLoaded', function() {
                         lucide.createIcons();
                     }
                 });
+        });
+    }
+    
+    // Event listener para formulário de relatórios (IGUAL LICITAÇÕES)
+    const formRelatorioQualificacao = document.getElementById('formRelatorioQualificacao');
+    if (formRelatorioQualificacao) {
+        formRelatorioQualificacao.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const params = new URLSearchParams();
+
+            for (const [key, value] of formData) {
+                if (value) params.append(key, value);
+            }
+
+            const formato = formData.get('formato');
+            const url = 'relatorios/gerar_relatorio_qualificacao.php?' + params.toString();
+
+            if (formato === 'html') {
+                // Abrir em nova aba
+                window.open(url, '_blank');
+            } else {
+                // Download direto
+                window.location.href = url;
+            }
+
+            // Fechar modal
+            fecharModal('modalRelatorioQualificacao');
         });
     }
     
@@ -1030,9 +1003,7 @@ function criarModalEdicao() {
                             <select id="edit_status" name="status" required>
                                 <option value="">Selecione o status</option>
                                 <option value="Em Análise">Em Análise</option>
-                                <option value="Aprovado">Aprovado</option>
-                                <option value="Reprovado">Reprovado</option>
-                                <option value="Pendente">Pendente</option>
+                                <option value="Concluído">Concluído</option>
                             </select>
                         </div>
                         
@@ -1310,6 +1281,28 @@ function fecharModal(modalId) {
     modal.style.display = 'none';
 }
 
+// ==================== SISTEMA DE RELATÓRIOS ====================
+
+/**
+ * Gerar relatório de qualificação (IGUAL LICITAÇÕES)
+ */
+function gerarRelatorioQualificacao(tipo) {
+    // Definir títulos por tipo
+    const titulos = {
+        'status': 'Relatório por Status',
+        'modalidade': 'Relatório por Modalidade', 
+        'area': 'Relatório por Área Demandante',
+        'financeiro': 'Relatório Financeiro'
+    };
+    
+    // Configurar modal
+    document.getElementById('tipo_relatorio_qualificacao').value = tipo;
+    document.getElementById('tituloRelatorioQualificacao').textContent = titulos[tipo] || 'Configurar Relatório';
+    
+    // Abrir modal
+    abrirModal('modalRelatorioQualificacao');
+}
+
 // ==================== EXPORTAR FUNÇÕES GLOBAIS ====================
 
 // Disponibilizar funções principais globalmente
@@ -1335,5 +1328,6 @@ window.salvarEdicao = salvarEdicao;
 window.showSection = showSection;
 window.toggleSidebar = toggleSidebar;
 window.showNotification = showNotification;
+window.gerarRelatorioQualificacao = gerarRelatorioQualificacao;
 
 console.log('📋 Qualificação Dashboard JavaScript carregado com sucesso!');

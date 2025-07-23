@@ -15,8 +15,7 @@ try {
         $stats = [
             'total_qualificacoes' => 0,
             'em_andamento' => 0,
-            'aprovadas' => 0,
-            'reprovadas' => 0,
+            'concluidas' => 0,
             'valor_total' => 0.00
         ];
         $qualificacoes_recentes = [];
@@ -25,8 +24,7 @@ try {
         $stats_sql = "SELECT 
             COUNT(*) as total_qualificacoes,
             SUM(CASE WHEN status = 'Em Análise' THEN 1 ELSE 0 END) as em_andamento,
-            SUM(CASE WHEN status = 'Aprovado' THEN 1 ELSE 0 END) as aprovadas,
-            SUM(CASE WHEN status = 'Reprovado' THEN 1 ELSE 0 END) as reprovadas,
+            SUM(CASE WHEN status = 'Concluído' THEN 1 ELSE 0 END) as concluidas,
             SUM(valor_estimado) as valor_total
             FROM qualificacoes";
         $stmt_stats = $pdo->query($stats_sql);
@@ -35,8 +33,7 @@ try {
         // Garantir que os valores não sejam null
         $stats['total_qualificacoes'] = intval($stats['total_qualificacoes']);
         $stats['em_andamento'] = intval($stats['em_andamento']);
-        $stats['aprovadas'] = intval($stats['aprovadas']);
-        $stats['reprovadas'] = intval($stats['reprovadas']);
+        $stats['concluidas'] = intval($stats['concluidas']);
         $stats['valor_total'] = floatval($stats['valor_total'] ?? 0.00);
         
         // Buscar qualificações recentes para a tabela
@@ -49,8 +46,7 @@ try {
     $stats = [
         'total_qualificacoes' => 0,
         'em_andamento' => 0,
-        'aprovadas' => 0,
-        'reprovadas' => 0,
+        'concluidas' => 0,
         'valor_total' => 0.00
     ];
     $qualificacoes_recentes = [];
@@ -168,15 +164,11 @@ try {
                     </div>
                     <div class="stat-card andamento">
                         <div class="stat-number"><?php echo number_format($stats['em_andamento']); ?></div>
-                        <div class="stat-label">Em Andamento</div>
+                        <div class="stat-label">Em Análise</div>
                     </div>
                     <div class="stat-card aprovados">
-                        <div class="stat-number"><?php echo number_format($stats['aprovadas']); ?></div>
-                        <div class="stat-label">Aprovadas</div>
-                    </div>
-                    <div class="stat-card reprovados">
-                        <div class="stat-number"><?php echo number_format($stats['reprovadas']); ?></div>
-                        <div class="stat-label">Reprovadas</div>
+                        <div class="stat-number"><?php echo number_format($stats['concluidas']); ?></div>
+                        <div class="stat-label">Concluídas</div>
                     </div>
                     <div class="stat-card valor">
                         <div class="stat-number"><?php echo abreviarValor($stats['valor_total']); ?></div>
@@ -186,16 +178,6 @@ try {
                 
                 <!-- Gráficos -->
                 <div class="charts-grid">
-                    <div class="chart-card">
-                        <div class="chart-title">
-                            <i data-lucide="pie-chart"></i>
-                            Qualificações por Categoria
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="qualificationChart"></canvas>
-                        </div>
-                    </div>
-                    
                     <div class="chart-card">
                         <div class="chart-title">
                             <i data-lucide="bar-chart"></i>
@@ -263,8 +245,7 @@ try {
                                         <?php
                                         $status_class = '';
                                         switch($qualificacao['status']) {
-                                            case 'Aprovado': $status_class = 'status-aprovado'; break;
-                                            case 'Reprovado': $status_class = 'status-reprovado'; break;
+                                            case 'Concluído': $status_class = 'status-aprovado'; break;
                                             case 'Em Análise': $status_class = 'status-em-andamento'; break;
                                             default: $status_class = 'status-pendente';
                                         }
@@ -301,15 +282,49 @@ try {
             </section>
             
             
+            <!-- Relatórios -->
             <section id="relatorios" class="content-section">
                 <div class="dashboard-header">
-                    <h1><i data-lucide="file-text"></i> Relatórios</h1>
-                    <p>Módulo de relatórios em desenvolvimento</p>
+                    <h1><i data-lucide="file-text"></i> Relatórios de Qualificações</h1>
+                    <p>Relatórios detalhados sobre o processo de qualificação</p>
                 </div>
-                <div class="empty-state">
-                    <i data-lucide="construction"></i>
-                    <h3>Em Desenvolvimento</h3>
-                    <p>Este módulo será implementado em breve.</p>
+
+                <div class="stats-grid">
+                    <div class="chart-card" style="cursor: pointer;" onclick="gerarRelatorioQualificacao('status')">
+                        <h3 class="chart-title"><i data-lucide="check-circle"></i> Relatório por Status</h3>
+                        <p style="color: #7f8c8d; margin-bottom: 20px;">Análise detalhada das qualificações por status de aprovação</p>
+                        <div style="text-align: center;">
+                            <i data-lucide="pie-chart" style="width: 64px; height: 64px; color: #f59e0b; margin-bottom: 20px;"></i>
+                            <button class="btn-primary">Gerar Relatório</button>
+                        </div>
+                    </div>
+
+                    <div class="chart-card" style="cursor: pointer;" onclick="gerarRelatorioQualificacao('modalidade')">
+                        <h3 class="chart-title"><i data-lucide="list"></i> Relatório por Modalidade</h3>
+                        <p style="color: #7f8c8d; margin-bottom: 20px;">Performance e distribuição por modalidade licitatória</p>
+                        <div style="text-align: center;">
+                            <i data-lucide="bar-chart-3" style="width: 64px; height: 64px; color: #d97706; margin-bottom: 20px;"></i>
+                            <button class="btn-primary">Gerar Relatório</button>
+                        </div>
+                    </div>
+
+                    <div class="chart-card" style="cursor: pointer;" onclick="gerarRelatorioQualificacao('area')">
+                        <h3 class="chart-title"><i data-lucide="building"></i> Relatório por Área</h3>
+                        <p style="color: #7f8c8d; margin-bottom: 20px;">Desempenho por área demandante</p>
+                        <div style="text-align: center;">
+                            <i data-lucide="users" style="width: 64px; height: 64px; color: #b45309; margin-bottom: 20px;"></i>
+                            <button class="btn-primary">Gerar Relatório</button>
+                        </div>
+                    </div>
+
+                    <div class="chart-card" style="cursor: pointer;" onclick="gerarRelatorioQualificacao('financeiro')">
+                        <h3 class="chart-title"><i data-lucide="dollar-sign"></i> Relatório Financeiro</h3>
+                        <p style="color: #7f8c8d; margin-bottom: 20px;">Análise financeira e evolução de valores</p>
+                        <div style="text-align: center;">
+                            <i data-lucide="trending-up" style="width: 64px; height: 64px; color: #92400e; margin-bottom: 20px;"></i>
+                            <button class="btn-primary">Gerar Relatório</button>
+                        </div>
+                    </div>
                 </div>
             </section>
             
@@ -343,7 +358,7 @@ try {
 
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>NUP (Número Único de Protocolo) *</label>
+                            <label>NUP (Número Único de Processo) *</label>
                             <input type="text" name="nup" id="nup_criar" required placeholder="xxxxx.xxxxxx/xxxx-xx" maxlength="20">
                         </div>
 
@@ -390,9 +405,7 @@ try {
                             <select name="status" required>
                                 <option value="">Selecione o status</option>
                                 <option value="Em Análise">Em Análise</option>
-                                <option value="Aprovado">Aprovado</option>
-                                <option value="Reprovado">Reprovado</option>
-                                <option value="Pendente">Pendente</option>
+                                <option value="Concluído">Concluído</option>
                             </select>
                         </div>
 
@@ -408,6 +421,104 @@ try {
                         </button>
                         <button type="submit" class="btn-primary" style="display: flex; align-items: center; gap: 8px;">
                             <i data-lucide="save"></i> Criar Qualificação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Relatórios -->
+    <div id="modalRelatorioQualificacao" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="file-text"></i> <span id="tituloRelatorioQualificacao">Configurar Relatório</span>
+                </h3>
+                <span class="close" onclick="fecharModal('modalRelatorioQualificacao')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formRelatorioQualificacao">
+                    <input type="hidden" id="tipo_relatorio_qualificacao" name="tipo">
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
+                            Período
+                        </label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label style="font-size: 12px; color: #6c757d;">Data Inicial</label>
+                                <input type="date" name="data_inicial" id="qual_data_inicial" value="<?php echo date('Y-01-01'); ?>">
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6c757d;">Data Final</label>
+                                <input type="date" name="data_final" id="qual_data_final" value="<?php echo date('Y-m-d'); ?>">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="gavel" style="width: 16px; height: 16px;"></i>
+                            Modalidade (Opcional)
+                        </label>
+                        <select name="modalidade" id="qual_modalidade">
+                            <option value="">Todas as modalidades</option>
+                            <option value="Pregão Eletrônico">Pregão Eletrônico</option>
+                            <option value="Concorrência">Concorrência</option>
+                            <option value="Tomada de Preços">Tomada de Preços</option>
+                            <option value="Convite">Convite</option>
+                            <option value="Dispensa">Dispensa</option>
+                            <option value="Inexigibilidade">Inexigibilidade</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="building" style="width: 16px; height: 16px;"></i>
+                            Área Demandante (Opcional)
+                        </label>
+                        <input type="text" name="area_demandante" id="qual_area_demandante" placeholder="Digite parte do nome da área">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                            Status (Opcional)
+                        </label>
+                        <select name="status" id="qual_status">
+                            <option value="">Todos os status</option>
+                            <option value="Em Análise">Em Análise</option>
+                            <option value="Concluído">Concluído</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="file-type" style="width: 16px; height: 16px;"></i>
+                            Formato
+                        </label>
+                        <select name="formato" id="qual_formato">
+                            <option value="html">HTML (Visualização)</option>
+                            <option value="csv">CSV (Excel)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" name="incluir_graficos" id="qual_incluir_graficos" checked>
+                            <i data-lucide="bar-chart-3" style="width: 16px; height: 16px;"></i>
+                            Incluir gráficos (apenas HTML)
+                        </label>
+                    </div>
+
+                    <div class="modal-footer" style="display: flex; gap: 15px; justify-content: flex-end; padding: 20px 0 0 0; border-top: 1px solid #e5e7eb; margin-top: 25px;">
+                        <button type="button" onclick="fecharModal('modalRelatorioQualificacao')" class="btn-secondary">
+                            <i data-lucide="x"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            <i data-lucide="file-text"></i> Gerar Relatório
                         </button>
                     </div>
                 </form>
