@@ -719,13 +719,6 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
     </div>
     <?php endif; ?>
 
-    <div class="nav-section">
-        <div class="nav-section-title">Navegação</div>
-        <a href="dashboard.php" class="nav-item">
-            <i data-lucide="calendar"></i> <span>Dashboard Planejamento</span>
-        </a>
-    </div>
-
     <!-- Navegação Geral -->
     <div class="nav-section">
         <div class="nav-section-title">Sistema</div>

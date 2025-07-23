@@ -413,7 +413,7 @@ body {
 
 /* ==================== DASHBOARD HEADER ==================== */
 .dashboard-header {
-    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
     color: white;
     padding: 30px 35px;
     border-radius: 16px;
@@ -757,7 +757,7 @@ body {
 
 /* ==================== BOTÕES ==================== */
 .btn-primary {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
     color: white;
     padding: 14px 28px;
     border: none;
@@ -774,7 +774,7 @@ body {
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #c0392b, #a93226);
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
 }
