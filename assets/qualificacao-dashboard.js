@@ -555,114 +555,7 @@ function initializePerformanceChart() {
 
 // ==================== PROCESSAMENTO DE FORMULÁRIOS ====================
 
-/**
- * Processar envio do formulário de qualificação
- */
-function processarFormularioQualificacao(event) {
-    console.log('🚀 processarFormularioQualificacao chamado!');
-    event.preventDefault();
-    
-    const form = event.target;
-    const formData = new FormData(form);
-    
-    // Validar campos obrigatórios
-    const requiredFields = form.querySelectorAll('input[required], select[required], textarea[required]');
-    let isValid = true;
-    let firstErrorField = null;
-    
-    requiredFields.forEach(field => {
-        // Limpar erros anteriores
-        clearFieldError({ target: field });
-        
-        if (!field.value.trim()) {
-            isValid = false;
-            showFieldError(field, 'Este campo é obrigatório.');
-            if (!firstErrorField) firstErrorField = field;
-        } else {
-            // Validação específica por tipo de campo - apenas para campos críticos
-            if (field.name === 'valor_estimado' && field.classList.contains('currency')) {
-                const cleanValue = field.value.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.');
-                const numericValue = parseFloat(cleanValue);
-                
-                if (isNaN(numericValue) || numericValue <= 0) {
-                    isValid = false;
-                    showFieldError(field, 'Digite um valor válido maior que zero.');
-                    if (!firstErrorField) firstErrorField = field;
-                }
-            }
-        }
-    });
-    
-    if (!isValid) {
-        showNotification('Por favor, corrija os erros destacados no formulário.', 'error');
-        // Focar no primeiro campo com erro
-        if (firstErrorField) {
-            firstErrorField.focus();
-            firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        return;
-    }
-    
-    // Mostrar loading
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = 'Salvando...';
-    submitBtn.disabled = true;
-    
-    // Debug: Log dados antes do envio
-    console.log('=== ENVIANDO QUALIFICAÇÃO ===');
-    for (let [key, value] of formData.entries()) {
-        console.log(`${key}: ${value}`);
-    }
-    
-    // Enviar via AJAX
-    fetch('process.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        return response.text(); // Primeiro pegar como texto para debug
-    })
-    .then(responseText => {
-        console.log('Response text:', responseText);
-        
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (e) {
-            console.error('Erro ao parsear JSON:', e);
-            console.error('Resposta recebida:', responseText);
-            throw new Error('Resposta inválida do servidor');
-        }
-        
-        console.log('Response data:', data);
-        
-        if (data.success) {
-            showNotification(data.message || 'Qualificação salva com sucesso!', 'success');
-            form.reset();
-            // Atualizar estatísticas
-            setTimeout(() => location.reload(), 2000);
-        } else {
-            showNotification(data.message || 'Erro ao salvar qualificação.', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Erro completo:', error);
-        showNotification('Erro ao salvar qualificação: ' + error.message, 'error');
-    })
-    .finally(() => {
-        // Restaurar botão
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    });
-}
+// Função removida - usando pattern simples igual às licitações
 
 // ==================== UTILITÁRIOS ====================
 
@@ -739,10 +632,75 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configurar event listeners
     setupEventListeners();
     
-    // Configurar formulário de qualificação
-    const formQualificacao = document.getElementById('form-nova-qualificacao');
-    if (formQualificacao) {
-        formQualificacao.addEventListener('submit', processarFormularioQualificacao);
+    // Event listener para o formulário de criação no modal (IGUAL LICITAÇÕES)
+    const formCriarQualificacao = document.querySelector('#modalCriarQualificacao form');
+    if (formCriarQualificacao) {
+        formCriarQualificacao.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
+            // Converter valor monetário antes de enviar (IGUAL LICITAÇÕES)
+            const valorEstimado = formData.get('valor_estimado');
+            if (valorEstimado) {
+                let cleanValue = valorEstimado.toString().trim();
+                // Se tem vírgula, assumir que é separador decimal brasileiro
+                if (cleanValue.includes(',')) {
+                    // Remover pontos (separadores de milhares) e trocar vírgula por ponto
+                    cleanValue = cleanValue.replace(/\./g, '').replace(',', '.');
+                }
+                // Se não tem vírgula mas tem pontos, verificar se é separador decimal ou milhares
+                else if (cleanValue.includes('.')) {
+                    const parts = cleanValue.split('.');
+                    if (parts.length === 2 && parts[1].length <= 2) {
+                        // Último ponto com 1-2 dígitos = decimal
+                        cleanValue = cleanValue;
+                    } else {
+                        // Múltiplos pontos ou último com 3+ dígitos = separadores de milhares
+                        cleanValue = cleanValue.replace(/\./g, '');
+                    }
+                }
+                formData.set('valor_estimado', cleanValue);
+            }
+
+            // Mostrar loading (IGUAL LICITAÇÕES)
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i> Criando...';
+            submitBtn.disabled = true;
+
+            fetch('process.php', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Qualificação criada com sucesso!');
+                        fecharModal('modalCriarQualificacao');
+                        this.reset();
+                        location.reload();
+                    } else {
+                        alert('❌ Erro: ' + (data.message || 'Erro ao criar qualificação'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('❌ Erro de conexão');
+                })
+                .finally(() => {
+                    // Restaurar botão (IGUAL LICITAÇÕES)
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    // Reinicializar ícones
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                });
+        });
     }
     
     // Restaurar estados salvos
@@ -917,32 +875,236 @@ function setupActionButtons() {
  * Visualizar qualificação
  */
 function visualizarQualificacao(id) {
-    console.log(`Visualizar qualificação ID: ${id}`);
-    showNotification('Funcionalidade de visualização em desenvolvimento', 'info');
+    // Buscar dados via AJAX
+    fetch('process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'acao=buscar_qualificacao&id=' + id
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const qual = data.data;
+            
+            // Preencher modal de visualização
+            const modal = document.getElementById('modalVisualizacao');
+            if (!modal) {
+                // Se modal não existe, criar uma única vez
+                criarModalVisualizacao();
+            }
+            
+            // Preencher dados no modal
+            preencherModalVisualizacao(qual);
+            
+            // Mostrar modal (igual ao padrão licitações)
+            const modalElement = document.getElementById('modalVisualizacao');
+            modalElement.classList.add('show');
+            modalElement.style.display = 'block';
+            
+            // Inicializar ícones Lucide
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        } else {
+            showNotification(data.message || 'Erro ao buscar qualificação', 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Erro de conexão', 'error');
+    });
 }
 
 /**
  * Editar qualificação
  */
 function editarQualificacao(id) {
-    console.log(`Editar qualificação ID: ${id}`);
-    showNotification('Funcionalidade de edição em desenvolvimento', 'info');
+    // Buscar dados da qualificação via AJAX
+    fetch('process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'acao=buscar_qualificacao&id=' + id
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const qual = data.data;
+            
+            // Verificar se modal existe, senão criar
+            const modal = document.getElementById('modalEdicao');
+            if (!modal) {
+                criarModalEdicao();
+            }
+            
+            // Preencher dados no modal
+            preencherModalEdicao(qual);
+            
+            // Mostrar modal (igual ao padrão licitações)
+            const modalElement = document.getElementById('modalEdicao');
+            modalElement.classList.add('show');
+            modalElement.style.display = 'block';
+            
+            // Inicializar ícones Lucide e máscaras
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            
+            // Configurar máscara para valor monetário
+            const currencyInput = document.querySelector('#modalEdicao .currency');
+            if (currencyInput) {
+                setupCurrencyMask(currencyInput);
+            }
+        } else {
+            showNotification(data.message || 'Erro ao buscar qualificação', 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Erro de conexão', 'error');
+    });
 }
 
 /**
- * Excluir qualificação
+ * Criar modal de edição (uma única vez)
  */
-function excluirQualificacao(id) {
-    console.log(`Excluir qualificação ID: ${id}`);
+function criarModalEdicao() {
+    const modalHtml = `
+        <div id="modalEdicao" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i data-lucide="edit"></i> Editar Qualificação</h3>
+                    <span class="close" onclick="fecharModal('modalEdicao')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="form-editar-qualificacao" class="form-grid">
+                        <input type="hidden" id="edit_id" name="id">
+                        <input type="hidden" name="acao" value="editar_qualificacao">
+                        
+                        <div class="form-group">
+                            <label>NUP (Número Único de Protocolo) *</label>
+                            <input type="text" id="edit_nup" name="nup" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Área Demandante *</label>
+                            <input type="text" id="edit_area_demandante" name="area_demandante" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Responsável *</label>
+                            <input type="text" id="edit_responsavel" name="responsavel" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Modalidade *</label>
+                            <select id="edit_modalidade" name="modalidade" required>
+                                <option value="">Selecione a modalidade</option>
+                                <option value="Pregão Eletrônico">Pregão Eletrônico</option>
+                                <option value="Concorrência">Concorrência</option>
+                                <option value="Tomada de Preços">Tomada de Preços</option>
+                                <option value="Convite">Convite</option>
+                                <option value="Dispensa">Dispensa</option>
+                                <option value="Inexigibilidade">Inexigibilidade</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group form-full">
+                            <label>Objeto *</label>
+                            <textarea id="edit_objeto" name="objeto" required rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Palavras-Chave</label>
+                            <input type="text" id="edit_palavras_chave" name="palavras_chave">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Valor Estimado (R$) *</label>
+                            <input type="text" id="edit_valor_estimado" name="valor_estimado" class="currency" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Status *</label>
+                            <select id="edit_status" name="status" required>
+                                <option value="">Selecione o status</option>
+                                <option value="Em Análise">Em Análise</option>
+                                <option value="Aprovado">Aprovado</option>
+                                <option value="Reprovado">Reprovado</option>
+                                <option value="Pendente">Pendente</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group form-full">
+                            <label>Observações</label>
+                            <textarea id="edit_observacoes" name="observacoes" rows="4"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 15px; justify-content: flex-end; padding: 20px; border-top: 1px solid #e5e7eb;">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalEdicao')" style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="x"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn-primary" onclick="salvarEdicao()" style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="save"></i> Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
     
-    if (!confirm('Tem certeza que deseja excluir esta qualificação? Esta ação não pode ser desfeita.')) {
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+/**
+ * Preencher dados no modal de edição
+ */
+function preencherModalEdicao(qualificacao) {
+    document.getElementById('edit_id').value = qualificacao.id;
+    document.getElementById('edit_nup').value = qualificacao.nup;
+    document.getElementById('edit_area_demandante').value = qualificacao.area_demandante;
+    document.getElementById('edit_responsavel').value = qualificacao.responsavel;
+    document.getElementById('edit_modalidade').value = qualificacao.modalidade;
+    document.getElementById('edit_objeto').value = qualificacao.objeto;
+    document.getElementById('edit_palavras_chave').value = qualificacao.palavras_chave || '';
+    document.getElementById('edit_valor_estimado').value = parseFloat(qualificacao.valor_estimado).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    document.getElementById('edit_status').value = qualificacao.status;
+    document.getElementById('edit_observacoes').value = qualificacao.observacoes || '';
+}
+
+/**
+ * Salvar edição da qualificação
+ */
+function salvarEdicao() {
+    const form = document.getElementById('form-editar-qualificacao');
+    const formData = new FormData(form);
+    
+    // Validar campos obrigatórios
+    const requiredFields = form.querySelectorAll('input[required], select[required], textarea[required]');
+    let isValid = true;
+    
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            isValid = false;
+            field.style.borderColor = '#e74c3c';
+        } else {
+            field.style.borderColor = '';
+        }
+    });
+    
+    if (!isValid) {
+        showNotification('Por favor, preencha todos os campos obrigatórios', 'error');
         return;
     }
     
-    const formData = new FormData();
-    formData.append('acao', 'excluir_qualificacao');
-    formData.append('id', id);
+    // Mostrar loading
+    const saveBtn = document.querySelector('#modalEdicao .btn-primary');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Salvando...';
+    saveBtn.disabled = true;
     
+    // Enviar dados
     fetch('process.php', {
         method: 'POST',
         body: formData
@@ -950,17 +1112,202 @@ function excluirQualificacao(id) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showNotification(data.message || 'Qualificação excluída com sucesso!', 'success');
-            // Recarregar página após pequeno delay
-            setTimeout(() => location.reload(), 1500);
+            showNotification(data.message || 'Qualificação atualizada com sucesso!', 'success');
+            fecharModal('modalEdicao');
+            setTimeout(() => location.reload(), 1000);
         } else {
-            showNotification(data.message || 'Erro ao excluir qualificação.', 'error');
+            showNotification(data.message || 'Erro ao atualizar qualificação', 'error');
         }
     })
     .catch(error => {
-        console.error('Erro ao excluir:', error);
-        showNotification('Erro ao excluir qualificação. Tente novamente.', 'error');
+        showNotification('Erro de conexão', 'error');
+    })
+    .finally(() => {
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
     });
+}
+
+/**
+ * Configurar máscara de moeda para input
+ */
+function setupCurrencyMask(input) {
+    input.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 0) {
+            let numericValue = parseInt(value);
+            let formattedValue = (numericValue / 100).toFixed(2);
+            let parts = formattedValue.split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            e.target.value = parts.join(',');
+        } else {
+            e.target.value = '';
+        }
+    });
+}
+
+/**
+ * Excluir qualificação
+ */
+function excluirQualificacao(id) {
+    // Confirmação dupla para segurança
+    const confirmacao1 = confirm('⚠️ ATENÇÃO: Você tem certeza que deseja EXCLUIR esta qualificação?\\n\\nEsta ação NÃO pode ser desfeita!');
+    
+    if (!confirmacao1) {
+        return;
+    }
+    
+    const confirmacao2 = confirm('🚨 CONFIRMAÇÃO FINAL: Excluir definitivamente a qualificação?');
+    
+    if (!confirmacao2) {
+        return;
+    }
+    
+    // Enviar requisição de exclusão
+    fetch('process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'acao=excluir_qualificacao&id=' + id
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message || 'Qualificação excluída com sucesso!', 'success');
+            // Recarregar a página após 1 segundo
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification(data.message || 'Erro ao excluir qualificação', 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Erro de conexão', 'error');
+    });
+}
+
+/**
+ * Criar modal de visualização (uma única vez)
+ */
+function criarModalVisualizacao() {
+    const modalHtml = `
+        <div id="modalVisualizacao" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i data-lucide="eye"></i> Detalhes da Qualificação</h3>
+                    <span class="close" onclick="fecharModal('modalVisualizacao')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-grid" id="dadosVisualizacao">
+                        <!-- Conteúdo será preenchido dinamicamente -->
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 15px; justify-content: flex-end; padding: 20px; border-top: 1px solid #e5e7eb;">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalVisualizacao')" style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="x"></i> Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+/**
+ * Preencher dados no modal de visualização
+ */
+function preencherModalVisualizacao(qual) {
+    const container = document.getElementById('dadosVisualizacao');
+    if (container) {
+        container.innerHTML = `
+            <div class="form-group">
+                <label><strong>NUP:</strong></label>
+                <p>${qual.nup}</p>
+            </div>
+            <div class="form-group">
+                <label><strong>Área Demandante:</strong></label>
+                <p>${qual.area_demandante}</p>
+            </div>
+            <div class="form-group">
+                <label><strong>Responsável:</strong></label>
+                <p>${qual.responsavel}</p>
+            </div>
+            <div class="form-group">
+                <label><strong>Modalidade:</strong></label>
+                <p>${qual.modalidade}</p>
+            </div>
+            <div class="form-group">
+                <label><strong>Status:</strong></label>
+                <p><span class="status-badge status-${qual.status.toLowerCase().replace(' ', '-')}">${qual.status}</span></p>
+            </div>
+            <div class="form-group">
+                <label><strong>Valor Estimado:</strong></label>
+                <p>R$ ${parseFloat(qual.valor_estimado).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+            </div>
+            <div class="form-group form-full">
+                <label><strong>Objeto:</strong></label>
+                <p>${qual.objeto}</p>
+            </div>
+            <div class="form-group form-full">
+                <label><strong>Palavras-chave:</strong></label>
+                <p>${qual.palavras_chave || 'Nenhuma'}</p>
+            </div>
+            <div class="form-group form-full">
+                <label><strong>Observações:</strong></label>
+                <p>${qual.observacoes || 'Nenhuma observação'}</p>
+            </div>
+            <div class="form-group">
+                <label><strong>Criado em:</strong></label>
+                <p>${new Date(qual.criado_em).toLocaleString('pt-BR')}</p>
+            </div>
+            <div class="form-group">
+                <label><strong>Atualizado em:</strong></label>
+                <p>${new Date(qual.atualizado_em).toLocaleString('pt-BR')}</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Abrir modal (IGUAL LICITAÇÕES)
+ */
+function abrirModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+        console.warn('Modal não encontrado:', modalId);
+        return;
+    }
+    
+    // Limpar formulário se existir
+    const form = modal.querySelector('form');
+    if (form) {
+        form.reset();
+    }
+    
+    // Mostrar modal
+    modal.style.display = 'block';
+    modal.classList.add('show');
+    
+    // Reinicializar ícones
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Fechar modal (IGUAL LICITAÇÕES)
+ */
+function fecharModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+        console.warn('Modal não encontrado:', modalId);
+        return;
+    }
+
+    // Remover classe show e forçar display none
+    modal.classList.remove('show');
+    modal.style.display = 'none';
 }
 
 // ==================== EXPORTAR FUNÇÕES GLOBAIS ====================
@@ -973,13 +1320,20 @@ window.QualificacaoDashboard = {
     formatCurrency,
     formatDate,
     copyToClipboard,
-    initializeDashboardCharts,
-    processarFormularioQualificacao
+    initializeDashboardCharts
 };
 
 // Disponibilizar funções de ação globalmente
 window.visualizarQualificacao = visualizarQualificacao;
 window.editarQualificacao = editarQualificacao;
 window.excluirQualificacao = excluirQualificacao;
+window.abrirModal = abrirModal;
+window.fecharModal = fecharModal;
+window.salvarEdicao = salvarEdicao;
+
+// Disponibilizar funções de navegação diretamente (para compatibilidade com onclick)
+window.showSection = showSection;
+window.toggleSidebar = toggleSidebar;
+window.showNotification = showNotification;
 
 console.log('📋 Qualificação Dashboard JavaScript carregado com sucesso!');

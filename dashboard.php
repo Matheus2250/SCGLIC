@@ -354,19 +354,26 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                     <?php endif; ?>
                 </div>
                 
+                <!-- Navegação Geral -->
                 <div class="nav-section">
-                    <div class="nav-section-title">Sistema & Navegação</div>
+                    <div class="nav-section-title">Sistema</div>
+                    <a href="selecao_modulos.php" class="nav-item">
+                        <i data-lucide="home"></i>
+                        <span>Menu Principal</span>
+                    </a>
                     <a href="licitacao_dashboard.php" class="nav-item">
-                        <i data-lucide="gavel"></i> <span>Dashboard Licitações</span>
+                        <i data-lucide="gavel"></i>
+                        <span>Licitações</span>
+                    </a>
+                    <a href="qualificacao_dashboard.php" class="nav-item">
+                        <i data-lucide="award"></i>
+                        <span>Qualificações</span>
                     </a>
                     <?php if (temPermissao('backup_executar')): ?>
                     <button class="nav-item" onclick="showSection('backup-sistema')">
                         <i data-lucide="shield"></i> <span>Backup & Segurança</span>
                     </button>
                     <?php endif; ?>
-                    <a href="selecao_modulos.php" class="nav-item">
-                        <i data-lucide="arrow-left"></i> <span>Voltar ao Menu</span>
-                    </a>
                 </div>
             </nav>
             

@@ -991,6 +991,89 @@ case 'editar_licitacao':
         echo json_encode($response);
         break;
         
+    case 'buscar_qualificacao':
+        verificarLogin();
+        
+        header('Content-Type: application/json');
+        $response = ['success' => false, 'message' => ''];
+        
+        try {
+            $id = intval($_POST['id'] ?? 0);
+            
+            if ($id <= 0) {
+                throw new Exception('ID da qualificação é obrigatório');
+            }
+            
+            // Buscar qualificação
+            $sql = "SELECT * FROM qualificacoes WHERE id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$id]);
+            $qualificacao = $stmt->fetch();
+            
+            if (!$qualificacao) {
+                throw new Exception('Qualificação não encontrada');
+            }
+            
+            $response['success'] = true;
+            $response['data'] = $qualificacao;
+            
+        } catch (Exception $e) {
+            $response['success'] = false;
+            $response['message'] = $e->getMessage();
+        }
+        
+        echo json_encode($response);
+        break;
+        
+    case 'excluir_qualificacao':
+        verificarLogin();
+        
+        header('Content-Type: application/json');
+        $response = ['success' => false, 'message' => ''];
+        
+        try {
+            $id = intval($_POST['id'] ?? 0);
+            
+            if ($id <= 0) {
+                throw new Exception('ID da qualificação é obrigatório');
+            }
+            
+            // Verificar se qualificação existe antes de excluir
+            $sql_check = "SELECT nup FROM qualificacoes WHERE id = ?";
+            $stmt_check = $pdo->prepare($sql_check);
+            $stmt_check->execute([$id]);
+            $qualificacao = $stmt_check->fetch();
+            
+            if (!$qualificacao) {
+                throw new Exception('Qualificação não encontrada');
+            }
+            
+            // Excluir qualificação
+            $sql = "DELETE FROM qualificacoes WHERE id = ?";
+            $stmt = $pdo->prepare($sql);
+            $resultado = $stmt->execute([$id]);
+            
+            if (!$resultado) {
+                throw new Exception('Erro ao excluir qualificação do banco de dados');
+            }
+            
+            $response['success'] = true;
+            $response['message'] = 'Qualificação excluída com sucesso!';
+            
+            // Log da operação
+            error_log("Qualificação excluída - ID: $id, NUP: " . $qualificacao['nup'] . ", Usuário: " . $_SESSION['usuario_id']);
+            
+        } catch (Exception $e) {
+            $response['success'] = false;
+            $response['message'] = $e->getMessage();
+            
+            // Log do erro
+            error_log("Erro ao excluir qualificação: " . $e->getMessage());
+        }
+        
+        echo json_encode($response);
+        break;
+        
     default:
         header('Location: index.php');
         break;

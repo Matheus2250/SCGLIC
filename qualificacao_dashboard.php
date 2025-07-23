@@ -95,13 +95,9 @@ try {
                 <!-- Qualificações -->
                 <div class="nav-section">
                     <div class="nav-section-title">Qualificações</div>
-                    <a href="javascript:void(0)" class="nav-item" onclick="showSection('nova-qualificacao')">
-                        <i data-lucide="plus-circle"></i>
-                        <span>Nova Qualificação</span>
-                    </a>
                     <a href="javascript:void(0)" class="nav-item" onclick="showSection('lista-qualificacoes')">
                         <i data-lucide="list"></i>
-                        <span>Listar Qualificações</span>
+                        <span>Qualificações</span>
                     </a>
                 </div>
                 
@@ -222,91 +218,7 @@ try {
                 </div>
             </section>
             
-            <!-- Nova Qualificação -->
-            <section id="nova-qualificacao" class="content-section">
-                <div class="dashboard-header">
-                    <h1><i data-lucide="plus-circle"></i> Nova Qualificação</h1>
-                    <p>Registrar nova qualificação de fornecedor</p>
-                </div>
-                
-                <div class="table-container">
-                    <h4><i data-lucide="award"></i> Dados da Qualificação</h4>
-                    <form class="form-grid" id="form-nova-qualificacao" method="POST">
-                        <input type="hidden" name="acao" value="criar_qualificacao">
-                        
-                        <div class="form-group">
-                            <label>NUP (Número Único de Protocolo)</label>
-                            <input type="text" name="nup" placeholder="00000.000000/0000-00" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Área Demandante</label>
-                            <input type="text" name="area_demandante" placeholder="Nome da área solicitante" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Responsável</label>
-                            <input type="text" name="responsavel" placeholder="Nome do responsável" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Modalidade</label>
-                            <select name="modalidade" required>
-                                <option value="">Selecione a modalidade</option>
-                                <option value="Pregão Eletrônico">Pregão Eletrônico</option>
-                                <option value="Concorrência">Concorrência</option>
-                                <option value="Tomada de Preços">Tomada de Preços</option>
-                                <option value="Convite">Convite</option>
-                                <option value="Dispensa">Dispensa</option>
-                                <option value="Inexigibilidade">Inexigibilidade</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group form-full">
-                            <label>Objeto</label>
-                            <textarea name="objeto" placeholder="Descrição do objeto da qualificação" required rows="3"></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Palavras-Chave</label>
-                            <input type="text" name="palavras_chave" placeholder="Ex: equipamentos, serviços, tecnologia">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Valor Estimado (R$)</label>
-                            <input type="text" name="valor_estimado" class="currency" placeholder="R$ 0,00" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Status</label>
-                            <select name="status" required>
-                                <option value="">Selecione o status</option>
-                                <option value="Em Análise">Em Análise</option>
-                                <option value="Aprovado">Aprovado</option>
-                                <option value="Reprovado">Reprovado</option>
-                                <option value="Pendente">Pendente</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group form-full">
-                            <label>Observações</label>
-                            <textarea name="observacoes" placeholder="Observações adicionais" rows="4"></textarea>
-                        </div>
-                    </form>
-                    
-                    <!-- Botões de Ação -->
-                    <div style="margin-top: 30px; text-align: center;">
-                        <button type="submit" form="form-nova-qualificacao" class="btn-primary" data-loading="Salvando...">
-                            <i data-lucide="save"></i>
-                            Salvar Qualificação
-                        </button>
-                        <button type="button" class="btn-secondary" onclick="showSection('dashboard')">
-                            <i data-lucide="arrow-left"></i>
-                            Voltar ao Dashboard
-                        </button>
-                    </div>
-                </div>
-            </section>
+            <!-- Seção removida - será recriada como modal seguindo padrão de licitações -->
             
             <!-- Lista de Qualificações -->
             <section id="lista-qualificacoes" class="content-section">
@@ -318,22 +230,10 @@ try {
                 <div class="table-container">
                     <div class="table-header">
                         <div class="table-title">Qualificações Cadastradas</div>
-                        <div class="table-filters">
-                            <select>
-                                <option value="">Todas as categorias</option>
-                                <option value="tecnica">Técnica</option>
-                                <option value="economica">Econômica</option>
-                                <option value="juridica">Jurídica</option>
-                                <option value="ambiental">Ambiental</option>
-                                <option value="social">Social</option>
-                            </select>
-                            <select>
-                                <option value="">Todos os status</option>
-                                <option value="aprovado">Aprovado</option>
-                                <option value="reprovado">Reprovado</option>
-                                <option value="pendente">Pendente</option>
-                                <option value="em_analise">Em Análise</option>
-                            </select>
+                        <div class="table-actions">
+                            <button onclick="abrirModal('modalCriarQualificacao')" class="btn-primary">
+                                <i data-lucide="plus-circle"></i> Nova Qualificação
+                            </button>
                         </div>
                     </div>
                     
@@ -375,14 +275,14 @@ try {
                                     </td>
                                     <td><span class="valor-cell"><?php echo formatarMoeda($qualificacao['valor_estimado']); ?></span></td>
                                     <td class="table-actions">
-                                        <button class="btn-view" title="Visualizar" onclick="visualizarQualificacao(<?php echo $qualificacao['id']; ?>)">
-                                            <i data-lucide="eye"></i>
+                                        <button onclick="visualizarQualificacao(<?php echo $qualificacao['id']; ?>)" title="Ver Detalhes" style="background: #6c757d; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; margin-right: 4px;">
+                                            <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
                                         </button>
-                                        <button class="btn-edit" title="Editar" onclick="editarQualificacao(<?php echo $qualificacao['id']; ?>)">
-                                            <i data-lucide="edit"></i>
+                                        <button onclick="editarQualificacao(<?php echo $qualificacao['id']; ?>)" title="Editar" style="background: #f39c12; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; margin-right: 4px;">
+                                            <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
                                         </button>
-                                        <button class="btn-delete" title="Excluir" data-confirm="Deseja excluir esta qualificação?" onclick="excluirQualificacao(<?php echo $qualificacao['id']; ?>)">
-                                            <i data-lucide="trash-2"></i>
+                                        <button onclick="excluirQualificacao(<?php echo $qualificacao['id']; ?>)" title="Excluir" style="background: #e74c3c; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">
+                                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -427,6 +327,93 @@ try {
             
         </main>
     </div>
+
+    <!-- Modal de Criação de Qualificação (baseado no modal de licitações) -->
+    <div id="modalCriarQualificacao" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="plus-circle"></i> Criar Nova Qualificação
+                </h3>
+                <span class="close" onclick="fecharModal('modalCriarQualificacao')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form action="process.php" method="POST" id="formCriarQualificacao">
+                    <input type="hidden" name="acao" value="criar_qualificacao">
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>NUP (Número Único de Protocolo) *</label>
+                            <input type="text" name="nup" id="nup_criar" required placeholder="xxxxx.xxxxxx/xxxx-xx" maxlength="20">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Área Demandante *</label>
+                            <input type="text" name="area_demandante" required placeholder="Nome da área solicitante">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Responsável *</label>
+                            <input type="text" name="responsavel" required placeholder="Nome do responsável">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Modalidade *</label>
+                            <select name="modalidade" required>
+                                <option value="">Selecione a modalidade</option>
+                                <option value="Pregão Eletrônico">Pregão Eletrônico</option>
+                                <option value="Concorrência">Concorrência</option>
+                                <option value="Tomada de Preços">Tomada de Preços</option>
+                                <option value="Convite">Convite</option>
+                                <option value="Dispensa">Dispensa</option>
+                                <option value="Inexigibilidade">Inexigibilidade</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group form-full">
+                            <label>Objeto *</label>
+                            <textarea name="objeto" required placeholder="Descrição do objeto da qualificação" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Palavras-Chave</label>
+                            <input type="text" name="palavras_chave" placeholder="Ex: equipamentos, serviços, tecnologia">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Valor Estimado (R$) *</label>
+                            <input type="text" name="valor_estimado" class="currency" required placeholder="R$ 0,00">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Status *</label>
+                            <select name="status" required>
+                                <option value="">Selecione o status</option>
+                                <option value="Em Análise">Em Análise</option>
+                                <option value="Aprovado">Aprovado</option>
+                                <option value="Reprovado">Reprovado</option>
+                                <option value="Pendente">Pendente</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group form-full">
+                            <label>Observações</label>
+                            <textarea name="observacoes" placeholder="Observações adicionais" rows="4"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer" style="display: flex; gap: 15px; justify-content: flex-end; padding: 20px 0 0 0; border-top: 1px solid #e5e7eb; margin-top: 25px;">
+                        <button type="button" class="btn-secondary" onclick="fecharModal('modalCriarQualificacao')" style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="x"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn-primary" style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="save"></i> Criar Qualificação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     
     <!-- Scripts -->
     <script src="assets/qualificacao-dashboard.js"></script>
@@ -435,14 +422,5 @@ try {
     <script src="assets/ux-improvements.js"></script>
     <script src="assets/notifications.js"></script>
     
-    <script>
-        // Inicializar quando DOM estiver pronto
-        document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar ícones Lucide
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        });
-    </script>
 </body>
 </html>

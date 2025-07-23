@@ -339,6 +339,9 @@ $contratacoes_pca = $pdo->query("
     ORDER BY pi.ano_pca DESC, p.numero_contratacao ASC
     LIMIT 2000
 ")->fetchAll(PDO::FETCH_ASSOC);
+
+// Debug básico
+echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " . count($contratacoes_pca) . ");</script>";
 ?>
 
 <!DOCTYPE html>
@@ -723,10 +726,20 @@ $contratacoes_pca = $pdo->query("
         </a>
     </div>
 
+    <!-- Navegação Geral -->
     <div class="nav-section">
         <div class="nav-section-title">Sistema</div>
         <a href="selecao_modulos.php" class="nav-item">
-            <i data-lucide="arrow-left"></i> <span>Voltar ao Menu</span>
+            <i data-lucide="home"></i>
+            <span>Menu Principal</span>
+        </a>
+        <a href="dashboard.php" class="nav-item">
+            <i data-lucide="calendar-check"></i>
+            <span>Planejamento</span>
+        </a>
+        <a href="qualificacao_dashboard.php" class="nav-item">
+            <i data-lucide="award"></i>
+            <span>Qualificações</span>
         </a>
     </div>
 </nav>
