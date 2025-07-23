@@ -411,7 +411,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
             <!-- Dashboard Section -->
             <div id="dashboard" class="content-section <?php echo $secao_ativa === 'dashboard' ? 'active' : ''; ?>">
                 <div class="dashboard-header">
-                    <h1><i data-lucide="bar-chart-3"></i> Dashboard de Planejamento</h1>
+                    <h1><i data-lucide="bar-chart-3"></i> Painel de Planejamento</h1>
                     <p>Visão geral do Plano de Contratações Anual (PCA) e indicadores de desempenho</p>
                     
                     <!-- Seletor de Ano PCA -->

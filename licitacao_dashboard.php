@@ -776,7 +776,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 
             <div id="dashboard" class="content-section <?php echo $secao_ativa === 'dashboard' ? 'active' : ''; ?>">
                 <div class="dashboard-header">
-                    <h1><i data-lucide="bar-chart-3"></i> Dashboard de Licitações</h1>
+                    <h1><i data-lucide="bar-chart-3"></i> Painel de Licitações</h1>
                     <p>Visão geral do processo licitatório e indicadores de desempenho</p>
                 </div>
 

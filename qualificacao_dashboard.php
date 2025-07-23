@@ -172,7 +172,7 @@ try {
                     </div>
                     <div class="stat-card valor">
                         <div class="stat-number"><?php echo abreviarValor($stats['valor_total']); ?></div>
-                        <div class="stat-label">Valor Total</div>
+                        <div class="stat-label">Valor Total (Em R$)</div>
                     </div>
                 </div>
                 
