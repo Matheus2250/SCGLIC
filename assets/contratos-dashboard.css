@@ -1,0 +1,970 @@
+/* ========================================
+   CONTRATOS DASHBOARD - SISTEMA CGLIC
+   Tema: Roxo/Violeta (#7c3aed, #5b21b6)
+======================================== */
+
+/* Reset e Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ========================================
+   LAYOUT PRINCIPAL
+======================================== */
+
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.main-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+}
+
+/* ========================================
+   SIDEBAR PERSONALIZADA PARA CONTRATOS
+======================================== */
+
+.sidebar {
+    width: 280px;
+    background: linear-gradient(180deg, #7c3aed 0%, #5b21b6 100%);
+    color: white;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 20px rgba(124, 58, 237, 0.15);
+}
+
+.sidebar-header {
+    padding: 25px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.sidebar-header h2 {
+    color: white;
+    font-size: 22px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar-header h2 i {
+    color: #fbbf24;
+    font-size: 24px;
+}
+
+.sidebar-toggle {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Navegação */
+.sidebar-nav {
+    flex: 1;
+    padding: 20px 0;
+    overflow-y: auto;
+}
+
+.nav-section {
+    margin-bottom: 25px;
+}
+
+.nav-section-title {
+    padding: 0 20px 10px;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 1px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+    gap: 12px;
+    font-weight: 500;
+    margin: 2px 10px;
+    border-radius: 10px;
+}
+
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: translateX(5px);
+}
+
+.nav-item.active {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.nav-item i {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+/* Footer da Sidebar */
+.sidebar-footer {
+    padding: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    color: white;
+}
+
+.user-details h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+}
+
+.user-details p {
+    margin: 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.logout-btn {
+    width: 100%;
+    background: rgba(220, 38, 38, 0.8);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.logout-btn:hover {
+    background: rgba(220, 38, 38, 1);
+    transform: translateY(-1px);
+}
+
+/* ========================================
+   DASHBOARD PRINCIPAL
+======================================== */
+
+.content-section {
+    display: none;
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.content-section.active {
+    display: block;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header do Dashboard */
+.dashboard-header {
+    margin-bottom: 35px;
+    padding: 30px;
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    border-radius: 20px;
+    color: white;
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.3);
+}
+
+.dashboard-header h1 {
+    margin: 0 0 8px 0;
+    font-size: 36px;
+    font-weight: 800;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-header p {
+    margin: 0;
+    font-size: 18px;
+    opacity: 0.9;
+    font-weight: 300;
+}
+
+/* ========================================
+   CARDS DE ESTATÍSTICAS
+======================================== */
+
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 35px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 20px 20px 0 0;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card.purple::before {
+    background: linear-gradient(90deg, #7c3aed, #5b21b6);
+}
+
+.stat-card.green::before {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.stat-card.red::before {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.stat-card.blue::before {
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.stat-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.stat-card.purple .stat-icon {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+}
+
+.stat-card.green .stat-icon {
+    background: linear-gradient(135deg, #10b981, #059669);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.stat-card.red .stat-icon {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+}
+
+.stat-card.blue .stat-icon {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+}
+
+.stat-info h3 {
+    margin: 0 0 5px 0;
+    font-size: 32px;
+    font-weight: 800;
+    color: #1f2937;
+}
+
+.stat-info p {
+    margin: 0;
+    font-size: 16px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* ========================================
+   GRÁFICOS
+======================================== */
+
+.charts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 25px;
+    margin-bottom: 35px;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+    transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
+}
+
+.chart-header {
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.chart-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chart-header h3::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(180deg, #7c3aed, #5b21b6);
+    border-radius: 2px;
+}
+
+.chart-content {
+    position: relative;
+    height: 320px;
+}
+
+/* ========================================
+   SEÇÕES DE CONTEÚDO
+======================================== */
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 25px 30px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 800;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.section-header h2::before {
+    content: '';
+    width: 6px;
+    height: 28px;
+    background: linear-gradient(180deg, #7c3aed, #5b21b6);
+    border-radius: 3px;
+}
+
+/* ========================================
+   BOTÕES
+======================================== */
+
+.btn-primary {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
+}
+
+.btn-secondary {
+    background: white;
+    color: #6b7280;
+    border: 2px solid #e5e7eb;
+    padding: 10px 22px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn-secondary:hover {
+    border-color: #7c3aed;
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.05);
+}
+
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f3f4f6;
+    color: #6b7280;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.btn-icon:hover {
+    background: #7c3aed;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* ========================================
+   TABELAS
+======================================== */
+
+.contracts-table,
+.contracts-list,
+.recent-contracts {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.table-responsive {
+    overflow-x: auto;
+    border-radius: 12px;
+}
+
+.data-table,
+.contracts-table table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.data-table th,
+.data-table td,
+.contracts-table th,
+.contracts-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.data-table th,
+.contracts-table th {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    font-weight: 700;
+    color: #374151;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.data-table td,
+.contracts-table td {
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.data-table tbody tr:hover,
+.contracts-table tbody tr:hover {
+    background: rgba(124, 58, 237, 0.03);
+    transform: scale(1.01);
+    transition: all 0.2s ease;
+}
+
+/* ========================================
+   BADGES
+======================================== */
+
+.badge {
+    padding: 6px 14px;
+    border-radius: 25px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.badge-vigente {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    color: #16a34a;
+    border: 1px solid #22c55e;
+}
+
+.badge-vencido {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    color: #dc2626;
+    border: 1px solid #ef4444;
+}
+
+.badge-rescindido {
+    background: linear-gradient(135deg, #fef3c7, #fed7aa);
+    color: #d97706;
+    border: 1px solid #f59e0b;
+}
+
+/* ========================================
+   FILTROS
+======================================== */
+
+.filtros-container {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 25px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.filtros-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    align-items: end;
+}
+
+.filtro-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filtro-grupo label {
+    font-weight: 700;
+    color: #374151;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filtro-grupo select,
+.filtro-grupo input {
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.filtro-grupo select:focus,
+.filtro-grupo input:focus {
+    outline: none;
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+    transform: translateY(-1px);
+}
+
+.busca-grupo {
+    grid-column: span 2;
+}
+
+.filtro-acoes {
+    display: flex;
+    gap: 12px;
+    grid-column: span 1;
+}
+
+/* ========================================
+   PAGINAÇÃO
+======================================== */
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 30px;
+    padding-top: 25px;
+    border-top: 2px solid #f3f4f6;
+}
+
+.page-btn {
+    padding: 10px 16px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    color: #6b7280;
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+}
+
+.page-btn:hover {
+    background: rgba(124, 58, 237, 0.1);
+    border-color: #7c3aed;
+    color: #7c3aed;
+    transform: translateY(-2px);
+}
+
+.page-btn.active {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    border-color: #7c3aed;
+    color: white;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+/* ========================================
+   RELATÓRIOS
+======================================== */
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.report-card {
+    background: white;
+    border-radius: 20px;
+    padding: 35px;
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.report-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #7c3aed, #5b21b6);
+}
+
+.report-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.report-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 32px;
+    box-shadow: 0 10px 25px rgba(124, 58, 237, 0.3);
+}
+
+.report-card h3 {
+    margin: 0 0 12px 0;
+    color: #1f2937;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.report-card p {
+    margin: 0 0 25px 0;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* ========================================
+   ESTADO VAZIO
+======================================== */
+
+.empty-state {
+    text-align: center;
+    padding: 80px 30px;
+    color: #6b7280;
+}
+
+.empty-state i {
+    font-size: 64px;
+    margin-bottom: 20px;
+    color: #d1d5db;
+    opacity: 0.8;
+}
+
+.empty-state h4 {
+    margin: 0 0 12px 0;
+    color: #374151;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* ========================================
+   ESTATÍSTICAS
+======================================== */
+
+.stats-content {
+    background: white;
+    border-radius: 20px;
+    padding: 50px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+/* ========================================
+   AÇÕES DA TABELA
+======================================== */
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* ========================================
+   RESPONSIVIDADE
+======================================== */
+
+@media (max-width: 1200px) {
+    .charts-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        position: fixed;
+        top: 0;
+        left: -100%;
+        z-index: 1000;
+        transition: left 0.3s ease;
+    }
+    
+    .sidebar.active {
+        left: 0;
+    }
+    
+    .main-content {
+        padding: 15px;
+        margin-left: 0;
+    }
+    
+    .dashboard-stats {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .dashboard-header {
+        padding: 25px;
+        text-align: center;
+    }
+    
+    .dashboard-header h1 {
+        font-size: 28px;
+    }
+    
+    .dashboard-header p {
+        font-size: 16px;
+    }
+    
+    .filtros-form {
+        grid-template-columns: 1fr;
+    }
+    
+    .busca-grupo,
+    .filtro-acoes {
+        grid-column: span 1;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        padding: 25px;
+    }
+    
+    .chart-card {
+        padding: 25px;
+    }
+    
+    .chart-content {
+        height: 280px;
+    }
+    
+    .contracts-table,
+    .contracts-list,
+    .recent-contracts,
+    .filtros-container {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 10px;
+    }
+    
+    .dashboard-header {
+        padding: 20px;
+    }
+    
+    .dashboard-header h1 {
+        font-size: 24px;
+    }
+    
+    .section-header h2 {
+        font-size: 22px;
+    }
+    
+    .stat-card {
+        padding: 20px;
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 28px;
+    }
+    
+    .stat-info h3 {
+        font-size: 28px;
+    }
+    
+    .chart-card {
+        padding: 20px;
+    }
+    
+    .chart-content {
+        height: 250px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 12px 8px;
+        font-size: 12px;
+    }
+    
+    .report-card {
+        padding: 25px;
+    }
+    
+    .report-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+    }
+}

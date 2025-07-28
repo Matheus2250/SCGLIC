@@ -119,6 +119,10 @@ verificarLogin();
             background: linear-gradient(90deg, #f59e0b, #d97706);
         }
 
+        .modulo-contratos::before {
+            background: linear-gradient(90deg, #7c3aed, #5b21b6);
+        }
+
         .modulo-icon {
             width: 80px;
             height: 80px;
@@ -152,6 +156,14 @@ verificarLogin();
             background: linear-gradient(135deg, #f59e0b, #d97706);
             box-shadow: 
                 0 10px 25px rgba(245, 158, 11, 0.3),
+                0 0 0 4px rgba(255, 255, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .modulo-contratos .modulo-icon {
+            background: linear-gradient(135deg, #7c3aed, #5b21b6);
+            box-shadow: 
+                0 10px 25px rgba(124, 58, 237, 0.3),
                 0 0 0 4px rgba(255, 255, 255, 0.1),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
@@ -309,6 +321,18 @@ verificarLogin();
                         e controle documentação para processos licitatórios.
                     </p>
                 </div>
+
+                <!-- Módulo Contratos -->
+                <div class="modulo-card modulo-contratos" onclick="acessarModulo('contratos')">
+                    <div class="modulo-icon">
+                        <i data-lucide="file-contract"></i>
+                    </div>
+                    <h2 class="modulo-title">Contratos</h2>
+                    <p class="modulo-description">
+                        Controle e gerencie contratos administrativos, acompanhe vigências, 
+                        valores e documentação contratual.
+                    </p>
+                </div>
             </div>
 
             <!-- Informações do Usuário -->
@@ -354,6 +378,8 @@ verificarLogin();
                     window.location.href = 'licitacao_dashboard.php';
                 } else if (modulo === 'qualificacao') {
                     window.location.href = 'qualificacao_dashboard.php';
+                } else if (modulo === 'contratos') {
+                    window.location.href = 'contratos_dashboard.php';
                 }
             }, 500);
         }
