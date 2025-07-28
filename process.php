@@ -1074,6 +1074,241 @@ case 'editar_licitacao':
         echo json_encode($response);
         break;
         
+    case 'editar_qualificacao':
+        verificarLogin();
+        
+        header('Content-Type: application/json');
+        $response = ['success' => false, 'message' => ''];
+        
+        try {
+            $id = intval($_POST['id'] ?? 0);
+            
+            if ($id <= 0) {
+                throw new Exception('ID da qualificação é obrigatório');
+            }
+            
+            // Validar dados obrigatórios
+            $nup = limpar($_POST['nup'] ?? '');
+            $area_demandante = limpar($_POST['area_demandante'] ?? '');
+            $responsavel = limpar($_POST['responsavel'] ?? '');
+            $modalidade = limpar($_POST['modalidade'] ?? '');
+            $objeto = limpar($_POST['objeto'] ?? '');
+            $palavras_chave = limpar($_POST['palavras_chave'] ?? '');
+            $valor_estimado = limpar($_POST['valor_estimado'] ?? '');
+            $status = limpar($_POST['status'] ?? '');
+            $observacoes = limpar($_POST['observacoes'] ?? '');
+            
+            // Validações
+            if (empty($nup)) {
+                throw new Exception('NUP é obrigatório');
+            }
+            
+            if (empty($area_demandante)) {
+                throw new Exception('Área demandante é obrigatória');
+            }
+            
+            if (empty($responsavel)) {
+                throw new Exception('Responsável é obrigatório');
+            }
+            
+            if (empty($modalidade)) {
+                throw new Exception('Modalidade é obrigatória');
+            }
+            
+            if (empty($objeto)) {
+                throw new Exception('Objeto é obrigatório');
+            }
+            
+            if (empty($status)) {
+                throw new Exception('Status é obrigatório');
+            }
+            
+            // Limpar e converter valor monetário
+            $valor_numerico = 0.00;
+            if (!empty($valor_estimado)) {
+                $valor_limpo = trim($valor_estimado);
+                $valor_limpo = preg_replace('/[^\d,.]/', '', $valor_limpo);
+                
+                if (strpos($valor_limpo, '.') !== false && strpos($valor_limpo, ',') !== false) {
+                    $valor_limpo = str_replace('.', '', $valor_limpo);
+                    $valor_limpo = str_replace(',', '.', $valor_limpo);
+                } elseif (strpos($valor_limpo, ',') !== false && strpos($valor_limpo, '.') === false) {
+                    $valor_limpo = str_replace(',', '.', $valor_limpo);
+                }
+                
+                $valor_numerico = floatval($valor_limpo);
+                
+                if ($valor_numerico <= 0) {
+                    throw new Exception('Valor estimado deve ser maior que zero');
+                }
+            }
+            
+            // Verificar se a qualificação existe
+            $sql_check = "SELECT id FROM qualificacoes WHERE id = ?";
+            $stmt_check = $pdo->prepare($sql_check);
+            $stmt_check->execute([$id]);
+            
+            if (!$stmt_check->fetch()) {
+                throw new Exception('Qualificação não encontrada');
+            }
+            
+            // Verificar se NUP já existe em outra qualificação
+            $sql_nup = "SELECT id FROM qualificacoes WHERE nup = ? AND id != ?";
+            $stmt_nup = $pdo->prepare($sql_nup);
+            $stmt_nup->execute([$nup, $id]);
+            
+            if ($stmt_nup->fetch()) {
+                throw new Exception('Este NUP já está cadastrado em outra qualificação');
+            }
+            
+            // Atualizar qualificação
+            $sql = "UPDATE qualificacoes SET 
+                nup = ?, 
+                area_demandante = ?, 
+                responsavel = ?, 
+                modalidade = ?, 
+                objeto = ?, 
+                palavras_chave = ?, 
+                valor_estimado = ?, 
+                status = ?, 
+                observacoes = ?
+                WHERE id = ?";
+            
+            $stmt = $pdo->prepare($sql);
+            $resultado = $stmt->execute([
+                $nup,
+                $area_demandante,
+                $responsavel,
+                $modalidade,
+                $objeto,
+                $palavras_chave,
+                $valor_numerico,
+                $status,
+                $observacoes,
+                $id
+            ]);
+            
+            if (!$resultado) {
+                throw new Exception('Erro ao atualizar qualificação no banco de dados');
+            }
+            
+            $response['success'] = true;
+            $response['message'] = 'Qualificação atualizada com sucesso!';
+            
+            // Log da operação
+            error_log("Qualificação editada - ID: $id, NUP: $nup, Usuário: " . $_SESSION['usuario_id']);
+            
+        } catch (Exception $e) {
+            $response['success'] = false;
+            $response['message'] = $e->getMessage();
+            
+            // Log do erro
+            error_log("Erro ao editar qualificação: " . $e->getMessage());
+        }
+        
+        echo json_encode($response);
+        break;
+
+    case 'dashboard_stats_qualificacao':
+        try {
+            // Verificar se a tabela existe
+            $check_table = $pdo->query("SHOW TABLES LIKE 'qualificacoes'");
+            if ($check_table->rowCount() == 0) {
+                // Tabela não existe - retornar dados zerados
+                $response = [
+                    'success' => true,
+                    'data' => [
+                        'status_chart' => [
+                            'labels' => ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                            'em_analise' => [0, 0, 0, 0, 0, 0],
+                            'concluido' => [0, 0, 0, 0, 0, 0]
+                        ],
+                        'performance_chart' => [
+                            'labels' => ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                            'dados' => [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                        ]
+                    ]
+                ];
+            } else {
+                // Buscar dados do gráfico de status por mês
+                $status_sql = "SELECT 
+                    MONTH(criado_em) as mes,
+                    SUM(CASE WHEN status = 'Em Análise' THEN 1 ELSE 0 END) as em_analise,
+                    SUM(CASE WHEN status = 'Concluído' THEN 1 ELSE 0 END) as concluido
+                    FROM qualificacoes 
+                    WHERE YEAR(criado_em) = YEAR(CURDATE())
+                    GROUP BY MONTH(criado_em)
+                    ORDER BY MONTH(criado_em)";
+                
+                $stmt_status = $pdo->query($status_sql);
+                $dados_status = $stmt_status->fetchAll();
+                
+                // Inicializar arrays para os 6 primeiros meses
+                $meses_labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
+                $em_analise = [0, 0, 0, 0, 0, 0];
+                $concluido = [0, 0, 0, 0, 0, 0];
+                
+                // Preencher com dados reais
+                foreach ($dados_status as $dado) {
+                    $mes_index = $dado['mes'] - 1; // Converter para index (0-based)
+                    if ($mes_index >= 0 && $mes_index < 6) {
+                        $em_analise[$mes_index] = intval($dado['em_analise']);
+                        $concluido[$mes_index] = intval($dado['concluido']);
+                    }
+                }
+                
+                // Buscar dados de performance (taxa de aprovação por mês)
+                $performance_sql = "SELECT 
+                    MONTH(criado_em) as mes,
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 'Concluído' THEN 1 ELSE 0 END) as aprovados
+                    FROM qualificacoes 
+                    WHERE YEAR(criado_em) = YEAR(CURDATE())
+                    GROUP BY MONTH(criado_em)
+                    ORDER BY MONTH(criado_em)";
+                
+                $stmt_performance = $pdo->query($performance_sql);
+                $dados_performance = $stmt_performance->fetchAll();
+                
+                // Inicializar array para 12 meses
+                $performance_dados = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                
+                // Calcular taxa de aprovação por mês
+                foreach ($dados_performance as $dado) {
+                    $mes_index = $dado['mes'] - 1;
+                    if ($mes_index >= 0 && $mes_index < 12) {
+                        $total = intval($dado['total']);
+                        $aprovados = intval($dado['aprovados']);
+                        $performance_dados[$mes_index] = $total > 0 ? round(($aprovados / $total) * 100, 1) : 0;
+                    }
+                }
+                
+                $response = [
+                    'success' => true,
+                    'data' => [
+                        'status_chart' => [
+                            'labels' => $meses_labels,
+                            'em_analise' => $em_analise,
+                            'concluido' => $concluido
+                        ],
+                        'performance_chart' => [
+                            'labels' => ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                            'dados' => $performance_dados
+                        ]
+                    ]
+                ];
+            }
+            
+            echo json_encode($response);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Erro ao buscar dados dos gráficos: ' . $e->getMessage()
+            ]);
+        }
+        break;
+        
     default:
         header('Location: index.php');
         break;

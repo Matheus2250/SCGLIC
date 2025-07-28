@@ -4,6 +4,626 @@
  * Baseado em licitacao-dashboard.css com tema amarelo
  */
 
+/* ==================== ESTILOS PERSONALIZADOS TABELA ==================== */
+
+/* NUP em azul */
+.nup-azul {
+    color: #2980b9;
+    font-weight: 600;
+}
+
+/* Valor em verde */
+.valor-verde {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+/* Badges para modalidades */
+.modalidade-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-pregao {
+    background-color: #3498db;
+    color: white;
+}
+
+.badge-concurso {
+    background-color: #9b59b6;
+    color: white;
+}
+
+.badge-inexigibilidade {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.badge-dispensa {
+    background-color: #f39c12;
+    color: white;
+}
+
+.badge-irp {
+    background-color: #1abc9c;
+    color: white;
+}
+
+.badge-adesao {
+    background-color: #34495e;
+    color: white;
+}
+
+.badge-default {
+    background-color: #95a5a6;
+    color: white;
+}
+
+/* ==================== FILTROS E PAGINAÇÃO ==================== */
+
+/* Controles da tabela */
+.table-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.table-info h3 {
+    margin: 0 0 5px 0;
+    color: #2c3e50;
+    font-size: 1.2em;
+}
+
+.table-info p {
+    margin: 0;
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+/* Container de filtros */
+.filter-container {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 0.8fr;
+    gap: 15px;
+    align-items: end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filter-group label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9em;
+}
+
+.filter-input, .filter-select {
+    padding: 10px 12px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+}
+
+.filter-input:focus, .filter-select:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* Paginação */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.pagination-info {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.pagination {
+    display: flex;
+    gap: 5px;
+}
+
+.pagination-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    color: #6c757d;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.pagination-btn:hover {
+    background-color: #f8f9fa;
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.pagination-btn.active {
+    background-color: #f59e0b;
+    border-color: #f59e0b;
+    color: white;
+    font-weight: 600;
+}
+
+/* Responsivo para filtros */
+@media (max-width: 768px) {
+    .filter-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .table-controls {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .pagination-container {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+
+/* ==================== ESTATÍSTICAS AVANÇADAS ==================== */
+
+/* Seções de estatísticas */
+.stats-section {
+    margin-bottom: 40px;
+}
+
+.stats-section h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 1.4em;
+    border-bottom: 2px solid #f59e0b;
+    padding-bottom: 10px;
+}
+
+/* Cards expandidos para visão geral */
+.stats-grid-expanded {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card-expanded {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card-expanded:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.stat-card-expanded.primary { border-left: 5px solid #3498db; }
+.stat-card-expanded.success { border-left: 5px solid #27ae60; }
+.stat-card-expanded.warning { border-left: 5px solid #f59e0b; }
+.stat-card-expanded.info { border-left: 5px solid #9b59b6; }
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.stat-card-expanded.primary .stat-icon { background: rgba(52, 152, 219, 0.1); color: #3498db; }
+.stat-card-expanded.success .stat-icon { background: rgba(39, 174, 96, 0.1); color: #27ae60; }
+.stat-card-expanded.warning .stat-icon { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.stat-card-expanded.info .stat-icon { background: rgba(155, 89, 182, 0.1); color: #9b59b6; }
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-content .stat-number {
+    font-size: 2.5em;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+.stat-content .stat-label {
+    font-size: 1em;
+    color: #7f8c8d;
+    margin-bottom: 8px;
+}
+
+.stat-trend {
+    font-size: 0.9em;
+}
+
+.trend-positive { color: #27ae60; font-weight: 600; }
+.trend-negative { color: #e74c3c; font-weight: 600; }
+.trend-neutral { color: #7f8c8d; font-weight: 600; }
+
+/* Cards de análise financeira */
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.stat-card.valor-maximo { border-top: 4px solid #27ae60; }
+.stat-card.valor-medio { border-top: 4px solid #f59e0b; }
+.stat-card.valor-minimo { border-top: 4px solid #3498db; }
+
+.stat-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+.stat-number.big {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+/* Tabelas de estatísticas */
+.stats-table {
+    width: 100%;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stats-table th {
+    background: #f8f9fa;
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.stats-table td {
+    padding: 15px;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.stats-table tr:hover {
+    background: #f8f9fa;
+}
+
+/* Barras de progresso */
+.progress-bar {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    background: #f1f3f4;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar.small {
+    height: 16px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #27ae60, #2ecc71);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Cards de ranking */
+.ranking-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.ranking-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: transform 0.2s ease;
+}
+
+.ranking-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.ranking-card.top-1 { border-left: 5px solid #f1c40f; }
+.ranking-card.top-2 { border-left: 5px solid #95a5a6; }
+.ranking-card.top-3 { border-left: 5px solid #cd7f32; }
+
+.ranking-position {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5em;
+    font-weight: 700;
+    color: white;
+    background: #f59e0b;
+}
+
+.ranking-card.top-1 .ranking-position { background: #f1c40f; }
+.ranking-card.top-2 .ranking-position { background: #95a5a6; }
+.ranking-card.top-3 .ranking-position { background: #cd7f32; }
+
+.ranking-content h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.1em;
+}
+
+.ranking-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ranking-stats span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9em;
+    color: #7f8c8d;
+}
+
+/* Performance cards */
+.performance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.performance-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.performance-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.performance-icon {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto 15px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    font-size: 20px;
+}
+
+.performance-number {
+    font-size: 2.5em;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.performance-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.performance-detail {
+    font-size: 0.9em;
+    color: #7f8c8d;
+}
+
+/* Performance badges */
+.performance-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.performance-badge.excelente {
+    background: #d4edda;
+    color: #155724;
+}
+
+.performance-badge.boa {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.performance-badge.regular {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Timeline de evolução */
+.timeline-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.timeline-item {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid #f59e0b;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.timeline-header h4 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.timeline-quantity {
+    background: #f59e0b;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+}
+
+.timeline-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.timeline-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.timeline-stat .label {
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+/* Responsivo para estatísticas */
+@media (max-width: 768px) {
+    .stats-grid-expanded {
+        grid-template-columns: 1fr;
+    }
+    
+    .ranking-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .performance-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .timeline-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card-expanded {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .ranking-card {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
 body {
     margin: 0;
     padding: 0;

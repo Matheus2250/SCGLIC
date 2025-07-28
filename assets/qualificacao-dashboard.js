@@ -350,16 +350,46 @@ function showNotification(message, type = 'info', duration = 5000) {
 function initializeDashboardCharts() {
     // Aguardar um pouco para garantir que a seção está visível
     setTimeout(() => {
+        loadChartsData();
+    }, 100);
+}
+
+/**
+ * Carregar dados dos gráficos via AJAX
+ */
+function loadChartsData() {
+    fetch('process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'acao=dashboard_stats_qualificacao'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            initializeStatusChart(data.data.status_chart);
+            initializePerformanceChart(data.data.performance_chart);
+        } else {
+            console.error('Erro ao carregar dados dos gráficos:', data.message);
+            // Em caso de erro, inicializar com dados zerados
+            initializeStatusChart();
+            initializePerformanceChart();
+        }
+    })
+    .catch(error => {
+        console.error('Erro na requisição:', error);
+        // Em caso de erro, inicializar com dados zerados
         initializeStatusChart();
         initializePerformanceChart();
-    }, 100);
+    });
 }
 
 
 /**
  * Gráfico de status das qualificações
  */
-function initializeStatusChart() {
+function initializeStatusChart(chartData = null) {
     const ctx = document.getElementById('statusChart');
     if (!ctx || typeof Chart === 'undefined') return;
     
@@ -368,21 +398,26 @@ function initializeStatusChart() {
         window.statusChartInstance.destroy();
     }
     
+    // Usar dados passados ou valores padrão zerados
+    const labels = chartData ? chartData.labels : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
+    const emAnalise = chartData ? chartData.em_analise : [0, 0, 0, 0, 0, 0];
+    const concluido = chartData ? chartData.concluido : [0, 0, 0, 0, 0, 0];
+    
     window.statusChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+            labels: labels,
             datasets: [
                 {
                     label: 'Em Análise',
-                    data: [0, 0, 0, 0, 0, 0],
+                    data: emAnalise,
                     backgroundColor: '#f59e0b',
                     borderRadius: 4,
                     borderSkipped: false,
                 },
                 {
                     label: 'Concluído',
-                    data: [0, 0, 0, 0, 0, 0],
+                    data: concluido,
                     backgroundColor: '#27ae60',
                     borderRadius: 4,
                     borderSkipped: false,
@@ -425,7 +460,7 @@ function initializeStatusChart() {
 /**
  * Gráfico de performance mensal
  */
-function initializePerformanceChart() {
+function initializePerformanceChart(chartData = null) {
     const ctx = document.getElementById('performanceChart');
     if (!ctx || typeof Chart === 'undefined') return;
     
@@ -434,13 +469,17 @@ function initializePerformanceChart() {
         window.performanceChartInstance.destroy();
     }
     
+    // Usar dados passados ou valores padrão zerados
+    const labels = chartData ? chartData.labels : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const dados = chartData ? chartData.dados : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    
     window.performanceChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+            labels: labels,
             datasets: [{
                 label: 'Taxa de Aprovação (%)',
-                data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                data: dados,
                 borderColor: '#f59e0b',
                 backgroundColor: 'rgba(245, 158, 11, 0.1)',
                 borderWidth: 3,
@@ -700,6 +739,9 @@ function setupEventListeners() {
         sidebarToggle.addEventListener('click', toggleSidebar);
     }
     
+    // Configurar filtros automáticos
+    setupFiltrosAutomaticos();
+    
     // Fechar sidebar ao clicar fora (apenas mobile)
     document.addEventListener('click', function(event) {
         const sidebar = document.getElementById('sidebar');
@@ -842,6 +884,36 @@ function setupActionButtons() {
     });
 }
 
+// ==================== SISTEMA DE FILTROS AUTOMÁTICOS ====================
+
+/**
+ * Configurar filtros automáticos
+ */
+function setupFiltrosAutomaticos() {
+    const formFiltro = document.getElementById('filtroQualificacoes');
+    if (!formFiltro) return;
+    
+    // Auto-submit ao alterar selects
+    const selects = formFiltro.querySelectorAll('select');
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            formFiltro.submit();
+        });
+    });
+    
+    // Debounce para campo de busca
+    const campoBusca = document.getElementById('busca');
+    if (campoBusca) {
+        let timeoutId;
+        campoBusca.addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                formFiltro.submit();
+            }, 800); // 800ms de delay
+        });
+    }
+}
+
 // ==================== FUNÇÕES DE AÇÕES DA TABELA ====================
 
 /**
@@ -974,12 +1046,12 @@ function criarModalEdicao() {
                             <label>Modalidade *</label>
                             <select id="edit_modalidade" name="modalidade" required>
                                 <option value="">Selecione a modalidade</option>
-                                <option value="Pregão Eletrônico">Pregão Eletrônico</option>
-                                <option value="Concorrência">Concorrência</option>
-                                <option value="Tomada de Preços">Tomada de Preços</option>
-                                <option value="Convite">Convite</option>
-                                <option value="Dispensa">Dispensa</option>
-                                <option value="Inexigibilidade">Inexigibilidade</option>
+                                <option value="PREGÃO">PREGÃO</option>
+                                <option value="CONCURSO">CONCURSO</option>
+                                <option value="INEXIGIBILIDADE">INEXIGIBILIDADE</option>
+                                <option value="DISPENSA">DISPENSA</option>
+                                <option value="IRP">IRP</option>
+                                <option value="ADESÃO">ADESÃO</option>
                             </select>
                         </div>
                         
@@ -1002,8 +1074,8 @@ function criarModalEdicao() {
                             <label>Status *</label>
                             <select id="edit_status" name="status" required>
                                 <option value="">Selecione o status</option>
-                                <option value="Em Análise">Em Análise</option>
-                                <option value="Concluído">Concluído</option>
+                                <option value="EM ANÁLISE">EM ANÁLISE</option>
+                                <option value="CONCLUÍDO">CONCLUÍDO</option>
                             </select>
                         </div>
                         
