@@ -1,10 +1,10 @@
 <?php
-<<<<<<< HEAD
 /**
  * Dashboard do Módulo de Contratos
  * Sistema CGLIC - Ministério da Saúde
  * 
  * Integração com API Comprasnet (UASG 250110)
+ * Gestão completa de contratos administrativos
  */
 
 require_once 'config.php';
@@ -16,9 +16,12 @@ if (!verificarLogin()) {
     exit;
 }
 
+// Conectar ao banco usando PDO
+$pdo = conectarDB();
+
 // Verificar permissões para o módulo de contratos
-$nivel = $_SESSION['nivel_acesso'];
-$podeEditar = in_array($nivel, [1]); // Apenas Coordenador pode editar inicialmente
+$nivel = $_SESSION['usuario_nivel'] ?? $_SESSION['nivel_acesso'] ?? null;
+$podeEditar = in_array($nivel, [1, 2, 3]); // Coordenador, DIPLAN, DIPLI podem editar
 $podeVisualizar = in_array($nivel, [1, 2, 3, 4]); // Todos podem visualizar
 
 if (!$podeVisualizar) {
@@ -26,7 +29,16 @@ if (!$podeVisualizar) {
     exit;
 }
 
-// Parâmetros de filtro
+// Verificar se o módulo de contratos foi configurado
+$moduloConfigurado = false;
+try {
+    $stmt = $pdo->query("SHOW TABLES LIKE 'contratos'");
+    $moduloConfigurado = ($stmt && $stmt->rowCount() > 0);
+} catch (Exception $e) {
+    $moduloConfigurado = false;
+}
+
+// Parâmetros de filtro e paginação
 $filtroStatus = $_GET['status'] ?? '';
 $filtroModalidade = $_GET['modalidade'] ?? '';
 $filtroVencimento = $_GET['vencimento'] ?? '';
@@ -35,233 +47,160 @@ $pagina = max(1, intval($_GET['pagina'] ?? 1));
 $limite = 20;
 $offset = ($pagina - 1) * $limite;
 
-// Construir query de filtros
-$whereConditions = ["c.uasg = '250110'"];
-$params = [];
-$types = '';
-
-if ($filtroStatus) {
-    $whereConditions[] = "c.status_contrato = ?";
-    $params[] = $filtroStatus;
-    $types .= 's';
-}
-
-if ($filtroModalidade) {
-    $whereConditions[] = "c.modalidade LIKE ?";
-    $params[] = "%{$filtroModalidade}%";
-    $types .= 's';
-}
-
-if ($filtroVencimento) {
-    switch ($filtroVencimento) {
-        case 'vencidos':
-            $whereConditions[] = "c.data_fim_vigencia < CURDATE()";
-            break;
-        case '30_dias':
-            $whereConditions[] = "c.data_fim_vigencia BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)";
-            break;
-        case '90_dias':
-            $whereConditions[] = "c.data_fim_vigencia BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 90 DAY)";
-            break;
-    }
-}
-
-if ($busca) {
-    $whereConditions[] = "(c.numero_contrato LIKE ? OR c.objeto LIKE ? OR c.contratado_nome LIKE ?)";
-    $params[] = "%{$busca}%";
-    $params[] = "%{$busca}%";
-    $params[] = "%{$busca}%";
-    $types .= 'sss';
-}
-
-$whereClause = implode(' AND ', $whereConditions);
-
-// Buscar contratos (com tratamento de erro caso tabela não exista ainda)
+// Inicializar variáveis
 $contratos = [];
 $total = 0;
-$stats = [];
+$stats = [
+    'total_contratos' => 0,
+    'contratos_vigentes' => 0,
+    'contratos_encerrados' => 0,
+    'valor_total_contratos' => 0,
+    'valor_total_empenhado' => 0,
+    'valor_total_pago' => 0,
+    'vencem_30_dias' => 0,
+    'vencidos' => 0
+];
 $alertas = [];
 $historicoSync = [];
 
-try {
-    // Buscar contratos
-    $query = "
-        SELECT c.*, 
-               COUNT(ca.id) as total_aditivos,
-               COALESCE(SUM(ca.valor_aditivo), 0) as valor_aditivos,
-               CASE 
-                   WHEN c.data_fim_vigencia <= CURDATE() THEN 'vencido'
-                   WHEN c.data_fim_vigencia <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'vence_30_dias'
-                   WHEN c.data_fim_vigencia <= DATE_ADD(CURDATE(), INTERVAL 90 DAY) THEN 'vence_90_dias'
-                   ELSE 'vigente'
-               END as alerta_vencimento
-        FROM contratos c
-        LEFT JOIN contratos_aditivos ca ON c.id = ca.contrato_id
-        WHERE {$whereClause}
-        GROUP BY c.id
-        ORDER BY c.data_assinatura DESC
-        LIMIT {$limite} OFFSET {$offset}
-    ";
+if ($moduloConfigurado) {
+    // Construir query de filtros
+    $whereConditions = ["c.uasg = '250110'"];
+    $params = [];
+    $types = '';
 
-    $stmt = $conn->prepare($query);
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
+    if ($filtroStatus) {
+        $whereConditions[] = "c.status_contrato = ?";
+        $params[] = $filtroStatus;
+        $types .= 's';
     }
-    $stmt->execute();
-    $contratos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-    // Contar total para paginação
-    $countQuery = "SELECT COUNT(DISTINCT c.id) as total FROM contratos c WHERE {$whereClause}";
-    $stmt = $conn->prepare($countQuery);
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
+    if ($filtroModalidade) {
+        $whereConditions[] = "c.modalidade LIKE ?";
+        $params[] = "%{$filtroModalidade}%";
+        $types .= 's';
     }
-    $stmt->execute();
-    $total = $stmt->get_result()->fetch_assoc()['total'];
 
-    // Buscar estatísticas do dashboard
-    $stats = $conn->query("SELECT * FROM vw_contratos_dashboard")->fetch_assoc() ?? [];
+    if ($filtroVencimento) {
+        switch ($filtroVencimento) {
+            case 'vencidos':
+                $whereConditions[] = "c.data_fim_vigencia < CURDATE()";
+                break;
+            case '30_dias':
+                $whereConditions[] = "c.data_fim_vigencia BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)";
+                break;
+            case '90_dias':
+                $whereConditions[] = "c.data_fim_vigencia BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 90 DAY)";
+                break;
+        }
+    }
 
-    // Buscar alertas ativos
-    $alertas = $conn->query("
-        SELECT c.numero_contrato, c.objeto, c.contratado_nome, 
-               c.data_fim_vigencia, c.valor_total,
-               'vencimento' as tipo_alerta,
-               DATEDIFF(c.data_fim_vigencia, CURDATE()) as dias_restantes
-        FROM contratos c 
-        WHERE c.data_fim_vigencia <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-          AND c.status_contrato = 'vigente'
-        ORDER BY c.data_fim_vigencia ASC
-        LIMIT 10
-    ")->fetch_all(MYSQLI_ASSOC);
+    if ($busca) {
+        $whereConditions[] = "(c.numero_contrato LIKE ? OR c.objeto LIKE ? OR c.contratado_nome LIKE ?)";
+        $params[] = "%{$busca}%";
+        $params[] = "%{$busca}%";
+        $params[] = "%{$busca}%";
+        $types .= 'sss';
+    }
 
-    // Buscar histórico de sincronização
-    $historicoSync = $conn->query("
-        SELECT * FROM contratos_sync_log 
-        ORDER BY inicio_sync DESC 
-        LIMIT 5
-    ")->fetch_all(MYSQLI_ASSOC);
+    $whereClause = implode(' AND ', $whereConditions);
 
-} catch (Exception $e) {
-    // Tabelas ainda não foram criadas - mostrar mensagem de setup
-    $needsSetup = true;
+    try {
+        // Buscar contratos
+        $query = "
+            SELECT c.*, 
+                   COALESCE(COUNT(ca.id), 0) as total_aditivos,
+                   COALESCE(SUM(ca.valor_aditivo), 0) as valor_aditivos,
+                   CASE 
+                       WHEN c.data_fim_vigencia <= CURDATE() THEN 'vencido'
+                       WHEN c.data_fim_vigencia <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'vence_30_dias'
+                       WHEN c.data_fim_vigencia <= DATE_ADD(CURDATE(), INTERVAL 90 DAY) THEN 'vence_90_dias'
+                       ELSE 'vigente'
+                   END as alerta_vencimento
+            FROM contratos c
+            LEFT JOIN contratos_aditivos ca ON c.id = ca.contrato_id
+            WHERE {$whereClause}
+            GROUP BY c.id
+            ORDER BY c.data_assinatura DESC
+            LIMIT {$limite} OFFSET {$offset}
+        ";
+
+        $stmt = $pdo->prepare($query);
+        if (!empty($params)) {
+            $stmt->execute($params);
+        } else {
+            $stmt->execute();
+        }
+        $contratos = $stmt->fetchAll();
+
+        // Contar total para paginação
+        $countQuery = "SELECT COUNT(DISTINCT c.id) as total FROM contratos c WHERE {$whereClause}";
+        $stmt = $pdo->prepare($countQuery);
+        if (!empty($params)) {
+            $stmt->execute($params);
+        } else {
+            $stmt->execute();
+        }
+        $total = $stmt->fetch()['total'];
+
+        // Buscar estatísticas
+        $statsQuery = "
+            SELECT 
+                COUNT(*) as total_contratos,
+                COUNT(CASE WHEN status_contrato = 'vigente' THEN 1 END) as contratos_vigentes,
+                COUNT(CASE WHEN status_contrato = 'encerrado' THEN 1 END) as contratos_encerrados,
+                COALESCE(SUM(valor_total), 0) as valor_total_contratos,
+                COALESCE(SUM(valor_empenhado), 0) as valor_total_empenhado,
+                COALESCE(SUM(valor_pago), 0) as valor_total_pago,
+                COUNT(CASE WHEN data_fim_vigencia BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) 
+                           AND status_contrato = 'vigente' THEN 1 END) as vencem_30_dias,
+                COUNT(CASE WHEN data_fim_vigencia < CURDATE() AND status_contrato = 'vigente' THEN 1 END) as vencidos
+            FROM contratos 
+            WHERE uasg = '250110'
+        ";
+        $stmt = $pdo->query($statsQuery);
+        if ($stmt) {
+            $stats = $stmt->fetch();
+        }
+
+        // Buscar alertas ativos
+        $alertasQuery = "
+            SELECT c.numero_contrato, c.objeto, c.contratado_nome, 
+                   c.data_fim_vigencia, c.valor_total,
+                   'vencimento' as tipo_alerta,
+                   DATEDIFF(c.data_fim_vigencia, CURDATE()) as dias_restantes
+            FROM contratos c 
+            WHERE c.data_fim_vigencia <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+              AND c.status_contrato = 'vigente'
+              AND c.uasg = '250110'
+            ORDER BY c.data_fim_vigencia ASC
+            LIMIT 10
+        ";
+        $stmt = $pdo->query($alertasQuery);
+        if ($stmt) {
+            $alertas = $stmt->fetchAll();
+        }
+
+        // Buscar histórico de sincronização
+        $syncQuery = "
+            SELECT * FROM contratos_sync_log 
+            ORDER BY inicio_sync DESC 
+            LIMIT 5
+        ";
+        $stmt = $pdo->query($syncQuery);
+        if ($stmt) {
+            $historicoSync = $stmt->fetchAll();
+        }
+
+    } catch (Exception $e) {
+        // Em caso de erro, definir valores padrão
+        error_log("Erro no dashboard de contratos: " . $e->getMessage());
+    }
 }
 
 $totalPaginas = ceil($total / $limite);
 
 ?>
-=======
-require_once 'config.php';
-require_once 'functions.php';
-
-verificarLogin();
-
-$pdo = conectarDB();
-
-// ========================================
-// SISTEMA DE PAGINAÇÃO E FILTROS
-// ========================================
-
-// Configuração de paginação
-$contratos_por_pagina = isset($_GET['por_pagina']) ? max(10, min(100, intval($_GET['por_pagina']))) : 10;
-$pagina_atual = isset($_GET['pagina']) ? max(1, intval($_GET['pagina'])) : 1;
-$offset = ($pagina_atual - 1) * $contratos_por_pagina;
-
-// Processar filtros
-$filtro_status = $_GET['status_filtro'] ?? '';
-$filtro_modalidade = $_GET['modalidade_filtro'] ?? '';
-$filtro_busca = $_GET['busca'] ?? '';
-
-$where_conditions = ['1=1'];
-$params = [];
-
-if (!empty($filtro_status)) {
-    $where_conditions[] = "status = ?";
-    $params[] = $filtro_status;
-}
-
-if (!empty($filtro_modalidade)) {
-    $where_conditions[] = "modalidade = ?";
-    $params[] = $filtro_modalidade;
-}
-
-if (!empty($filtro_busca)) {
-    $where_conditions[] = "(numero_contrato LIKE ? OR fornecedor LIKE ? OR objeto LIKE ? OR responsavel LIKE ?)";
-    $busca_param = "%$filtro_busca%";
-    $params[] = $busca_param;
-    $params[] = $busca_param;
-    $params[] = $busca_param;
-    $params[] = $busca_param;
-}
-
-$where_clause = implode(' AND ', $where_conditions);
-
-// Buscar estatísticas dos contratos
-try {
-    // Verificar se a tabela existe
-    $check_table = $pdo->query("SHOW TABLES LIKE 'contratos'");
-    if ($check_table->rowCount() == 0) {
-        // Tabela não existe - usar dados zerados
-        $stats = [
-            'total_contratos' => 0,
-            'vigentes' => 0,
-            'vencidos' => 0,
-            'valor_total' => 0.00
-        ];
-        $contratos_recentes = [];
-        $total_contratos = 0;
-    } else {
-        // Buscar estatísticas gerais
-        $stats_sql = "SELECT 
-            COUNT(*) as total_contratos,
-            SUM(CASE WHEN status = 'VIGENTE' THEN 1 ELSE 0 END) as vigentes,
-            SUM(CASE WHEN status = 'VENCIDO' THEN 1 ELSE 0 END) as vencidos,
-            SUM(valor_contrato) as valor_total,
-            AVG(valor_contrato) as valor_medio,
-            MIN(valor_contrato) as menor_valor,
-            MAX(valor_contrato) as maior_valor
-            FROM contratos";
-        $stmt_stats = $pdo->query($stats_sql);
-        $stats = $stmt_stats->fetch();
-        
-        // Garantir que os valores não sejam null
-        $stats['total_contratos'] = intval($stats['total_contratos']);
-        $stats['vigentes'] = intval($stats['vigentes']);
-        $stats['vencidos'] = intval($stats['vencidos']);
-        $stats['valor_total'] = floatval($stats['valor_total'] ?? 0.00);
-        $stats['valor_medio'] = floatval($stats['valor_medio'] ?? 0.00);
-        $stats['menor_valor'] = floatval($stats['menor_valor'] ?? 0.00);
-        $stats['maior_valor'] = floatval($stats['maior_valor'] ?? 0.00);
-        
-        // Contar contratos para paginação
-        $count_sql = "SELECT COUNT(*) FROM contratos WHERE $where_clause";
-        $stmt_count = $pdo->prepare($count_sql);
-        $stmt_count->execute($params);
-        $total_contratos = $stmt_count->fetchColumn();
-        
-        // Buscar contratos com paginação
-        $contratos_sql = "SELECT * FROM contratos WHERE $where_clause ORDER BY criado_em DESC LIMIT $contratos_por_pagina OFFSET $offset";
-        $stmt_contratos = $pdo->prepare($contratos_sql);
-        $stmt_contratos->execute($params);
-        $contratos_recentes = $stmt_contratos->fetchAll();
-    }
-} catch (Exception $e) {
-    $stats = [
-        'total_contratos' => 0,
-        'vigentes' => 0,
-        'vencidos' => 0,
-        'valor_total' => 0.00
-    ];
-    $contratos_recentes = [];
-    $total_contratos = 0;
-}
-
-// Calcular informações de paginação
-$total_paginas = ceil($total_contratos / $contratos_por_pagina);
-
-?>
-
->>>>>>> 060bcff6550ff7af2a72dd02d1dfb0cceae6092a
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -269,7 +208,6 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contratos - Sistema CGLIC</title>
     <link rel="stylesheet" href="assets/style.css">
-<<<<<<< HEAD
     <link rel="stylesheet" href="assets/dashboard.css">
     <link rel="stylesheet" href="assets/mobile-improvements.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -277,55 +215,94 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Header -->
-        <header class="dashboard-header">
-            <div class="header-left">
-                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
                     <i data-lucide="menu"></i>
                 </button>
-                <h1><i data-lucide="file-text"></i> Contratos</h1>
+                <h2><i data-lucide="file-contract"></i> Contratos</h2>
             </div>
-            <div class="header-right">
-                <span class="user-info">
-                    <i data-lucide="user"></i>
-                    <?= htmlspecialchars($_SESSION['nome']) ?>
-                    (Nível <?= $_SESSION['nivel_acesso'] ?>)
-                </span>
-                <a href="logout.php" class="btn-logout">
-                    <i data-lucide="log-out"></i> Sair
-                </a>
-            </div>
-        </header>
-
-        <div class="dashboard-content">
-            <!-- Sidebar -->
-            <aside class="dashboard-sidebar">
-                <nav class="sidebar-nav">
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Visão Geral</div>
+                    <button class="nav-item active" onclick="showSection('dashboard')">
+                        <i data-lucide="bar-chart-3"></i> <span>Dashboard</span>
+                    </button>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Gerenciar & Relatórios</div>
+                    <?php if ($podeEditar): ?>
+                    <button class="nav-item" onclick="showConfigModal()">
+                        <i data-lucide="settings"></i> <span>Configuração API</span>
+                    </button>
+                    <button class="nav-item" onclick="sincronizarContratos()">
+                        <i data-lucide="refresh-cw"></i> <span>Sincronização</span>
+                    </button>
+                    <?php endif; ?>
+                    <button class="nav-item" onclick="showSection('lista-contratos')">
+                        <i data-lucide="list"></i> <span>Lista de Contratos</span>
+                    </button>
+                    <button class="nav-item" onclick="gerarRelatorio()">
+                        <i data-lucide="file-text"></i> <span>Relatórios</span>
+                    </button>
+                </div>
+                
+                <!-- Navegação Geral -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Sistema</div>
                     <a href="selecao_modulos.php" class="nav-item">
-                        <i data-lucide="home"></i> Menu Principal
+                        <i data-lucide="home"></i> <span>Menu Principal</span>
                     </a>
                     <a href="dashboard.php" class="nav-item">
-                        <i data-lucide="calendar-check"></i> Planejamento
+                        <i data-lucide="calendar-check"></i> <span>Planejamento</span>
                     </a>
                     <a href="licitacao_dashboard.php" class="nav-item">
-                        <i data-lucide="gavel"></i> Licitações
+                        <i data-lucide="gavel"></i> <span>Licitações</span>
                     </a>
-                    <a href="#" class="nav-item active">
-                        <i data-lucide="file-text"></i> Contratos
+                    <a href="gestao_riscos.php" class="nav-item">
+                        <i data-lucide="shield-alert"></i> <span>Riscos</span>
                     </a>
-                    <a href="#configuracao-api" class="nav-item" onclick="showConfigModal()">
-                        <i data-lucide="settings"></i> Configuração API
+                    <a href="qualificacao_dashboard.php" class="nav-item">
+                        <i data-lucide="award"></i> <span>Qualificações</span>
                     </a>
-                    <a href="#sincronizacao" class="nav-item" onclick="showSyncModal()">
-                        <i data-lucide="refresh-cw"></i> Sincronização
-                    </a>
-                </nav>
-            </aside>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <?= strtoupper(substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?>
+                    </div>
+                    <div class="user-details">
+                        <h4><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></h4>
+                        <p><?= htmlspecialchars($_SESSION['usuario_email'] ?? '') ?></p>
+                        <small style="color: #3498db; font-weight: 600;">
+                            <?= getNomeNivel($_SESSION['usuario_nivel'] ?? 0) ?> - <?= htmlspecialchars($_SESSION['usuario_departamento'] ?? 'CGLIC') ?>
+                        </small>
+                    </div>
+                </div>
+                <a href="perfil_usuario.php" class="logout-btn" style="text-decoration: none; margin-bottom: 10px; background: #27ae60 !important;">
+                    <i data-lucide="user"></i> <span>Meu Perfil</span>
+                </a>
+                <button class="logout-btn" onclick="window.location.href='logout.php'">
+                    <i data-lucide="log-out"></i> <span>Sair</span>
+                </button>
+            </div>
+        </div>
 
-            <!-- Main Content -->
-            <main class="dashboard-main">
-                <?php if (isset($needsSetup)): ?>
-                <!-- Setup inicial -->
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <?php if (!$moduloConfigurado): ?>
+            <!-- Setup inicial -->
+            <div id="setup" class="content-section active">
+                <div class="dashboard-header">
+                    <h1><i data-lucide="database"></i> Configuração Inicial do Módulo</h1>
+                    <p>Configure o módulo de Contratos para começar a usar</p>
+                </div>
+                
                 <div class="setup-section">
                     <div class="setup-card">
                         <div class="setup-icon">
@@ -333,12 +310,23 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
                         </div>
                         <div class="setup-content">
                             <h2>Módulo de Contratos - Configuração Inicial</h2>
-                            <p>O módulo de Contratos precisa ser configurado. Execute os seguintes passos:</p>
-                            <ol>
-                                <li>Execute o script SQL: <code>database/modulo_contratos.sql</code></li>
-                                <li>Configure as credenciais da API Comprasnet</li>
-                                <li>Execute a primeira sincronização</li>
-                            </ol>
+                            <p>O módulo de Contratos precisa ser configurado antes do uso. Este módulo permite:</p>
+                            <ul>
+                                <li><strong>Integração com API Comprasnet</strong> - Sincronização automática de contratos da UASG 250110</li>
+                                <li><strong>Gestão completa</strong> - Controle de vigências, valores, aditivos e pagamentos</li>
+                                <li><strong>Alertas inteligentes</strong> - Notificações de vencimento e irregularidades</li>
+                                <li><strong>Relatórios gerenciais</strong> - Análises financeiras e operacionais</li>
+                            </ul>
+                            
+                            <div class="setup-steps">
+                                <h3>Passos para configuração:</h3>
+                                <ol>
+                                    <li>Execute o setup inicial do banco de dados</li>
+                                    <li>Configure as credenciais da API Comprasnet</li>
+                                    <li>Execute a primeira sincronização de contratos</li>
+                                </ol>
+                            </div>
+                            
                             <?php if ($podeEditar): ?>
                             <div class="setup-actions">
                                 <button onclick="executarSetup()" class="btn btn-primary">
@@ -348,226 +336,79 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
                                     <i data-lucide="settings"></i> Configurar API
                                 </button>
                             </div>
+                            <?php else: ?>
+                            <div class="alert alert-info">
+                                <i data-lucide="info"></i>
+                                <p>Entre em contato com o administrador do sistema para configurar o módulo.</p>
+                            </div>
                             <?php endif; ?>
                         </div>
                     </div>
                 </div>
-                <?php else: ?>
+            </div>
+            <?php else: ?>
+            
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="content-section active">
+                <div class="dashboard-header">
+                    <h1><i data-lucide="bar-chart-3"></i> Dashboard de Contratos</h1>
+                    <p>Visão geral dos contratos administrativos da UASG 250110</p>
+                </div>
 
                 <!-- Cards de Estatísticas -->
                 <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i data-lucide="file-text"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-number"><?= number_format($stats['total_contratos'] ?? 0) ?></div>
-                            <div class="stat-label">Total de Contratos</div>
-                        </div>
+                    <div class="stat-card info">
+                        <div class="stat-number"><?= number_format($stats['total_contratos']) ?></div>
+                        <div class="stat-label">Total de Contratos</div>
                     </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon vigente">
-                            <i data-lucide="check-circle"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-number"><?= number_format($stats['contratos_vigentes'] ?? 0) ?></div>
-                            <div class="stat-label">Contratos Vigentes</div>
-                        </div>
+                    
+                    <div class="stat-card success">
+                        <div class="stat-number"><?= number_format($stats['contratos_vigentes']) ?></div>
+                        <div class="stat-label">Contratos Vigentes</div>
                     </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon valor">
-                            <i data-lucide="dollar-sign"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-number">R$ <?= number_format($stats['valor_total_contratos'] ?? 0, 2, ',', '.') ?></div>
-                            <div class="stat-label">Valor Total</div>
-                        </div>
+                    
+                    <div class="stat-card money">
+                        <div class="stat-number">R$ <?= number_format($stats['valor_total_contratos'], 2, ',', '.') ?></div>
+                        <div class="stat-label">Valor Total</div>
                     </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon alerta">
-                            <i data-lucide="alert-triangle"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-number"><?= number_format($stats['vencem_30_dias'] ?? 0) ?></div>
-                            <div class="stat-label">Vencem em 30 dias</div>
-=======
-    <link rel="stylesheet" href="assets/contratos-dashboard.css">
-    <link rel="stylesheet" href="assets/dark-mode.css">
-    <link rel="stylesheet" href="assets/mobile-improvements.css">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-</head>
-<body>
-    <div class="dashboard-container">
-        <!-- Sidebar -->
-        <div class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <button class="sidebar-toggle" id="sidebarToggle">
-                    <i data-lucide="menu"></i>
-                </button>
-                <h2><i data-lucide="file-contract"></i> Contratos</h2>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <!-- Navegação Principal -->
-                <div class="nav-section">
-                    <div class="nav-section-title">Dashboard</div>
-                    <a href="javascript:void(0)" class="nav-item active" onclick="showSection('dashboard')">
-                        <i data-lucide="chart-line"></i>
-                        <span>Painel Principal</span>
-                    </a>
-                </div>
-                
-                <!-- Contratos -->
-                <div class="nav-section">
-                    <div class="nav-section-title">Contratos</div>
-                    <a href="javascript:void(0)" class="nav-item" onclick="showSection('lista-contratos')">
-                        <i data-lucide="list"></i>
-                        <span>Contratos</span>
-                    </a>
-                </div>
-                
-                <!-- Relatórios -->
-                <div class="nav-section">
-                    <div class="nav-section-title">Relatórios</div>
-                    <a href="javascript:void(0)" class="nav-item" onclick="showSection('relatorios')">
-                        <i data-lucide="file-text"></i>
-                        <span>Relatórios</span>
-                    </a>
-                    <a href="javascript:void(0)" class="nav-item" onclick="showSection('estatisticas')">
-                        <i data-lucide="bar-chart-3"></i>
-                        <span>Estatísticas</span>
-                    </a>
-                </div>
-                
-                <!-- Navegação Geral -->
-                <div class="nav-section">
-                    <div class="nav-section-title">Sistema</div>
-                    <a href="selecao_modulos.php" class="nav-item">
-                        <i data-lucide="home"></i>
-                        <span>Menu Principal</span>
-                    </a>
-                    <a href="dashboard.php" class="nav-item">
-                        <i data-lucide="calendar-check"></i>
-                        <span>Planejamento</span>
-                    </a>
-                    <a href="licitacao_dashboard.php" class="nav-item">
-                        <i data-lucide="gavel"></i>
-                        <span>Licitações</span>
-                    </a>
-                    <a href="qualificacao_dashboard.php" class="nav-item">
-                        <i data-lucide="award"></i>
-                        <span>Qualificação</span>
-                    </a>
-                </div>
-            </nav>
-            
-            <div class="sidebar-footer">
-                <div class="user-info">
-                    <div class="user-avatar">
-                        <?php echo strtoupper(substr($_SESSION['usuario_nome'], 0, 1)); ?>
-                    </div>
-                    <div class="user-details">
-                        <h4><?php echo htmlspecialchars($_SESSION['usuario_nome']); ?></h4>
-                        <p><?php echo htmlspecialchars($_SESSION['usuario_email']); ?></p>
-                    </div>
-                </div>
-                <a href="perfil_usuario.php" class="logout-btn" style="text-decoration: none; margin-bottom: 10px; background: #27ae60 !important;">
-                    <i data-lucide="user"></i> <span>Meu Perfil</span>
-                </a>
-                <button class="logout-btn" onclick="window.location.href='logout.php'">
-                    <i data-lucide="log-out"></i>
-                    <span>Sair</span>
-                </button>
-            </div>
-        </div>
-        
-        <!-- Main Content -->
-        <main class="main-content" id="mainContent">
-            
-            <!-- Dashboard Principal -->
-            <section id="dashboard-section" class="content-section active">
-                <div class="dashboard-header">
-                    <h1>Dashboard de Contratos</h1>
-                    <p>Visão geral dos contratos administrativos</p>
-                </div>
-
-                <!-- Cards de Estatísticas -->
-                <div class="dashboard-stats">
-                    <div class="stat-card purple">
-                        <div class="stat-icon">
-                            <i data-lucide="file-contract"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3><?php echo number_format($stats['total_contratos']); ?></h3>
-                            <p>Total de Contratos</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card green">
-                        <div class="stat-icon">
-                            <i data-lucide="check-circle"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3><?php echo number_format($stats['vigentes']); ?></h3>
-                            <p>Contratos Vigentes</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card red">
-                        <div class="stat-icon">
-                            <i data-lucide="alert-circle"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3><?php echo number_format($stats['vencidos']); ?></h3>
-                            <p>Contratos Vencidos</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card blue">
-                        <div class="stat-icon">
-                            <i data-lucide="dollar-sign"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3>R$ <?php echo number_format($stats['valor_total'], 2, ',', '.'); ?></h3>
-                            <p>Valor Total</p>
->>>>>>> 060bcff6550ff7af2a72dd02d1dfb0cceae6092a
-                        </div>
+                    
+                    <div class="stat-card warning">
+                        <div class="stat-number"><?= number_format($stats['vencem_30_dias']) ?></div>
+                        <div class="stat-label">Vencem em 30 dias</div>
                     </div>
                 </div>
 
-<<<<<<< HEAD
-                <!-- Alertas -->
+                <!-- Alertas Importantes -->
                 <?php if (!empty($alertas)): ?>
-                <div class="alertas-section">
-                    <h3><i data-lucide="bell"></i> Alertas Importantes</h3>
-                    <div class="alertas-list">
+                <div class="alerts-section">
+                    <div class="section-header">
+                        <h3><i data-lucide="bell"></i> Alertas Importantes</h3>
+                        <span class="badge badge-warning"><?= count($alertas) ?></span>
+                    </div>
+                    <div class="alerts-list">
                         <?php foreach ($alertas as $alerta): ?>
-                        <div class="alerta-item <?= $alerta['dias_restantes'] <= 0 ? 'urgente' : 'atencao' ?>">
-                            <div class="alerta-icon">
+                        <div class="alert-item <?= $alerta['dias_restantes'] <= 0 ? 'alert-danger' : ($alerta['dias_restantes'] <= 7 ? 'alert-warning' : 'alert-info') ?>">
+                            <div class="alert-icon">
                                 <i data-lucide="<?= $alerta['dias_restantes'] <= 0 ? 'alert-circle' : 'clock' ?>"></i>
                             </div>
-                            <div class="alerta-content">
-                                <div class="alerta-titulo">
+                            <div class="alert-content">
+                                <div class="alert-title">
                                     Contrato <?= htmlspecialchars($alerta['numero_contrato']) ?>
                                 </div>
-                                <div class="alerta-descricao">
-                                    <?= substr(htmlspecialchars($alerta['objeto']), 0, 80) ?>...
+                                <div class="alert-description">
+                                    <?= substr(htmlspecialchars($alerta['objeto']), 0, 100) ?>...
                                 </div>
-                                <div class="alerta-meta">
-                                    Contratado: <?= htmlspecialchars($alerta['contratado_nome']) ?> |
-                                    Vencimento: <?= date('d/m/Y', strtotime($alerta['data_fim_vigencia'])) ?>
+                                <div class="alert-meta">
+                                    <span><strong>Contratado:</strong> <?= htmlspecialchars($alerta['contratado_nome']) ?></span>
+                                    <span><strong>Vencimento:</strong> <?= date('d/m/Y', strtotime($alerta['data_fim_vigencia'])) ?></span>
                                     <?php if ($alerta['dias_restantes'] <= 0): ?>
-                                        | <strong>VENCIDO</strong>
+                                        <span class="status-vencido"><strong>VENCIDO</strong></span>
                                     <?php else: ?>
-                                        | <?= $alerta['dias_restantes'] ?> dias restantes
+                                        <span class="dias-restantes"><?= $alerta['dias_restantes'] ?> dias restantes</span>
                                     <?php endif; ?>
                                 </div>
                             </div>
-                            <div class="alerta-valor">
+                            <div class="alert-value">
                                 R$ <?= number_format($alerta['valor_total'], 2, ',', '.') ?>
                             </div>
                         </div>
@@ -576,16 +417,32 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
                 </div>
                 <?php endif; ?>
 
-                <!-- Filtros -->
-                <div class="filters-section">
-                    <form method="GET" class="filters-form">
-                        <div class="filter-group">
-                            <input type="text" name="busca" placeholder="Buscar por número, objeto ou contratado..." 
-                                   value="<?= htmlspecialchars($busca) ?>" class="filter-input">
+            </div>
+
+            <!-- Lista de Contratos Section -->
+            <div id="lista-contratos" class="content-section">
+                <div class="dashboard-header">
+                    <h1><i data-lucide="list"></i> Lista de Contratos</h1>
+                    <p>Visualize e gerencie todos os contratos da UASG 250110</p>
+                </div>
+
+                <!-- Filtros e Ações -->
+                <div class="filter-section" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                    <form method="GET" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: end;">
+                        <input type="hidden" name="secao" value="lista-contratos">
+                        
+                        <div style="flex: 1; min-width: 250px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #1e3c72;">
+                                <i data-lucide="search" style="width: 16px; height: 16px;"></i> Buscar:
+                            </label>
+                            <input type="text" name="busca" placeholder="Número, objeto ou contratado..." 
+                                   value="<?= htmlspecialchars($busca) ?>" 
+                                   style="width: 100%; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px;">
                         </div>
                         
-                        <div class="filter-group">
-                            <select name="status" class="filter-select">
+                        <div style="min-width: 150px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #1e3c72;">Status:</label>
+                            <select name="status" style="width: 100%; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px;">
                                 <option value="">Todos os Status</option>
                                 <option value="vigente" <?= $filtroStatus === 'vigente' ? 'selected' : '' ?>>Vigente</option>
                                 <option value="encerrado" <?= $filtroStatus === 'encerrado' ? 'selected' : '' ?>>Encerrado</option>
@@ -594,169 +451,71 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
                             </select>
                         </div>
 
-                        <div class="filter-group">
-                            <select name="vencimento" class="filter-select">
-                                <option value="">Prazo de Vencimento</option>
+                        <div style="min-width: 150px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #1e3c72;">Vencimento:</label>
+                            <select name="vencimento" style="width: 100%; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                <option value="">Todos os Prazos</option>
                                 <option value="vencidos" <?= $filtroVencimento === 'vencidos' ? 'selected' : '' ?>>Vencidos</option>
                                 <option value="30_dias" <?= $filtroVencimento === '30_dias' ? 'selected' : '' ?>>Vencem em 30 dias</option>
                                 <option value="90_dias" <?= $filtroVencimento === '90_dias' ? 'selected' : '' ?>>Vencem em 90 dias</option>
                             </select>
                         </div>
 
-                        <div class="filter-actions">
-                            <button type="submit" class="btn btn-primary">
-                                <i data-lucide="search"></i> Filtrar
+                        <div style="display: flex; gap: 10px;">
+                            <button type="submit" style="background: #1e3c72; color: white; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                <i data-lucide="search" style="width: 16px; height: 16px;"></i> Filtrar
                             </button>
-                            <a href="contratos_dashboard.php" class="btn btn-secondary">
-=======
-                <!-- Gráficos -->
-                <div class="charts-container">
-                    <div class="chart-card">
-                        <div class="chart-header">
-                            <h3>Status dos Contratos</h3>
-                        </div>
-                        <div class="chart-content">
-                            <canvas id="statusChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="chart-card">
-                        <div class="chart-header">
-                            <h3>Performance Mensal</h3>
-                        </div>
-                        <div class="chart-content">
-                            <canvas id="performanceChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Lista de Contratos Recentes -->
-                <div class="recent-contracts">
-                    <div class="section-header">
-                        <h3>Contratos Recentes</h3>
-                        <button class="btn-primary" onclick="showSection('lista-contratos')">
-                            <i data-lucide="eye"></i> Ver Todos
-                        </button>
-                    </div>
-                    
-                    <div class="contracts-table">
-                        <?php if (empty($contratos_recentes)): ?>
-                            <div class="empty-state">
-                                <i data-lucide="file-contract"></i>
-                                <h4>Nenhum contrato encontrado</h4>
-                                <p>Ainda não há contratos cadastrados no sistema.</p>
-                            </div>
-                        <?php else: ?>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Número</th>
-                                        <th>Fornecedor</th>
-                                        <th>Objeto</th>
-                                        <th>Valor</th>
-                                        <th>Status</th>
-                                        <th>Vigência</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach (array_slice($contratos_recentes, 0, 5) as $contrato): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($contrato['numero_contrato']); ?></td>
-                                        <td><?php echo htmlspecialchars($contrato['fornecedor']); ?></td>
-                                        <td><?php echo htmlspecialchars(substr($contrato['objeto'], 0, 60)) . '...'; ?></td>
-                                        <td>R$ <?php echo number_format($contrato['valor_contrato'], 2, ',', '.'); ?></td>
-                                        <td>
-                                            <span class="badge badge-<?php echo strtolower($contrato['status']); ?>">
-                                                <?php echo htmlspecialchars($contrato['status']); ?>
-                                            </span>
-                                        </td>
-                                        <td><?php echo date('d/m/Y', strtotime($contrato['data_fim'])); ?></td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Lista de Contratos -->
-            <section id="lista-contratos-section" class="content-section">
-                <div class="section-header">
-                    <h2>Contratos</h2>
-                    <button class="btn-primary" onclick="abrirModal('modalCriarContrato')">
-                        <i data-lucide="plus"></i> Novo Contrato
-                    </button>
-                </div>
-
-                <!-- Filtros -->
-                <div class="filtros-container">
-                    <form method="GET" class="filtros-form">
-                        <div class="filtro-grupo">
-                            <label>Status:</label>
-                            <select name="status_filtro">
-                                <option value="">Todos</option>
-                                <option value="VIGENTE" <?php echo $filtro_status == 'VIGENTE' ? 'selected' : ''; ?>>VIGENTE</option>
-                                <option value="VENCIDO" <?php echo $filtro_status == 'VENCIDO' ? 'selected' : ''; ?>>VENCIDO</option>
-                                <option value="RESCINDIDO" <?php echo $filtro_status == 'RESCINDIDO' ? 'selected' : ''; ?>>RESCINDIDO</option>
-                            </select>
-                        </div>
-
-                        <div class="filtro-grupo">
-                            <label>Modalidade:</label>
-                            <select name="modalidade_filtro">
-                                <option value="">Todas</option>
-                                <option value="PREGÃO" <?php echo $filtro_modalidade == 'PREGÃO' ? 'selected' : ''; ?>>PREGÃO</option>
-                                <option value="CONCURSO" <?php echo $filtro_modalidade == 'CONCURSO' ? 'selected' : ''; ?>>CONCURSO</option>
-                                <option value="INEXIGIBILIDADE" <?php echo $filtro_modalidade == 'INEXIGIBILIDADE' ? 'selected' : ''; ?>>INEXIGIBILIDADE</option>
-                                <option value="DISPENSA" <?php echo $filtro_modalidade == 'DISPENSA' ? 'selected' : ''; ?>>DISPENSA</option>
-                            </select>
-                        </div>
-
-                        <div class="filtro-grupo busca-grupo">
-                            <label>Buscar:</label>
-                            <input type="text" name="busca" placeholder="Número, fornecedor, objeto..." value="<?php echo htmlspecialchars($filtro_busca); ?>">
-                        </div>
-
-                        <div class="filtro-acoes">
-                            <button type="submit" class="btn-primary">
-                                <i data-lucide="search"></i> Filtrar
-                            </button>
-                            <a href="?" class="btn-secondary">
->>>>>>> 060bcff6550ff7af2a72dd02d1dfb0cceae6092a
-                                <i data-lucide="x"></i> Limpar
+                            <a href="contratos_dashboard.php?secao=lista-contratos" style="background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 8px; text-decoration: none; font-weight: 600;">
+                                <i data-lucide="x" style="width: 16px; height: 16px;"></i> Limpar
                             </a>
                         </div>
                     </form>
                 </div>
 
-<<<<<<< HEAD
-                <!-- Ações principais -->
+                <!-- Ações Principais -->
                 <?php if ($podeEditar): ?>
-                <div class="actions-section">
-                    <button onclick="sincronizarContratos()" class="btn btn-primary">
-                        <i data-lucide="refresh-cw"></i> Sincronizar Agora
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <button onclick="sincronizarContratos()" style="background: #28a745; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Sincronizar Agora
                     </button>
-                    <button onclick="showConfigModal()" class="btn btn-secondary">
-                        <i data-lucide="settings"></i> Configurar API
+                    <button onclick="showConfigModal()" style="background: #17a2b8; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i data-lucide="settings" style="width: 16px; height: 16px;"></i> Configurar API
                     </button>
-                    <button onclick="gerarRelatorio()" class="btn btn-info">
-                        <i data-lucide="file-down"></i> Relatório
+                    <button onclick="gerarRelatorio()" style="background: #007bff; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i data-lucide="file-down" style="width: 16px; height: 16px;"></i> Relatório
                     </button>
                 </div>
                 <?php endif; ?>
 
                 <!-- Lista de Contratos -->
-                <div class="contratos-section">
+                <div class="contracts-section">
                     <div class="section-header">
                         <h3><i data-lucide="list"></i> Lista de Contratos</h3>
                         <div class="section-meta">
-                            Mostrando <?= count($contratos) ?> de <?= $total ?> contratos
+                            Mostrando <?= count($contratos) ?> de <?= number_format($total) ?> contratos
                         </div>
                     </div>
 
-                    <div class="contratos-table-container">
-                        <table class="contratos-table">
+                    <div class="contracts-table-container">
+                        <?php if (empty($contratos)): ?>
+                        <div class="empty-state">
+                            <i data-lucide="inbox"></i>
+                            <h4>Nenhum contrato encontrado</h4>
+                            <p>
+                                <?php if ($busca || $filtroStatus || $filtroModalidade || $filtroVencimento): ?>
+                                    Nenhum contrato atende aos filtros aplicados.
+                                <?php else: ?>
+                                    Ainda não há contratos sincronizados do Comprasnet.
+                                <?php endif; ?>
+                            </p>
+                            <?php if ($podeEditar && !$busca && !$filtroStatus && !$filtroModalidade && !$filtroVencimento): ?>
+                            <button onclick="sincronizarContratos()" class="btn btn-primary">
+                                <i data-lucide="refresh-cw"></i> Sincronizar Contratos
+                            </button>
+                            <?php endif; ?>
+                        </div>
+                        <?php else: ?>
+                        <table class="contracts-table">
                             <thead>
                                 <tr>
                                     <th>Número</th>
@@ -769,69 +528,60 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (empty($contratos)): ?>
-                                <tr>
-                                    <td colspan="7" class="no-data">
-                                        <i data-lucide="inbox"></i>
-                                        <p>Nenhum contrato encontrado</p>
-                                        <?php if ($podeEditar): ?>
-                                        <button onclick="sincronizarContratos()" class="btn btn-primary">
-                                            <i data-lucide="refresh-cw"></i> Sincronizar Contratos
-                                        </button>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                                <?php else: ?>
                                 <?php foreach ($contratos as $contrato): ?>
-                                <tr class="contrato-row" data-id="<?= $contrato['id'] ?>">
+                                <tr class="contract-row" data-id="<?= $contrato['id'] ?>">
                                     <td>
-                                        <div class="contrato-numero">
+                                        <div class="contract-number">
                                             <?= htmlspecialchars($contrato['numero_contrato']) ?>
                                         </div>
                                         <?php if ($contrato['total_aditivos'] > 0): ?>
-                                        <div class="contrato-aditivos">
+                                        <div class="contract-additives">
                                             <i data-lucide="plus-circle"></i> <?= $contrato['total_aditivos'] ?> aditivo(s)
                                         </div>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <div class="contrato-objeto" title="<?= htmlspecialchars($contrato['objeto']) ?>">
+                                        <div class="contract-object" title="<?= htmlspecialchars($contrato['objeto']) ?>">
                                             <?= substr(htmlspecialchars($contrato['objeto']), 0, 80) ?>...
                                         </div>
-                                        <div class="contrato-meta">
-                                            <?= htmlspecialchars($contrato['modalidade']) ?>
+                                        <div class="contract-meta">
+                                            <?= htmlspecialchars($contrato['modalidade'] ?? 'N/I') ?>
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="contratado-nome">
+                                        <div class="contractor-name">
                                             <?= htmlspecialchars($contrato['contratado_nome']) ?>
                                         </div>
-                                        <div class="contratado-cnpj">
+                                        <?php if ($contrato['contratado_cnpj']): ?>
+                                        <div class="contractor-cnpj">
                                             <?= formatarCNPJ($contrato['contratado_cnpj']) ?>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="valor-total">
-                                            R$ <?= number_format($contrato['valor_total'], 2, ',', '.') ?>
-                                        </div>
-                                        <?php if ($contrato['valor_aditivos'] > 0): ?>
-                                        <div class="valor-aditivos">
-                                            +R$ <?= number_format($contrato['valor_aditivos'], 2, ',', '.') ?> (aditivos)
                                         </div>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <div class="vigencia-periodo">
+                                        <div class="contract-value">
+                                            R$ <?= number_format($contrato['valor_total'], 2, ',', '.') ?>
+                                        </div>
+                                        <?php if ($contrato['valor_aditivos'] > 0): ?>
+                                        <div class="additive-value">
+                                            +R$ <?= number_format($contrato['valor_aditivos'], 2, ',', '.') ?>
+                                        </div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="contract-period">
                                             <?= date('d/m/Y', strtotime($contrato['data_inicio_vigencia'])) ?> -
                                             <?= date('d/m/Y', strtotime($contrato['data_fim_vigencia'])) ?>
                                         </div>
                                         <?php if ($contrato['alerta_vencimento'] !== 'vigente'): ?>
-                                        <div class="vigencia-alerta <?= $contrato['alerta_vencimento'] ?>">
+                                        <div class="contract-alert <?= $contrato['alerta_vencimento'] ?>">
                                             <i data-lucide="alert-triangle"></i>
                                             <?php if ($contrato['alerta_vencimento'] === 'vencido'): ?>
                                                 Vencido
                                             <?php elseif ($contrato['alerta_vencimento'] === 'vence_30_dias'): ?>
                                                 Vence em breve
+                                            <?php else: ?>
+                                                Vencimento próximo
                                             <?php endif; ?>
                                         </div>
                                         <?php endif; ?>
@@ -857,9 +607,9 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
-                                <?php endif; ?>
                             </tbody>
                         </table>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Paginação -->
@@ -894,22 +644,24 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
                 <!-- Histórico de Sincronização -->
                 <?php if (!empty($historicoSync)): ?>
                 <div class="sync-history-section">
-                    <h3><i data-lucide="activity"></i> Histórico de Sincronização</h3>
+                    <div class="section-header">
+                        <h3><i data-lucide="activity"></i> Últimas Sincronizações</h3>
+                    </div>
                     <div class="sync-history-list">
                         <?php foreach ($historicoSync as $sync): ?>
-                        <div class="sync-item status-<?= $sync['status'] ?>">
+                        <div class="sync-item sync-<?= $sync['status'] ?>">
                             <div class="sync-icon">
-                                <i data-lucide="<?= $sync['status'] === 'sucesso' ? 'check' : ($sync['status'] === 'erro' ? 'x' : 'clock') ?>"></i>
+                                <i data-lucide="<?= $sync['status'] === 'sucesso' ? 'check-circle' : ($sync['status'] === 'erro' ? 'x-circle' : 'clock') ?>"></i>
                             </div>
                             <div class="sync-content">
                                 <div class="sync-title">
-                                    Sincronização <?= ucfirst($sync['tipo_sync']) ?>
+                                    Sincronização <?= ucfirst($sync['tipo_sync'] ?? 'Geral') ?>
                                 </div>
                                 <div class="sync-stats">
                                     <?php if ($sync['status'] === 'sucesso'): ?>
-                                        <?= $sync['contratos_novos'] ?> novos, 
-                                        <?= $sync['contratos_atualizados'] ?> atualizados
-                                        <?php if ($sync['contratos_erro'] > 0): ?>
+                                        <?= $sync['contratos_novos'] ?? 0 ?> novos, 
+                                        <?= $sync['contratos_atualizados'] ?? 0 ?> atualizados
+                                        <?php if (($sync['contratos_erro'] ?? 0) > 0): ?>
                                             , <?= $sync['contratos_erro'] ?> erros
                                         <?php endif; ?>
                                     <?php elseif ($sync['mensagem']): ?>
@@ -929,8 +681,7 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
                 </div>
                 <?php endif; ?>
 
-                <?php endif; ?>
-            </main>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -949,11 +700,13 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
                         <label for="clientId">Client ID</label>
                         <input type="text" id="clientId" name="client_id" required
                                placeholder="Seu Client ID da API Comprasnet">
+                        <small>Obtido no portal do Comprasnet</small>
                     </div>
                     <div class="form-group">
                         <label for="clientSecret">Client Secret</label>
                         <input type="password" id="clientSecret" name="client_secret" required
                                placeholder="Seu Client Secret da API Comprasnet">
+                        <small>Chave secreta para autenticação</small>
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
@@ -973,12 +726,27 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
     <div id="detalhesModal" class="modal modal-large">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i data-lucide="file-text"></i> Detalhes do Contrato</h3>
+                <h3><i data-lucide="file-contract"></i> Detalhes do Contrato</h3>
                 <button class="modal-close" onclick="closeModal('detalhesModal')">
                     <i data-lucide="x"></i>
                 </button>
             </div>
             <div class="modal-body" id="detalhesContent">
+                <!-- Conteúdo carregado via AJAX -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Histórico de Sincronização -->
+    <div id="syncModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i data-lucide="activity"></i> Histórico de Sincronização</h3>
+                <button class="modal-close" onclick="closeModal('syncModal')">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="syncContent">
                 <!-- Conteúdo carregado via AJAX -->
             </div>
         </div>
@@ -994,14 +762,45 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
     // Inicializar Lucide icons
     lucide.createIcons();
 
-    // Setup inicial
+    // Navegação entre seções
+    function showSection(sectionId) {
+        // Esconder todas as seções
+        document.querySelectorAll('.content-section').forEach(section => {
+            section.classList.remove('active');
+        });
+        
+        // Mostrar seção selecionada
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+            targetSection.classList.add('active');
+        }
+        
+        // Atualizar navegação ativa
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        // Marcar item ativo
+        const activeItem = document.querySelector(`[onclick="showSection('${sectionId}')"]`);
+        if (activeItem) {
+            activeItem.classList.add('active');
+        }
+    }
+
+    // Toggle sidebar
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('collapsed');
+    }
+
+    // Setup inicial do módulo
     async function executarSetup() {
-        if (!confirm('Deseja executar o setup do módulo de Contratos? Esta operação criará as tabelas necessárias.')) {
+        if (!confirm('Deseja executar o setup do módulo de Contratos?\n\nEsta operação irá:\n- Criar as tabelas necessárias\n- Configurar views e índices\n- Preparar o sistema para sincronização')) {
             return;
         }
         
         try {
-            showLoading('Executando setup...');
+            showNotification('Executando setup do módulo...', 'info');
             
             const response = await fetch('api/setup_contratos.php', {
                 method: 'POST',
@@ -1012,15 +811,13 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
             const result = await response.json();
             
             if (result.success) {
-                showNotification('Setup executado com sucesso!', 'success');
+                showNotification('Setup executado com sucesso! Recarregando página...', 'success');
                 setTimeout(() => location.reload(), 2000);
             } else {
-                showNotification('Erro no setup: ' + result.error, 'error');
+                showNotification('Erro no setup: ' + (result.error || 'Erro desconhecido'), 'error');
             }
         } catch (error) {
             showNotification('Erro de conexão: ' + error.message, 'error');
-        } finally {
-            hideLoading();
         }
     }
 
@@ -1040,7 +837,7 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
         };
         
         try {
-            showLoading('Autenticando...');
+            showNotification('Validando credenciais...', 'info');
             
             const response = await fetch('api/comprasnet_api.php', {
                 method: 'POST',
@@ -1051,22 +848,20 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
             const result = await response.json();
             
             if (result.success) {
-                showNotification('Autenticação realizada com sucesso!', 'success');
+                showNotification('Credenciais salvas com sucesso!', 'success');
                 closeModal('configModal');
             } else {
-                showNotification('Erro na autenticação: ' + result.error, 'error');
+                showNotification('Erro na validação: ' + (result.error || 'Credenciais inválidas'), 'error');
             }
         } catch (error) {
             showNotification('Erro de conexão: ' + error.message, 'error');
-        } finally {
-            hideLoading();
         }
     });
 
     // Testar conexão
     async function testarConexao() {
         try {
-            showLoading('Testando conexão...');
+            showNotification('Testando conexão com API...', 'info');
             
             const response = await fetch('api/comprasnet_api.php', {
                 method: 'POST',
@@ -1077,25 +872,23 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
             const result = await response.json();
             
             if (result.success) {
-                showNotification('Conexão com a API está funcionando!', 'success');
+                showNotification('Conexão com API funcionando!', 'success');
             } else {
-                showNotification('Erro na conexão: ' + result.response.error, 'error');
+                showNotification('Erro na conexão: ' + (result.error || 'Falha na comunicação'), 'error');
             }
         } catch (error) {
             showNotification('Erro ao testar conexão: ' + error.message, 'error');
-        } finally {
-            hideLoading();
         }
     }
 
     // Sincronizar contratos
     async function sincronizarContratos(tipo = 'incremental') {
-        if (!confirm('Deseja iniciar a sincronização de contratos? Esta operação pode demorar alguns minutos.')) {
+        if (!confirm('Deseja iniciar a sincronização de contratos?\n\nTipo: ' + (tipo === 'completa' ? 'Sincronização completa' : 'Sincronização incremental') + '\n\nEsta operação pode demorar alguns minutos.')) {
             return;
         }
         
         try {
-            showLoading('Sincronizando contratos...');
+            showNotification('Iniciando sincronização de contratos...', 'info');
             
             const response = await fetch('api/contratos_sync.php', {
                 method: 'POST',
@@ -1106,58 +899,63 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
             const result = await response.json();
             
             if (result.success) {
+                const stats = result.stats || {};
                 showNotification(
-                    `Sincronização concluída! ${result.stats.novos} novos, ${result.stats.atualizados} atualizados`,
+                    `Sincronização concluída!\n${stats.novos || 0} novos contratos\n${stats.atualizados || 0} contratos atualizados`, 
                     'success'
                 );
-                setTimeout(() => location.reload(), 2000);
+                setTimeout(() => location.reload(), 3000);
             } else {
-                showNotification('Erro na sincronização: ' + result.error, 'error');
+                showNotification('Erro na sincronização: ' + (result.error || 'Falha na operação'), 'error');
             }
         } catch (error) {
             showNotification('Erro de conexão: ' + error.message, 'error');
-        } finally {
-            hideLoading();
         }
     }
 
     // Ver detalhes do contrato
     async function verDetalhes(contratoId) {
         try {
-            showLoading('Carregando detalhes...');
+            showNotification('Carregando detalhes do contrato...', 'info');
             
             const response = await fetch(`api/get_contrato_detalhes.php?id=${contratoId}`);
+            
+            if (!response.ok) {
+                throw new Error('Erro ao carregar detalhes');
+            }
+            
             const html = await response.text();
             
             document.getElementById('detalhesContent').innerHTML = html;
             document.getElementById('detalhesModal').style.display = 'block';
+            
+            // Reinicializar ícones Lucide no modal
+            lucide.createIcons();
+            
         } catch (error) {
             showNotification('Erro ao carregar detalhes: ' + error.message, 'error');
-        } finally {
-            hideLoading();
         }
     }
 
-    // Gerar relatório
-    function gerarRelatorio() {
-        const params = new URLSearchParams(window.location.search);
-        params.set('formato', 'pdf');
-        window.open(`relatorios/relatorio_contratos.php?${params.toString()}`, '_blank');
+    // Mostrar histórico de sincronização
+    function showSyncModal() {
+        document.getElementById('syncModal').style.display = 'block';
+        // Carregar histórico via AJAX se necessário
     }
 
-    // Utilitários
+    // Gerar relatório
+    function gerarRelatorio(tipo = 'geral') {
+        const params = new URLSearchParams(window.location.search);
+        params.set('relatorio', tipo);
+        params.set('formato', 'pdf');
+        
+        const url = `relatorios/relatorio_contratos.php?${params.toString()}`;
+        window.open(url, '_blank');
+    }
+
+    // Utilitários de modal
     function closeModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
-    }
-
-    function showLoading(message = 'Carregando...') {
-        // Implementar loading spinner
-        console.log(message);
-    }
-
-    function hideLoading() {
-        // Remover loading spinner
-        console.log('Loading hidden');
     }
 
     // Fechar modais clicando fora
@@ -1170,176 +968,37 @@ $total_paginas = ceil($total_contratos / $contratos_por_pagina);
         });
     }
 
-    // Auto-refresh a cada 5 minutos para alertas
+    // Auto-refresh para alertas (a cada 10 minutos)
     setInterval(() => {
-        // Verificar apenas os alertas sem recarregar a página toda
-        fetch('api/get_alertas.php')
+        fetch('api/get_alertas.php?modulo=contratos')
             .then(response => response.json())
             .then(data => {
                 if (data.alertas && data.alertas.length > 0) {
-                    // Atualizar seção de alertas se necessário
+                    // Atualizar badge de alertas se necessário
+                    const badge = document.querySelector('.alerts-section .badge');
+                    if (badge) {
+                        badge.textContent = data.alertas.length;
+                    }
                 }
             })
             .catch(error => console.log('Erro ao verificar alertas:', error));
-    }, 300000); // 5 minutos
+    }, 600000); // 10 minutos
+
+    // Atalhos de teclado
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key) {
+                case 'r':
+                    e.preventDefault();
+                    sincronizarContratos();
+                    break;
+                case 'f':
+                    e.preventDefault();
+                    document.querySelector('input[name="busca"]').focus();
+                    break;
+            }
+        }
+    });
     </script>
-=======
-                <!-- Tabela de Contratos -->
-                <div class="contracts-list">
-                    <?php if (empty($contratos_recentes)): ?>
-                        <div class="empty-state">
-                            <i data-lucide="file-contract"></i>
-                            <h4>Nenhum contrato encontrado</h4>
-                            <p>Não há contratos que atendam aos filtros selecionados.</p>
-                        </div>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Número</th>
-                                        <th>Fornecedor</th>
-                                        <th>Objeto</th>
-                                        <th>Valor</th>
-                                        <th>Status</th>
-                                        <th>Vigência</th>
-                                        <th>Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($contratos_recentes as $contrato): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($contrato['numero_contrato']); ?></td>
-                                        <td><?php echo htmlspecialchars($contrato['fornecedor']); ?></td>
-                                        <td><?php echo htmlspecialchars(substr($contrato['objeto'], 0, 80)) . '...'; ?></td>
-                                        <td>R$ <?php echo number_format($contrato['valor_contrato'], 2, ',', '.'); ?></td>
-                                        <td>
-                                            <span class="badge badge-<?php echo strtolower($contrato['status']); ?>">
-                                                <?php echo htmlspecialchars($contrato['status']); ?>
-                                            </span>
-                                        </td>
-                                        <td><?php echo date('d/m/Y', strtotime($contrato['data_fim'])); ?></td>
-                                        <td>
-                                            <div class="action-buttons">
-                                                <button class="btn-icon" title="Visualizar">
-                                                    <i data-lucide="eye"></i>
-                                                </button>
-                                                <button class="btn-icon" title="Editar">
-                                                    <i data-lucide="edit"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Paginação -->
-                        <?php if ($total_paginas > 1): ?>
-                        <div class="pagination">
-                            <?php if ($pagina_atual > 1): ?>
-                                <a href="?pagina=<?php echo $pagina_atual - 1; ?>&status_filtro=<?php echo $filtro_status; ?>&modalidade_filtro=<?php echo $filtro_modalidade; ?>&busca=<?php echo $filtro_busca; ?>" class="page-btn">
-                                    <i data-lucide="chevron-left"></i>
-                                </a>
-                            <?php endif; ?>
-
-                            <?php for ($i = max(1, $pagina_atual - 2); $i <= min($total_paginas, $pagina_atual + 2); $i++): ?>
-                                <a href="?pagina=<?php echo $i; ?>&status_filtro=<?php echo $filtro_status; ?>&modalidade_filtro=<?php echo $filtro_modalidade; ?>&busca=<?php echo $filtro_busca; ?>" 
-                                   class="page-btn <?php echo $i == $pagina_atual ? 'active' : ''; ?>">
-                                    <?php echo $i; ?>
-                                </a>
-                            <?php endfor; ?>
-
-                            <?php if ($pagina_atual < $total_paginas): ?>
-                                <a href="?pagina=<?php echo $pagina_atual + 1; ?>&status_filtro=<?php echo $filtro_status; ?>&modalidade_filtro=<?php echo $filtro_modalidade; ?>&busca=<?php echo $filtro_busca; ?>" class="page-btn">
-                                    <i data-lucide="chevron-right"></i>
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </div>
-            </section>
-
-            <!-- Relatórios -->
-            <section id="relatorios-section" class="content-section">
-                <div class="section-header">
-                    <h2>Relatórios</h2>
-                </div>
-                
-                <div class="reports-grid">
-                    <div class="report-card">
-                        <div class="report-icon">
-                            <i data-lucide="file-text"></i>
-                        </div>
-                        <h3>Relatório Geral</h3>
-                        <p>Relatório completo de todos os contratos</p>
-                        <button class="btn-primary" onclick="gerarRelatorio('geral')">
-                            <i data-lucide="download"></i> Gerar
-                        </button>
-                    </div>
-
-                    <div class="report-card">
-                        <div class="report-icon">
-                            <i data-lucide="calendar"></i>
-                        </div>
-                        <h3>Contratos por Período</h3>
-                        <p>Análise por período específico</p>
-                        <button class="btn-primary" onclick="gerarRelatorio('periodo')">
-                            <i data-lucide="download"></i> Gerar
-                        </button>
-                    </div>
-
-                    <div class="report-card">
-                        <div class="report-icon">
-                            <i data-lucide="alert-triangle"></i>
-                        </div>
-                        <h3>Contratos Vencendo</h3>
-                        <p>Contratos próximos ao vencimento</p>
-                        <button class="btn-primary" onclick="gerarRelatorio('vencendo')">
-                            <i data-lucide="download"></i> Gerar
-                        </button>
-                    </div>
-
-                    <div class="report-card">
-                        <div class="report-icon">
-                            <i data-lucide="dollar-sign"></i>
-                        </div>
-                        <h3>Relatório Financeiro</h3>
-                        <p>Análise de valores e execução</p>
-                        <button class="btn-primary" onclick="gerarRelatorio('financeiro')">
-                            <i data-lucide="download"></i> Gerar
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Estatísticas -->
-            <section id="estatisticas-section" class="content-section">
-                <div class="section-header">
-                    <h2>Estatísticas</h2>
-                </div>
-                
-                <div class="stats-content">
-                    <div class="empty-state">
-                        <i data-lucide="bar-chart-3"></i>
-                        <h4>Estatísticas em Desenvolvimento</h4>
-                        <p>As estatísticas detalhadas estarão disponíveis em breve.</p>
-                    </div>
-                </div>
-            </section>
-            
-        </main>
-    </div>
-
-    <!-- Scripts -->
-    <script src="assets/contratos-dashboard.js"></script>
-    <script src="assets/dark-mode.js"></script>
-    <script src="assets/mobile-improvements.js"></script>
-    <script src="assets/ux-improvements.js"></script>
-    <script src="assets/notifications.js"></script>
-    
->>>>>>> 060bcff6550ff7af2a72dd02d1dfb0cceae6092a
 </body>
 </html>

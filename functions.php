@@ -125,10 +125,7 @@ function limparEncoding($texto) {
 
 // Verificar se usuário está logado
 function verificarLogin() {
-    if (!isset($_SESSION['usuario_id'])) {
-        header('Location: index.php');
-        exit;
-    }
+    return isset($_SESSION['usuario_id']);
 }
 
 // Sanitizar entrada

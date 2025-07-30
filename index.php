@@ -2,9 +2,9 @@
 require_once 'config.php';
 require_once 'functions.php';
 
-// Se já estiver logado, redirecionar para dashboard
+// Se já estiver logado, redirecionar para seleção de módulos
 if (isset($_SESSION['usuario_id'])) {
-    header('Location: dashboard.php');
+    header('Location: selecao_modulos.php');
     exit;
 }
 ?>
