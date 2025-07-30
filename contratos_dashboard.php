@@ -209,6 +209,7 @@ $totalPaginas = ceil($total / $limite);
     <title>Contratos - Sistema CGLIC</title>
     <link rel="stylesheet" href="assets/style.css">
     <link rel="stylesheet" href="assets/dashboard.css">
+    <link rel="stylesheet" href="assets/contratos-dashboard.css">
     <link rel="stylesheet" href="assets/mobile-improvements.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -248,25 +249,34 @@ $totalPaginas = ceil($total / $limite);
                     <button class="nav-item" onclick="gerarRelatorio()">
                         <i data-lucide="file-text"></i> <span>Relatórios</span>
                     </button>
+                    <?php if (isVisitante()): ?>
+                    <div style="margin: 10px 15px; padding: 8px; background: #fff3cd; border-radius: 6px; border-left: 3px solid #f39c12;">
+                        <small style="color: #856404; font-size: 11px; font-weight: 600;">
+                            <i data-lucide="eye" style="width: 12px; height: 12px;"></i> MODO VISITANTE<br>
+                            Somente visualização e exportação
+                        </small>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 
                 <!-- Navegação Geral -->
                 <div class="nav-section">
                     <div class="nav-section-title">Sistema</div>
                     <a href="selecao_modulos.php" class="nav-item">
-                        <i data-lucide="home"></i> <span>Menu Principal</span>
+                        <i data-lucide="home"></i>
+                        <span>Menu Principal</span>
                     </a>
                     <a href="dashboard.php" class="nav-item">
-                        <i data-lucide="calendar-check"></i> <span>Planejamento</span>
+                        <i data-lucide="clipboard-check"></i>
+                        <span>Planejamento</span>
                     </a>
                     <a href="licitacao_dashboard.php" class="nav-item">
-                        <i data-lucide="gavel"></i> <span>Licitações</span>
-                    </a>
-                    <a href="gestao_riscos.php" class="nav-item">
-                        <i data-lucide="shield-alert"></i> <span>Riscos</span>
+                        <i data-lucide="gavel"></i>
+                        <span>Licitações</span>
                     </a>
                     <a href="qualificacao_dashboard.php" class="nav-item">
-                        <i data-lucide="award"></i> <span>Qualificações</span>
+                        <i data-lucide="award"></i>
+                        <span>Qualificações</span>
                     </a>
                 </div>
             </nav>
@@ -274,14 +284,19 @@ $totalPaginas = ceil($total / $limite);
             <div class="sidebar-footer">
                 <div class="user-info">
                     <div class="user-avatar">
-                        <?= strtoupper(substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?>
+                        <?php echo strtoupper(substr($_SESSION['usuario_nome'], 0, 1)); ?>
                     </div>
                     <div class="user-details">
-                        <h4><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></h4>
-                        <p><?= htmlspecialchars($_SESSION['usuario_email'] ?? '') ?></p>
+                        <h4><?php echo htmlspecialchars($_SESSION['usuario_nome']); ?></h4>
+                        <p><?php echo htmlspecialchars($_SESSION['usuario_email']); ?></p>
                         <small style="color: #3498db; font-weight: 600;">
-                            <?= getNomeNivel($_SESSION['usuario_nivel'] ?? 0) ?> - <?= htmlspecialchars($_SESSION['usuario_departamento'] ?? 'CGLIC') ?>
+                            <?php echo getNomeNivel($_SESSION['usuario_nivel'] ?? 3); ?> - <?php echo htmlspecialchars($_SESSION['usuario_departamento'] ?? ''); ?>
                         </small>
+                        <?php if (isVisitante()): ?>
+                        <small style="color: #f39c12; font-weight: 600; display: block; margin-top: 4px;">
+                            <i data-lucide="eye" style="width: 12px; height: 12px;"></i> Modo Somente Leitura
+                        </small>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <a href="perfil_usuario.php" class="logout-btn" style="text-decoration: none; margin-bottom: 10px; background: #27ae60 !important;">
@@ -757,6 +772,7 @@ $totalPaginas = ceil($total / $limite);
     <script src="assets/notifications.js"></script>
     <script src="assets/mobile-improvements.js"></script>
     <script src="assets/ux-improvements.js"></script>
+    <script src="assets/contratos-dashboard.js"></script>
     
     <script>
     // Inicializar Lucide icons

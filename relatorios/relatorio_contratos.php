@@ -1,710 +1,739 @@
 <?php
-/**
- * Relatório Gerencial de Contratos
- * Sistema CGLIC - Ministério da Saúde
- * 
- * Gera relatórios com estatísticas e gráficos dos contratos
- */
+require_once '../config.php';
+require_once '../functions.php';
 
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../functions.php';
+verificarLogin();
 
-// Verificar login
-if (!verificarLogin()) {
-    header('Location: ../index.php');
-    exit;
+$pdo = conectarDB();
+
+// Verificar se as tabelas existem
+$stmt = $pdo->query("SHOW TABLES LIKE 'contratos'");
+$tablesExist = $stmt && $stmt->rowCount() > 0;
+
+if (!$tablesExist) {
+    die('Módulo de contratos não foi configurado. Execute o setup primeiro.');
 }
 
-// Parâmetros do relatório
-$formato = $_GET['formato'] ?? 'html';
-$tipoRelatorio = $_GET['tipo'] ?? 'geral';
-$dataInicio = $_GET['data_inicio'] ?? date('Y-01-01');
-$dataFim = $_GET['data_fim'] ?? date('Y-12-31');
+// Parâmetros
+$tipo = $_GET['tipo'] ?? '';
+$data_inicial = $_GET['data_inicial'] ?? date('Y-01-01');
+$data_final = $_GET['data_final'] ?? date('Y-m-d');
 $status = $_GET['status'] ?? '';
 $modalidade = $_GET['modalidade'] ?? '';
+$formato = $_GET['formato'] ?? 'html';
+$incluir_graficos = isset($_GET['incluir_graficos']);
 
-// Validar datas
-$dataInicio = date('Y-m-d', strtotime($dataInicio));
-$dataFim = date('Y-m-d', strtotime($dataFim));
+// Construir WHERE
+$where = ['c.data_assinatura BETWEEN ? AND ?'];
+$params = [$data_inicial, $data_final];
 
-try {
-    // Verificar se as tabelas existem
-    $tablesExist = $conn->query("SHOW TABLES LIKE 'contratos'")->num_rows > 0;
-    
-    if (!$tablesExist) {
-        throw new Exception('Módulo de contratos não foi configurado. Execute o setup primeiro.');
-    }
-    
-    // Construir filtros
-    $whereConditions = ["c.uasg = '250110'"];
-    $params = [];
-    $types = '';
-    
-    // Filtro por data de assinatura
-    $whereConditions[] = "c.data_assinatura BETWEEN ? AND ?";
-    $params[] = $dataInicio;
-    $params[] = $dataFim;
-    $types .= 'ss';
-    
-    if ($status) {
-        $whereConditions[] = "c.status_contrato = ?";
-        $params[] = $status;
-        $types .= 's';
-    }
-    
-    if ($modalidade) {
-        $whereConditions[] = "c.modalidade LIKE ?";
-        $params[] = "%{$modalidade}%";
-        $types .= 's';
-    }
-    
-    $whereClause = implode(' AND ', $whereConditions);
-    
-    // 1. Estatísticas Gerais
-    $statsQuery = "
-        SELECT 
-            COUNT(*) as total_contratos,
-            COUNT(CASE WHEN c.status_contrato = 'vigente' THEN 1 END) as contratos_vigentes,
-            COUNT(CASE WHEN c.status_contrato = 'encerrado' THEN 1 END) as contratos_encerrados,
-            COUNT(CASE WHEN c.data_fim_vigencia < CURDATE() AND c.status_contrato = 'vigente' THEN 1 END) as contratos_vencidos,
-            SUM(c.valor_total) as valor_total,
-            SUM(c.valor_empenhado) as valor_empenhado,
-            SUM(c.valor_pago) as valor_pago,
-            AVG(c.valor_total) as valor_medio,
-            MIN(c.valor_total) as menor_valor,
-            MAX(c.valor_total) as maior_valor,
-            COUNT(CASE WHEN c.valor_total >= 1000000 THEN 1 END) as contratos_grandes,
-            COUNT(CASE WHEN c.valor_total < 100000 THEN 1 END) as contratos_pequenos
+if (!empty($status)) {
+    $where[] = 'c.status_contrato = ?';
+    $params[] = $status;
+}
+
+if (!empty($modalidade)) {
+    $where[] = 'c.modalidade LIKE ?';
+    $params[] = '%' . $modalidade . '%';
+}
+
+$whereClause = implode(' AND ', $where);
+
+// Gerar relatório baseado no tipo
+switch ($tipo) {
+    case 'modalidade':
+        gerarRelatorioModalidade($pdo, $whereClause, $params, $formato, $incluir_graficos);
+        break;
+        
+    case 'status':
+        gerarRelatorioStatus($pdo, $whereClause, $params, $formato, $incluir_graficos);
+        break;
+        
+    case 'prazos':
+        gerarRelatorioPrazos($pdo, $whereClause, $params, $formato, $incluir_graficos);
+        break;
+        
+    case 'financeiro':
+        gerarRelatorioFinanceiro($pdo, $whereClause, $params, $formato, $incluir_graficos);
+        break;
+        
+    default:
+        die('Tipo de relatório inválido');
+}
+
+// Função: Relatório por Modalidade
+function gerarRelatorioModalidade($pdo, $where, $params, $formato, $incluir_graficos) {
+    $sql = "SELECT 
+        c.modalidade,
+        COUNT(*) as total_contratos,
+        SUM(c.valor_total) as valor_total,
+        AVG(c.valor_total) as valor_medio,
+        COUNT(CASE WHEN c.status_contrato = 'vigente' THEN 1 END) as vigentes,
+        COUNT(CASE WHEN c.status_contrato = 'encerrado' THEN 1 END) as encerrados,
+        COUNT(CASE WHEN c.data_fim_vigencia < CURDATE() AND c.status_contrato = 'vigente' THEN 1 END) as vencidos,
+        COUNT(CASE WHEN c.data_fim_vigencia BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as vencendo_30_dias,
+        ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM contratos c2 WHERE $where), 2) as percentual
         FROM contratos c 
-        WHERE {$whereClause}
-    ";
-    
-    $stmt = $conn->prepare($statsQuery);
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
-    }
-    $stmt->execute();
-    $stats = $stmt->get_result()->fetch_assoc();
-    
-    // 2. Distribuição por Modalidade
-    $modalidadeQuery = "
-        SELECT 
-            c.modalidade,
-            COUNT(*) as quantidade,
-            SUM(c.valor_total) as valor_total,
-            AVG(c.valor_total) as valor_medio,
-            ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) FROM contratos c2 WHERE {$whereClause})), 2) as percentual
-        FROM contratos c 
-        WHERE {$whereClause}
+        WHERE $where AND c.modalidade IS NOT NULL
         GROUP BY c.modalidade
-        ORDER BY quantidade DESC
-    ";
+        ORDER BY valor_total DESC";
     
-    $stmt = $conn->prepare($modalidadeQuery);
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $dados = $stmt->fetchAll();
+    
+    if ($formato === 'html') {
+        gerarHTMLModalidade($dados, $incluir_graficos, $params);
+    } elseif ($formato === 'pdf') {
+        gerarPDFModalidade($dados, $incluir_graficos);
+    } else {
+        gerarExcelModalidade($dados);
     }
-    $stmt->execute();
-    $modalidades = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    
-    // 3. Distribuição por Status
-    $statusQuery = "
-        SELECT 
-            c.status_contrato,
-            COUNT(*) as quantidade,
-            SUM(c.valor_total) as valor_total,
-            ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) FROM contratos c2 WHERE {$whereClause})), 2) as percentual
+}
+
+// Função: Relatório por Status
+function gerarRelatorioStatus($pdo, $where, $params, $formato, $incluir_graficos) {
+    $sql = "SELECT 
+        c.status_contrato,
+        COUNT(*) as total_contratos,
+        SUM(c.valor_total) as valor_total,
+        AVG(c.valor_total) as valor_medio,
+        SUM(c.valor_empenhado) as valor_empenhado,
+        SUM(c.valor_pago) as valor_pago,
+        AVG(DATEDIFF(c.data_fim_vigencia, c.data_inicio_vigencia)) as prazo_medio_dias,
+        ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM contratos c2 WHERE $where), 2) as percentual
         FROM contratos c 
-        WHERE {$whereClause}
+        WHERE $where
         GROUP BY c.status_contrato
-        ORDER BY quantidade DESC
-    ";
+        ORDER BY valor_total DESC";
     
-    $stmt = $conn->prepare($statusQuery);
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $dados = $stmt->fetchAll();
+    
+    if ($formato === 'html') {
+        gerarHTMLStatus($dados, $incluir_graficos, $params);
+    } elseif ($formato === 'pdf') {
+        gerarPDFStatus($dados, $incluir_graficos);
+    } else {
+        gerarExcelStatus($dados);
     }
-    $stmt->execute();
-    $statusData = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    
-    // 4. Evolução Mensal
-    $evolucaoQuery = "
-        SELECT 
-            DATE_FORMAT(c.data_assinatura, '%Y-%m') as mes,
-            COUNT(*) as quantidade,
-            SUM(c.valor_total) as valor_total
+}
+
+// Função: Relatório de Prazos
+function gerarRelatorioPrazos($pdo, $where, $params, $formato, $incluir_graficos) {
+    $sql = "SELECT 
+        c.modalidade,
+        COUNT(*) as total_contratos,
+        COUNT(CASE WHEN c.data_fim_vigencia < CURDATE() AND c.status_contrato = 'vigente' THEN 1 END) as vencidos,
+        COUNT(CASE WHEN c.data_fim_vigencia BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as vencendo_30_dias,
+        COUNT(CASE WHEN c.data_fim_vigencia BETWEEN DATE_ADD(CURDATE(), INTERVAL 31 DAY) AND DATE_ADD(CURDATE(), INTERVAL 90 DAY) THEN 1 END) as vencendo_90_dias,
+        AVG(DATEDIFF(c.data_fim_vigencia, c.data_inicio_vigencia)) as prazo_medio_dias,
+        MIN(c.data_fim_vigencia) as proxima_vigencia,
+        SUM(CASE WHEN c.data_fim_vigencia < CURDATE() AND c.status_contrato = 'vigente' THEN c.valor_total ELSE 0 END) as valor_vencidos
         FROM contratos c 
-        WHERE {$whereClause}
+        WHERE $where AND c.modalidade IS NOT NULL
+        GROUP BY c.modalidade
+        ORDER BY vencidos DESC, vencendo_30_dias DESC";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $dados = $stmt->fetchAll();
+    
+    if ($formato === 'html') {
+        gerarHTMLPrazos($dados, $incluir_graficos, $params);
+    } elseif ($formato === 'pdf') {
+        gerarPDFPrazos($dados, $incluir_graficos);
+    } else {
+        gerarExcelPrazos($dados);
+    }
+}
+
+// Função: Relatório Financeiro
+function gerarRelatorioFinanceiro($pdo, $where, $params, $formato, $incluir_graficos) {
+    $sql = "SELECT 
+        DATE_FORMAT(c.data_assinatura, '%Y-%m') as mes,
+        COUNT(*) as total_contratos,
+        SUM(c.valor_total) as valor_total,
+        SUM(c.valor_empenhado) as valor_empenhado,
+        SUM(c.valor_pago) as valor_pago,
+        AVG(c.valor_total) as valor_medio,
+        COUNT(CASE WHEN c.status_contrato = 'vigente' THEN 1 END) as contratos_vigentes,
+        COUNT(CASE WHEN c.status_contrato = 'encerrado' THEN 1 END) as contratos_encerrados
+        FROM contratos c 
+        WHERE $where
         GROUP BY DATE_FORMAT(c.data_assinatura, '%Y-%m')
-        ORDER BY mes
-    ";
+        ORDER BY mes";
     
-    $stmt = $conn->prepare($evolucaoQuery);
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $dados = $stmt->fetchAll();
+    
+    if ($formato === 'html') {
+        gerarHTMLFinanceiro($dados, $incluir_graficos, $params);
+    } elseif ($formato === 'pdf') {
+        gerarPDFFinanceiro($dados, $incluir_graficos);
+    } else {
+        gerarExcelFinanceiro($dados);
     }
-    $stmt->execute();
-    $evolucao = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    
-    // 5. Top 10 Contratados
-    $contratadosQuery = "
-        SELECT 
-            c.contratado_nome,
-            c.contratado_cnpj,
-            COUNT(*) as quantidade_contratos,
-            SUM(c.valor_total) as valor_total,
-            AVG(c.valor_total) as valor_medio
-        FROM contratos c 
-        WHERE {$whereClause}
-        GROUP BY c.contratado_nome, c.contratado_cnpj
-        ORDER BY valor_total DESC
-        LIMIT 10
-    ";
-    
-    $stmt = $conn->prepare($contratadosQuery);
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
-    }
-    $stmt->execute();
-    $topContratados = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    
-    // 6. Contratos próximos ao vencimento
-    $vencimentoQuery = "
-        SELECT 
-            c.numero_contrato,
-            c.objeto,
-            c.contratado_nome,
-            c.valor_total,
-            c.data_fim_vigencia,
-            DATEDIFF(c.data_fim_vigencia, CURDATE()) as dias_restantes
-        FROM contratos c 
-        WHERE c.status_contrato = 'vigente'
-          AND c.data_fim_vigencia BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 90 DAY)
-        ORDER BY c.data_fim_vigencia ASC
-        LIMIT 20
-    ";
-    
-    $vencimentos = $conn->query($vencimentoQuery)->fetch_all(MYSQLI_ASSOC);
-    
-    // 7. Indicadores de Performance
-    $indicadores = [
-        'taxa_execucao' => $stats['valor_total'] > 0 ? ($stats['valor_pago'] / $stats['valor_total']) * 100 : 0,
-        'taxa_empenho' => $stats['valor_total'] > 0 ? ($stats['valor_empenhado'] / $stats['valor_total']) * 100 : 0,
-        'prazo_medio' => 0, // Calcular separadamente
-        'economia_media' => 0 // Se houver dados de economia
-    ];
-    
-    // Calcular prazo médio
-    $prazoQuery = "
-        SELECT AVG(DATEDIFF(c.data_fim_vigencia, c.data_inicio_vigencia)) as prazo_medio
-        FROM contratos c 
-        WHERE {$whereClause}
-          AND c.data_inicio_vigencia IS NOT NULL 
-          AND c.data_fim_vigencia IS NOT NULL
-    ";
-    
-    $stmt = $conn->prepare($prazoQuery);
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
-    }
-    $stmt->execute();
-    $prazoResult = $stmt->get_result()->fetch_assoc();
-    $indicadores['prazo_medio'] = $prazoResult['prazo_medio'] ?? 0;
-    
-} catch (Exception $e) {
-    $erro = $e->getMessage();
-    $stats = [];
-    $modalidades = [];
-    $statusData = [];
-    $evolucao = [];
-    $topContratados = [];
-    $vencimentos = [];
-    $indicadores = [];
 }
 
-// Gerar saída baseada no formato
-if ($formato === 'pdf') {
-    // TODO: Implementar geração de PDF se biblioteca estiver disponível
-    $formato = 'html'; // Fallback para HTML
-}
-
-if ($formato === 'csv') {
-    // Gerar CSV
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="relatorio_contratos_' . date('Y-m-d') . '.csv"');
+// Função: Gerar HTML - Modalidade
+function gerarHTMLModalidade($dados, $incluir_graficos, $params) {
+    $total_contratos = array_sum(array_column($dados, 'total_contratos'));
+    $valor_total = array_sum(array_column($dados, 'valor_total'));
+    $data_inicial = date('d/m/Y', strtotime($params[0]));
+    $data_final = date('d/m/Y', strtotime($params[1]));
     
-    $output = fopen('php://output', 'w');
-    
-    // BOM para UTF-8
-    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
-    
-    // Cabeçalhos
-    fputcsv($output, ['Relatório de Contratos - ' . date('d/m/Y')], ';');
-    fputcsv($output, ['Período: ' . date('d/m/Y', strtotime($dataInicio)) . ' a ' . date('d/m/Y', strtotime($dataFim))], ';');
-    fputcsv($output, [], ';'); // Linha vazia
-    
-    // Estatísticas gerais
-    fputcsv($output, ['ESTATÍSTICAS GERAIS'], ';');
-    fputcsv($output, ['Total de Contratos', number_format($stats['total_contratos'] ?? 0)], ';');
-    fputcsv($output, ['Contratos Vigentes', number_format($stats['contratos_vigentes'] ?? 0)], ';');
-    fputcsv($output, ['Valor Total', 'R$ ' . number_format($stats['valor_total'] ?? 0, 2, ',', '.')], ';');
-    fputcsv($output, ['Valor Empenhado', 'R$ ' . number_format($stats['valor_empenhado'] ?? 0, 2, ',', '.')], ';');
-    fputcsv($output, ['Valor Pago', 'R$ ' . number_format($stats['valor_pago'] ?? 0, 2, ',', '.')], ';');
-    fputcsv($output, [], ';'); // Linha vazia
-    
-    // Distribuição por modalidade
-    fputcsv($output, ['DISTRIBUIÇÃO POR MODALIDADE'], ';');
-    fputcsv($output, ['Modalidade', 'Quantidade', 'Valor Total', 'Percentual'], ';');
-    foreach ($modalidades as $mod) {
-        fputcsv($output, [
-            $mod['modalidade'],
-            number_format($mod['quantidade']),
-            'R$ ' . number_format($mod['valor_total'], 2, ',', '.'),
-            $mod['percentual'] . '%'
-        ], ';');
-    }
-    
-    fclose($output);
-    exit;
-}
-
-// Formato HTML (padrão)
-?>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório de Contratos - Sistema CGLIC</title>
-    <link rel="stylesheet" href="../assets/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <style>
-        .relatorio-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background: white;
-        }
-        
-        .relatorio-header {
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 20px;
-        }
-        
-        .relatorio-header h1 {
-            color: #007bff;
-            margin: 0;
-        }
-        
-        .relatorio-header .periodo {
-            color: #6c757d;
-            margin-top: 10px;
-        }
-        
-        .stats-overview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-        
-        .stat-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #007bff;
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 2em;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 5px;
-        }
-        
-        .stat-label {
-            color: #6c757d;
-            font-size: 0.9em;
-        }
-        
-        .chart-section {
-            margin: 40px 0;
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 8px;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 400px;
-            margin: 20px 0;
-        }
-        
-        .table-section {
-            margin: 40px 0;
-        }
-        
-        .table-section h3 {
-            color: #007bff;
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-        
-        .data-table th,
-        .data-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #dee2e6;
-        }
-        
-        .data-table th {
-            background: #007bff;
-            color: white;
-            font-weight: 600;
-        }
-        
-        .data-table tr:hover {
-            background: #f8f9fa;
-        }
-        
-        .indicador-card {
-            background: white;
-            border: 1px solid #dee2e6;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .indicador-valor {
-            font-size: 1.8em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .indicador-valor.bom { color: #28a745; }
-        .indicador-valor.regular { color: #ffc107; }
-        .indicador-valor.ruim { color: #dc3545; }
-        
-        .actions-bar {
-            text-align: center;
-            margin: 30px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            margin: 0 10px;
-            background: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .btn:hover {
-            background: #0056b3;
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-        }
-        
-        .btn-secondary:hover {
-            background: #545b62;
-        }
-        
-        @media print {
-            .actions-bar {
-                display: none;
-            }
+    ?>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <title>Relatório por Modalidade - Contratos</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+            .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+            .info { background: #ecf0f1; padding: 15px; border-radius: 5px; margin-bottom: 30px; }
+            .info p { margin: 5px 0; }
+            .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+            .summary-card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border-left: 4px solid #7c3aed; }
+            .summary-card h3 { margin: 0 0 10px 0; color: #2c3e50; font-size: 16px; }
+            .summary-card .value { font-size: 24px; font-weight: bold; color: #7c3aed; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th { background: #34495e; color: white; padding: 12px; text-align: left; }
+            td { padding: 10px; border-bottom: 1px solid #ddd; }
+            tr:nth-child(even) { background: #f8f9fa; }
+            .chart-container { width: 100%; margin: 30px 0; height: 400px; }
+            .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+            .status-vigente { background: #27ae60; color: white; }
+            .status-encerrado { background: #95a5a6; color: white; }
+            .status-vencido { background: #e74c3c; color: white; }
+            @media print { .no-print { display: none; } }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Relatório de Contratos por Modalidade</h1>
             
-            .relatorio-container {
-                padding: 0;
-            }
+            <div class="info">
+                <p><strong>Período:</strong> <?php echo $data_inicial; ?> a <?php echo $data_final; ?></p>
+                <p><strong>Total de Contratos:</strong> <?php echo $total_contratos; ?></p>
+                <p><strong>Valor Total:</strong> R$ <?php echo number_format($valor_total, 2, ',', '.'); ?></p>
+                <p><strong>Data de Geração:</strong> <?php echo date('d/m/Y H:i:s'); ?></p>
+            </div>
             
-            .chart-container {
-                height: 300px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="relatorio-container">
-        <!-- Cabeçalho -->
-        <div class="relatorio-header">
-            <h1><i data-lucide="file-text"></i> Relatório Gerencial de Contratos</h1>
-            <div class="periodo">
-                Período: <?= date('d/m/Y', strtotime($dataInicio)) ?> a <?= date('d/m/Y', strtotime($dataFim)) ?>
-            </div>
-            <div class="periodo">
-                Gerado em: <?= date('d/m/Y H:i') ?> | UASG: 250110 | Ministério da Saúde
-            </div>
-        </div>
-        
-        <!-- Ações -->
-        <div class="actions-bar">
-            <a href="?<?= http_build_query(array_merge($_GET, ['formato' => 'csv'])) ?>" class="btn">
-                <i data-lucide="download"></i> Exportar CSV
-            </a>
-            <button onclick="window.print()" class="btn btn-secondary">
-                <i data-lucide="printer"></i> Imprimir
-            </button>
-            <a href="../contratos_dashboard.php" class="btn btn-secondary">
-                <i data-lucide="arrow-left"></i> Voltar
-            </a>
-        </div>
-        
-        <?php if (isset($erro)): ?>
-        <div class="alert alert-error">
-            <strong>Erro:</strong> <?= htmlspecialchars($erro) ?>
-        </div>
-        <?php else: ?>
-        
-        <!-- Estatísticas Gerais -->
-        <div class="stats-overview">
-            <div class="stat-card">
-                <div class="stat-value"><?= number_format($stats['total_contratos']) ?></div>
-                <div class="stat-label">Total de Contratos</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value"><?= number_format($stats['contratos_vigentes']) ?></div>
-                <div class="stat-label">Contratos Vigentes</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">R$ <?= number_format($stats['valor_total'], 0, ',', '.') ?></div>
-                <div class="stat-label">Valor Total</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">R$ <?= number_format($stats['valor_pago'], 0, ',', '.') ?></div>
-                <div class="stat-label">Valor Pago</div>
-            </div>
-        </div>
-        
-        <!-- Indicadores de Performance -->
-        <div class="chart-section">
-            <h3><i data-lucide="trending-up"></i> Indicadores de Performance</h3>
-            <div class="stats-overview">
-                <div class="indicador-card">
-                    <div class="indicador-valor <?= $indicadores['taxa_execucao'] >= 80 ? 'bom' : ($indicadores['taxa_execucao'] >= 60 ? 'regular' : 'ruim') ?>">
-                        <?= number_format($indicadores['taxa_execucao'], 1) ?>%
-                    </div>
-                    <div class="stat-label">Taxa de Execução</div>
+            <div class="summary">
+                <div class="summary-card">
+                    <h3>Modalidades</h3>
+                    <div class="value"><?php echo count($dados); ?></div>
                 </div>
-                <div class="indicador-card">
-                    <div class="indicador-valor <?= $indicadores['taxa_empenho'] >= 90 ? 'bom' : ($indicadores['taxa_empenho'] >= 70 ? 'regular' : 'ruim') ?>">
-                        <?= number_format($indicadores['taxa_empenho'], 1) ?>%
-                    </div>
-                    <div class="stat-label">Taxa de Empenho</div>
+                <div class="summary-card">
+                    <h3>Valor Médio</h3>
+                    <div class="value">R$ <?php echo number_format($valor_total / max($total_contratos, 1), 2, ',', '.'); ?></div>
                 </div>
-                <div class="indicador-card">
-                    <div class="indicador-valor">
-                        <?= number_format($indicadores['prazo_medio']) ?>
-                    </div>
-                    <div class="stat-label">Prazo Médio (dias)</div>
+                <div class="summary-card">
+                    <h3>Contratos Vigentes</h3>
+                    <div class="value"><?php echo array_sum(array_column($dados, 'vigentes')); ?></div>
                 </div>
-                <div class="indicador-card">
-                    <div class="indicador-valor">
-                        R$ <?= number_format($stats['valor_medio'], 0, ',', '.') ?>
-                    </div>
-                    <div class="stat-label">Valor Médio</div>
+                <div class="summary-card">
+                    <h3>Vencidos</h3>
+                    <div class="value"><?php echo array_sum(array_column($dados, 'vencidos')); ?></div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Gráfico de Distribuição por Modalidade -->
-        <?php if (!empty($modalidades)): ?>
-        <div class="chart-section">
-            <h3><i data-lucide="pie-chart"></i> Distribuição por Modalidade</h3>
+
+            <?php if ($incluir_graficos): ?>
             <div class="chart-container">
                 <canvas id="modalidadeChart"></canvas>
             </div>
-        </div>
-        <?php endif; ?>
-        
-        <!-- Gráfico de Evolução Mensal -->
-        <?php if (!empty($evolucao)): ?>
-        <div class="chart-section">
-            <h3><i data-lucide="trending-up"></i> Evolução Mensal</h3>
-            <div class="chart-container">
-                <canvas id="evolucaoChart"></canvas>
-            </div>
-        </div>
-        <?php endif; ?>
-        
-        <!-- Tabela de Modalidades -->
-        <?php if (!empty($modalidades)): ?>
-        <div class="table-section">
-            <h3><i data-lucide="list"></i> Distribuição por Modalidade</h3>
-            <table class="data-table">
+            <?php endif; ?>
+
+            <table>
                 <thead>
                     <tr>
                         <th>Modalidade</th>
-                        <th>Quantidade</th>
+                        <th>Total</th>
                         <th>Valor Total</th>
                         <th>Valor Médio</th>
-                        <th>Percentual</th>
+                        <th>Vigentes</th>
+                        <th>Encerrados</th>
+                        <th>Vencidos</th>
+                        <th>%</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($modalidades as $mod): ?>
+                    <?php foreach ($dados as $row): ?>
                     <tr>
-                        <td><?= htmlspecialchars($mod['modalidade']) ?></td>
-                        <td><?= number_format($mod['quantidade']) ?></td>
-                        <td>R$ <?= number_format($mod['valor_total'], 2, ',', '.') ?></td>
-                        <td>R$ <?= number_format($mod['valor_medio'], 2, ',', '.') ?></td>
-                        <td><?= $mod['percentual'] ?>%</td>
+                        <td><?php echo htmlspecialchars($row['modalidade']); ?></td>
+                        <td><?php echo number_format($row['total_contratos']); ?></td>
+                        <td>R$ <?php echo number_format($row['valor_total'], 2, ',', '.'); ?></td>
+                        <td>R$ <?php echo number_format($row['valor_medio'], 2, ',', '.'); ?></td>
+                        <td><span class="status-badge status-vigente"><?php echo $row['vigentes']; ?></span></td>
+                        <td><span class="status-badge status-encerrado"><?php echo $row['encerrados']; ?></span></td>
+                        <td><span class="status-badge status-vencido"><?php echo $row['vencidos']; ?></span></td>
+                        <td><?php echo $row['percentual']; ?>%</td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <?php if ($incluir_graficos): ?>
+            <script>
+                const ctxModalidade = document.getElementById('modalidadeChart').getContext('2d');
+                new Chart(ctxModalidade, {
+                    type: 'bar',
+                    data: {
+                        labels: <?php echo json_encode(array_column($dados, 'modalidade')); ?>,
+                        datasets: [{
+                            label: 'Valor Total (R$)',
+                            data: <?php echo json_encode(array_column($dados, 'valor_total')); ?>,
+                            backgroundColor: 'rgba(124, 58, 237, 0.8)',
+                            borderColor: 'rgba(124, 58, 237, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return 'R$ ' + value.toLocaleString('pt-BR');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            </script>
+            <?php endif; ?>
+        </div>
+    </body>
+    </html>
+    <?php
+}
+
+// Função: Gerar HTML - Status
+function gerarHTMLStatus($dados, $incluir_graficos, $params) {
+    $total_contratos = array_sum(array_column($dados, 'total_contratos'));
+    $valor_total = array_sum(array_column($dados, 'valor_total'));
+    $data_inicial = date('d/m/Y', strtotime($params[0]));
+    $data_final = date('d/m/Y', strtotime($params[1]));
+    
+    ?>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <title>Relatório por Status - Contratos</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+            .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+            .info { background: #ecf0f1; padding: 15px; border-radius: 5px; margin-bottom: 30px; }
+            .info p { margin: 5px 0; }
+            .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+            .summary-card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border-left: 4px solid #e74c3c; }
+            .summary-card h3 { margin: 0 0 10px 0; color: #2c3e50; font-size: 16px; }
+            .summary-card .value { font-size: 24px; font-weight: bold; color: #e74c3c; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th { background: #34495e; color: white; padding: 12px; text-align: left; }
+            td { padding: 10px; border-bottom: 1px solid #ddd; }
+            tr:nth-child(even) { background: #f8f9fa; }
+            .chart-container { width: 100%; margin: 30px 0; height: 400px; }
+            @media print { .no-print { display: none; } }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Relatório de Contratos por Status</h1>
+            
+            <div class="info">
+                <p><strong>Período:</strong> <?php echo $data_inicial; ?> a <?php echo $data_final; ?></p>
+                <p><strong>Total de Contratos:</strong> <?php echo $total_contratos; ?></p>
+                <p><strong>Valor Total:</strong> R$ <?php echo number_format($valor_total, 2, ',', '.'); ?></p>
+                <p><strong>Data de Geração:</strong> <?php echo date('d/m/Y H:i:s'); ?></p>
+            </div>
+
+            <?php if ($incluir_graficos): ?>
+            <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+            </div>
+            <?php endif; ?>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Total</th>
+                        <th>Valor Total</th>
+                        <th>Valor Médio</th>
+                        <th>Empenhado</th>
+                        <th>Pago</th>
+                        <th>Prazo Médio (dias)</th>
+                        <th>%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($dados as $row): ?>
+                    <tr>
+                        <td><?php echo ucfirst($row['status_contrato']); ?></td>
+                        <td><?php echo number_format($row['total_contratos']); ?></td>
+                        <td>R$ <?php echo number_format($row['valor_total'], 2, ',', '.'); ?></td>
+                        <td>R$ <?php echo number_format($row['valor_medio'], 2, ',', '.'); ?></td>
+                        <td>R$ <?php echo number_format($row['valor_empenhado'], 2, ',', '.'); ?></td>
+                        <td>R$ <?php echo number_format($row['valor_pago'], 2, ',', '.'); ?></td>
+                        <td><?php echo number_format($row['prazo_medio_dias']); ?></td>
+                        <td><?php echo $row['percentual']; ?>%</td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <?php if ($incluir_graficos): ?>
+            <script>
+                const ctxStatus = document.getElementById('statusChart').getContext('2d');
+                new Chart(ctxStatus, {
+                    type: 'pie',
+                    data: {
+                        labels: <?php echo json_encode(array_map('ucfirst', array_column($dados, 'status_contrato'))); ?>,
+                        datasets: [{
+                            data: <?php echo json_encode(array_column($dados, 'total_contratos')); ?>,
+                            backgroundColor: [
+                                'rgba(39, 174, 96, 0.8)',
+                                'rgba(149, 165, 166, 0.8)',
+                                'rgba(231, 76, 60, 0.8)',
+                                'rgba(241, 196, 15, 0.8)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            </script>
+            <?php endif; ?>
+        </div>
+    </body>
+    </html>
+    <?php
+}
+
+// Função: Gerar HTML - Prazos
+function gerarHTMLPrazos($dados, $incluir_graficos, $params) {
+    $data_inicial = date('d/m/Y', strtotime($params[0]));
+    $data_final = date('d/m/Y', strtotime($params[1]));
+    
+    ?>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <title>Relatório de Prazos - Contratos</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+            .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+            .info { background: #ecf0f1; padding: 15px; border-radius: 5px; margin-bottom: 30px; }
+            .info p { margin: 5px 0; }
+            .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+            .summary-card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border-left: 4px solid #f39c12; }
+            .summary-card h3 { margin: 0 0 10px 0; color: #2c3e50; font-size: 16px; }
+            .summary-card .value { font-size: 24px; font-weight: bold; color: #f39c12; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th { background: #34495e; color: white; padding: 12px; text-align: left; }
+            td { padding: 10px; border-bottom: 1px solid #ddd; }
+            tr:nth-child(even) { background: #f8f9fa; }
+            .chart-container { width: 100%; margin: 30px 0; height: 400px; }
+            .warning { color: #e74c3c; font-weight: bold; }
+            .alert-high { background: #fee; color: #e74c3c; }
+            @media print { .no-print { display: none; } }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Relatório de Análise de Prazos - Contratos</h1>
+            
+            <div class="info">
+                <p><strong>Período:</strong> <?php echo $data_inicial; ?> a <?php echo $data_final; ?></p>
+                <p><strong>Total de Modalidades:</strong> <?php echo count($dados); ?></p>
+                <p><strong>Data de Geração:</strong> <?php echo date('d/m/Y H:i:s'); ?></p>
+            </div>
+            
+            <div class="summary">
+                <div class="summary-card">
+                    <h3>Total de Vencidos</h3>
+                    <div class="value"><?php echo array_sum(array_column($dados, 'vencidos')); ?></div>
+                </div>
+                <div class="summary-card">
+                    <h3>Vencem em 30 dias</h3>
+                    <div class="value"><?php echo array_sum(array_column($dados, 'vencendo_30_dias')); ?></div>
+                </div>
+                <div class="summary-card">
+                    <h3>Vencem em 90 dias</h3>
+                    <div class="value"><?php echo array_sum(array_column($dados, 'vencendo_90_dias')); ?></div>
+                </div>
+                <div class="summary-card">
+                    <h3>Valor Vencidos</h3>
+                    <div class="value">R$ <?php echo number_format(array_sum(array_column($dados, 'valor_vencidos')), 2, ',', '.'); ?></div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Modalidade</th>
+                        <th>Total</th>
+                        <th>Vencidos</th>
+                        <th>Vence 30d</th>
+                        <th>Vence 90d</th>
+                        <th>Prazo Médio</th>
+                        <th>Próxima Vigência</th>
+                        <th>Valor Vencidos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($dados as $row): ?>
+                    <tr <?php echo $row['vencidos'] > 0 ? 'class="alert-high"' : ''; ?>>
+                        <td><?php echo htmlspecialchars($row['modalidade']); ?></td>
+                        <td><?php echo number_format($row['total_contratos']); ?></td>
+                        <td class="warning"><?php echo $row['vencidos']; ?></td>
+                        <td><?php echo $row['vencendo_30_dias']; ?></td>
+                        <td><?php echo $row['vencendo_90_dias']; ?></td>
+                        <td><?php echo number_format($row['prazo_medio_dias']); ?> dias</td>
+                        <td><?php echo $row['proxima_vigencia'] ? date('d/m/Y', strtotime($row['proxima_vigencia'])) : '-'; ?></td>
+                        <td>R$ <?php echo number_format($row['valor_vencidos'], 2, ',', '.'); ?></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
-        <?php endif; ?>
-        
-        <!-- Top 10 Contratados -->
-        <?php if (!empty($topContratados)): ?>
-        <div class="table-section">
-            <h3><i data-lucide="users"></i> Top 10 Contratados</h3>
-            <table class="data-table">
+    </body>
+    </html>
+    <?php
+}
+
+// Função: Gerar HTML - Financeiro
+function gerarHTMLFinanceiro($dados, $incluir_graficos, $params) {
+    $valor_total = array_sum(array_column($dados, 'valor_total'));
+    $valor_empenhado = array_sum(array_column($dados, 'valor_empenhado'));
+    $valor_pago = array_sum(array_column($dados, 'valor_pago'));
+    $total_contratos = array_sum(array_column($dados, 'total_contratos'));
+    $data_inicial = date('d/m/Y', strtotime($params[0]));
+    $data_final = date('d/m/Y', strtotime($params[1]));
+    
+    ?>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <title>Relatório Financeiro - Contratos</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+            .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+            .info { background: #ecf0f1; padding: 15px; border-radius: 5px; margin-bottom: 30px; }
+            .info p { margin: 5px 0; }
+            .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+            .summary-card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; }
+            .summary-card h3 { margin: 0 0 10px 0; color: #2c3e50; font-size: 16px; }
+            .summary-card .value { font-size: 24px; font-weight: bold; }
+            .card-total { border-left: 4px solid #3498db; }
+            .card-total .value { color: #3498db; }
+            .card-empenhado { border-left: 4px solid #f39c12; }
+            .card-empenhado .value { color: #f39c12; }
+            .card-pago { border-left: 4px solid #27ae60; }
+            .card-pago .value { color: #27ae60; }
+            .card-pendente { border-left: 4px solid #e74c3c; }
+            .card-pendente .value { color: #e74c3c; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th { background: #34495e; color: white; padding: 12px; text-align: left; }
+            td { padding: 10px; border-bottom: 1px solid #ddd; }
+            tr:nth-child(even) { background: #f8f9fa; }
+            .chart-container { width: 100%; margin: 30px 0; height: 400px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0; }
+            @media print { .no-print { display: none; } }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Relatório Financeiro de Contratos</h1>
+            
+            <div class="info">
+                <p><strong>Período:</strong> <?php echo $data_inicial; ?> a <?php echo $data_final; ?></p>
+                <p><strong>Total de Meses:</strong> <?php echo count($dados); ?></p>
+                <p><strong>Data de Geração:</strong> <?php echo date('d/m/Y H:i:s'); ?></p>
+            </div>
+            
+            <div class="summary">
+                <div class="summary-card card-total">
+                    <h3>Valor Total</h3>
+                    <div class="value">R$ <?php echo number_format($valor_total, 2, ',', '.'); ?></div>
+                </div>
+                <div class="summary-card card-empenhado">
+                    <h3>Valor Empenhado</h3>
+                    <div class="value">R$ <?php echo number_format($valor_empenhado, 2, ',', '.'); ?></div>
+                </div>
+                <div class="summary-card card-pago">
+                    <h3>Valor Pago</h3>
+                    <div class="value">R$ <?php echo number_format($valor_pago, 2, ',', '.'); ?></div>
+                </div>
+                <div class="summary-card card-pendente">
+                    <h3>Valor Pendente</h3>
+                    <div class="value">R$ <?php echo number_format($valor_empenhado - $valor_pago, 2, ',', '.'); ?></div>
+                </div>
+            </div>
+
+            <?php if ($incluir_graficos): ?>
+            <div class="grid">
+                <div class="chart-container">
+                    <canvas id="evolucaoChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="financeiroChart"></canvas>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <table>
                 <thead>
                     <tr>
-                        <th>Contratado</th>
-                        <th>CNPJ</th>
+                        <th>Mês</th>
                         <th>Contratos</th>
                         <th>Valor Total</th>
+                        <th>Empenhado</th>
+                        <th>Pago</th>
                         <th>Valor Médio</th>
+                        <th>Vigentes</th>
+                        <th>Encerrados</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($topContratados as $contratado): ?>
+                    <?php foreach ($dados as $row): ?>
                     <tr>
-                        <td><?= htmlspecialchars($contratado['contratado_nome']) ?></td>
-                        <td><?= formatarCNPJ($contratado['contratado_cnpj']) ?></td>
-                        <td><?= number_format($contratado['quantidade_contratos']) ?></td>
-                        <td>R$ <?= number_format($contratado['valor_total'], 2, ',', '.') ?></td>
-                        <td>R$ <?= number_format($contratado['valor_medio'], 2, ',', '.') ?></td>
+                        <td><?php echo date('m/Y', strtotime($row['mes'] . '-01')); ?></td>
+                        <td><?php echo number_format($row['total_contratos']); ?></td>
+                        <td>R$ <?php echo number_format($row['valor_total'], 2, ',', '.'); ?></td>
+                        <td>R$ <?php echo number_format($row['valor_empenhado'], 2, ',', '.'); ?></td>
+                        <td>R$ <?php echo number_format($row['valor_pago'], 2, ',', '.'); ?></td>
+                        <td>R$ <?php echo number_format($row['valor_medio'], 2, ',', '.'); ?></td>
+                        <td><?php echo $row['contratos_vigentes']; ?></td>
+                        <td><?php echo $row['contratos_encerrados']; ?></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
+
+            <?php if ($incluir_graficos): ?>
+            <script>
+                // Gráfico de Evolução
+                const ctxEvolucao = document.getElementById('evolucaoChart').getContext('2d');
+                new Chart(ctxEvolucao, {
+                    type: 'line',
+                    data: {
+                        labels: <?php echo json_encode(array_map(function($m) { return date('m/Y', strtotime($m['mes'] . '-01')); }, $dados)); ?>,
+                        datasets: [{
+                            label: 'Valor Total',
+                            data: <?php echo json_encode(array_column($dados, 'valor_total')); ?>,
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return 'R$ ' + value.toLocaleString('pt-BR');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Gráfico Financeiro
+                const ctxFinanceiro = document.getElementById('financeiroChart').getContext('2d');
+                new Chart(ctxFinanceiro, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pago', 'Empenhado (não pago)', 'Não empenhado'],
+                        datasets: [{
+                            data: [
+                                <?php echo $valor_pago; ?>,
+                                <?php echo $valor_empenhado - $valor_pago; ?>,
+                                <?php echo $valor_total - $valor_empenhado; ?>
+                            ],
+                            backgroundColor: [
+                                'rgba(39, 174, 96, 0.8)',
+                                'rgba(241, 196, 15, 0.8)',
+                                'rgba(231, 76, 60, 0.8)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            </script>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
-        
-        <!-- Contratos Próximos ao Vencimento -->
-        <?php if (!empty($vencimentos)): ?>
-        <div class="table-section">
-            <h3><i data-lucide="clock"></i> Contratos Próximos ao Vencimento (90 dias)</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Número</th>
-                        <th>Contratado</th>
-                        <th>Valor</th>
-                        <th>Vencimento</th>
-                        <th>Dias Restantes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($vencimentos as $venc): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($venc['numero_contrato']) ?></td>
-                        <td><?= htmlspecialchars($venc['contratado_nome']) ?></td>
-                        <td>R$ <?= number_format($venc['valor_total'], 2, ',', '.') ?></td>
-                        <td><?= date('d/m/Y', strtotime($venc['data_fim_vigencia'])) ?></td>
-                        <td style="color: <?= $venc['dias_restantes'] <= 30 ? '#dc3545' : ($venc['dias_restantes'] <= 60 ? '#ffc107' : '#28a745') ?>">
-                            <?= $venc['dias_restantes'] ?> dias
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php endif; ?>
-        
-        <?php endif; ?>
-        
-        <!-- Rodapé -->
-        <div style="text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid #dee2e6; color: #6c757d; font-size: 0.9em;">
-            Sistema CGLIC - Coordenação Geral de Licitações<br>
-            Ministério da Saúde - UASG 250110<br>
-            Relatório gerado automaticamente em <?= date('d/m/Y \à\s H:i') ?>
-        </div>
-    </div>
-    
-    <script>
-    // Inicializar Lucide icons
-    lucide.createIcons();
-    
-    <?php if (!empty($modalidades) && !isset($erro)): ?>
-    // Gráfico de Modalidades
-    const modalidadeCtx = document.getElementById('modalidadeChart').getContext('2d');
-    new Chart(modalidadeCtx, {
-        type: 'doughnut',
-        data: {
-            labels: <?= json_encode(array_column($modalidades, 'modalidade')) ?>,
-            datasets: [{
-                data: <?= json_encode(array_column($modalidades, 'quantidade')) ?>,
-                backgroundColor: [
-                    '#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8',
-                    '#6f42c1', '#e83e8c', '#fd7e14', '#20c997', '#6c757d'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right'
-                }
-            }
-        }
-    });
-    <?php endif; ?>
-    
-    <?php if (!empty($evolucao) && !isset($erro)): ?>
-    // Gráfico de Evolução
-    const evolucaoCtx = document.getElementById('evolucaoChart').getContext('2d');
-    new Chart(evolucaoCtx, {
-        type: 'line',
-        data: {
-            labels: <?= json_encode(array_map(function($item) {
-                return date('m/Y', strtotime($item['mes'] . '-01'));
-            }, $evolucao)) ?>,
-            datasets: [{
-                label: 'Quantidade de Contratos',
-                data: <?= json_encode(array_column($evolucao, 'quantidade')) ?>,
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-    <?php endif; ?>
-    </script>
-</body>
-</html>
+    </body>
+    </html>
+    <?php
+}
+
+// Funções para PDF e Excel (stubs - implementar conforme necessário)
+function gerarPDFModalidade($dados, $incluir_graficos) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Exportação PDF não implementada ainda']);
+}
+
+function gerarExcelModalidade($dados) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Exportação Excel não implementada ainda']);
+}
+
+function gerarPDFStatus($dados, $incluir_graficos) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Exportação PDF não implementada ainda']);
+}
+
+function gerarExcelStatus($dados) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Exportação Excel não implementada ainda']);
+}
+
+function gerarPDFPrazos($dados, $incluir_graficos) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Exportação PDF não implementada ainda']);
+}
+
+function gerarExcelPrazos($dados) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Exportação Excel não implementada ainda']);
+}
+
+function gerarPDFFinanceiro($dados, $incluir_graficos) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Exportação PDF não implementada ainda']);
+}
+
+function gerarExcelFinanceiro($dados) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Exportação Excel não implementada ainda']);
+}
+?>

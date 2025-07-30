@@ -1023,4 +1023,46 @@ function timeAgo($datetime, $full = false) {
         return 'Data inválida';
     }
 }
+
+/**
+ * Formatar CNPJ
+ */
+function formatarCNPJ($cnpj) {
+    if (empty($cnpj)) {
+        return '';
+    }
+    
+    // Remove tudo que não for número
+    $cnpj = preg_replace('/[^0-9]/', '', $cnpj);
+    
+    // Verifica se tem 14 dígitos
+    if (strlen($cnpj) == 14) {
+        // Aplica a máscara XX.XXX.XXX/XXXX-XX
+        return preg_replace('/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/', '$1.$2.$3/$4-$5', $cnpj);
+    }
+    
+    // Se não tem 14 dígitos, retorna como está
+    return $cnpj;
+}
+
+/**
+ * Formatar CPF
+ */
+function formatarCPF($cpf) {
+    if (empty($cpf)) {
+        return '';
+    }
+    
+    // Remove tudo que não for número
+    $cpf = preg_replace('/[^0-9]/', '', $cpf);
+    
+    // Verifica se tem 11 dígitos
+    if (strlen($cpf) == 11) {
+        // Aplica a máscara XXX.XXX.XXX-XX
+        return preg_replace('/^(\d{3})(\d{3})(\d{3})(\d{2})$/', '$1.$2.$3-$4', $cpf);
+    }
+    
+    // Se não tem 11 dígitos, retorna como está
+    return $cpf;
+}
 ?>
