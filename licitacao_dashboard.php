@@ -9,6 +9,20 @@ verificarLogin();
 
 $pdo = conectarDB();
 
+// Buscar anos disponíveis para o filtro
+$anos_disponiveis = [];
+try {
+    $sql_anos = "SELECT DISTINCT YEAR(data_abertura) as ano 
+                 FROM licitacoes 
+                 WHERE data_abertura IS NOT NULL 
+                 ORDER BY ano DESC";
+    $stmt_anos = $pdo->query($sql_anos);
+    $anos_disponiveis = $stmt_anos->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    // Se houver erro, manter array vazio
+    $anos_disponiveis = [];
+}
+
 
 // Verificar se é uma requisição AJAX para filtros
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'filtrar_licitacoes') {
@@ -19,6 +33,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'filtrar_licitacoes') {
 
     $filtro_situacao = $_GET['situacao_filtro'] ?? '';
     $filtro_busca = $_GET['busca'] ?? '';
+    $filtro_ano = $_GET['ano_filtro'] ?? '';
 
     $where_conditions = ['1=1'];
     $params = [];
@@ -35,6 +50,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'filtrar_licitacoes') {
         $params[] = $busca_param;
         $params[] = $busca_param;
         $params[] = $busca_param;
+    }
+
+    if (!empty($filtro_ano)) {
+        $where_conditions[] = "YEAR(l.data_abertura) = ?";
+        $params[] = intval($filtro_ano);
     }
 
     $where_clause = implode(' AND ', $where_conditions);
@@ -209,6 +229,7 @@ $secao_ativa = $_GET['secao'] ?? 'lista-licitacoes';
 // Filtros opcionais
 $filtro_situacao = $_GET['situacao_filtro'] ?? '';
 $filtro_busca = $_GET['busca'] ?? '';
+$filtro_ano = $_GET['ano_filtro'] ?? '';
 
 // Construir WHERE clause para filtros
 $where_conditions = ['1=1'];
@@ -226,6 +247,11 @@ if (!empty($filtro_busca)) {
     $params[] = $busca_param;
     $params[] = $busca_param;
     $params[] = $busca_param;
+}
+
+if (!empty($filtro_ano)) {
+    $where_conditions[] = "YEAR(l.data_abertura) = ?";
+    $params[] = intval($filtro_ano);
 }
 
 $where_clause = implode(' AND ', $where_conditions);
@@ -340,8 +366,7 @@ $contratacoes_pca = $pdo->query("
     LIMIT 2000
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Debug básico
-echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " . count($contratacoes_pca) . ");</script>";
+// Sistema carregado
 ?>
 
 <!DOCTYPE html>
@@ -854,7 +879,7 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
 
         <!-- Filtros e Busca -->
         <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <form id="formFiltrosLicitacao" method="GET" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 15px; align-items: end;">
+            <form id="formFiltrosLicitacao" method="GET" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #495057;">Buscar</label>
                     <input type="text" name="busca" value="<?php echo htmlspecialchars($filtro_busca); ?>" 
@@ -870,6 +895,18 @@ echo "<script>console.log('Sistema carregado - Contratações disponíveis:', " 
                         <option value="HOMOLOGADO" <?php echo $filtro_situacao === 'HOMOLOGADO' ? 'selected' : ''; ?>>Homologadas</option>
                         <option value="FRACASSADO" <?php echo $filtro_situacao === 'FRACASSADO' ? 'selected' : ''; ?>>Fracassadas</option>
                         <option value="REVOGADO" <?php echo $filtro_situacao === 'REVOGADO' ? 'selected' : ''; ?>>Revogadas</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #495057;">Ano de Abertura</label>
+                    <select name="ano_filtro" style="width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px;">
+                        <option value="">Todos os Anos</option>
+                        <?php foreach ($anos_disponiveis as $ano): ?>
+                            <option value="<?php echo $ano; ?>" <?php echo $filtro_ano == $ano ? 'selected' : ''; ?>>
+                                <?php echo $ano; ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 
@@ -1017,6 +1054,7 @@ foreach ($licitacoes_recentes as $licitacao):
                     $url_params = [];
                     if (!empty($filtro_busca)) $url_params['busca'] = $filtro_busca;
                     if (!empty($filtro_situacao)) $url_params['situacao_filtro'] = $filtro_situacao;
+                    if (!empty($filtro_ano)) $url_params['ano_filtro'] = $filtro_ano;
                     if ($licitacoes_por_pagina != 10) $url_params['por_pagina'] = $licitacoes_por_pagina;
                     $url_params['secao'] = $secao_ativa; // Manter seção ativa na paginação
                     $url_base = 'licitacao_dashboard.php?' . http_build_query($url_params);
@@ -1813,31 +1851,144 @@ foreach ($licitacoes_recentes as $licitacao):
     </div>
 </div>
 
-<!-- Modal para Visualizar Andamentos -->
-<div id="modalVisualizarAndamentos" class="modal modern-modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header gradient-header">
-            <div class="header-info">
-                <h3 class="modal-title">
-                    <i data-lucide="clock"></i>
-                    Timeline do Processo
-                </h3>
-                <p class="modal-subtitle" id="nup-display">NUP: Carregando...</p>
+<!-- Modal para Visualizar Andamentos - REDESENHADO -->
+<div id="modalVisualizarAndamentos" class="modal andamentos-modal" style="display: none;">
+    <div class="andamentos-modal-content">
+        <!-- Header Expandido -->
+        <div class="andamentos-header">
+            <div class="header-left">
+                <div class="processo-info">
+                    <div class="processo-titulo">
+                        <i data-lucide="activity"></i>
+                        <h2>Timeline do Processo</h2>
+                    </div>
+                    <div class="processo-detalhes">
+                        <span class="nup-badge" id="nup-display">NUP: Carregando...</span>
+                        <span class="status-info" id="status-display">Status: Carregando...</span>
+                    </div>
+                </div>
             </div>
             <div class="header-actions">
-                <button class="btn-report" onclick="gerarRelatorioAndamentos()" title="Gerar Relatório">
-                    <i data-lucide="file-text"></i>
-                    Relatório
+                <button class="action-btn export-btn" onclick="gerarRelatorioAndamentos()" title="Exportar Timeline">
+                    <i data-lucide="download"></i>
+                    <span>Exportar PDF</span>
                 </button>
-                <button class="close-button" onclick="fecharModal('modalVisualizarAndamentos')">
+                <button class="action-btn refresh-btn" onclick="recarregarAndamentos()" title="Atualizar Dados">
+                    <i data-lucide="refresh-ccw"></i>
+                    <span>Atualizar</span>
+                </button>
+                <button class="action-btn close-btn" onclick="fecharModal('modalVisualizarAndamentos')" title="Fechar">
                     <i data-lucide="x"></i>
                 </button>
             </div>
         </div>
-        <div class="modal-body" id="conteudoAndamentos">
-            <div class="loading-timeline">
-                <i data-lucide="loader"></i>
-                <p>Carregando timeline do processo...</p>
+
+        <!-- Corpo Principal com Layout em Duas Colunas -->
+        <div class="andamentos-body">
+            <!-- Coluna Principal - Timeline -->
+            <div class="timeline-section">
+                <div class="timeline-header">
+                    <h3><i data-lucide="clock"></i> Histórico de Andamentos</h3>
+                    <div class="timeline-controls">
+                        <button class="filter-btn" onclick="toggleFiltrosAndamentos()">
+                            <i data-lucide="filter"></i> Filtros
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filtros Expansíveis -->
+                <div class="timeline-filters" id="filtrosAndamentos" style="display: none;">
+                    <div class="filter-group">
+                        <label>Período:</label>
+                        <select id="filtroPerioodo">
+                            <option value="">Todos</option>
+                            <option value="30">Últimos 30 dias</option>
+                            <option value="60">Últimos 60 dias</option>
+                            <option value="90">Últimos 90 dias</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Unidade:</label>
+                        <select id="filtroUnidade">
+                            <option value="">Todas</option>
+                            <option value="DIPLI">DIPLI</option>
+                            <option value="DIPLAN">DIPLAN</option>
+                            <option value="CGLIC">CGLIC</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Container da Timeline -->
+                <div class="timeline-container" id="conteudoAndamentos">
+                    <div class="loading-timeline">
+                        <div class="loading-spinner">
+                            <i data-lucide="loader-2"></i>
+                        </div>
+                        <p>Carregando timeline do processo...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna Lateral - Informações e Estatísticas -->
+            <div class="info-sidebar">
+                <div class="info-card">
+                    <h4><i data-lucide="bar-chart-3"></i> Estatísticas</h4>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value" id="totalAndamentos">-</span>
+                            <span class="stat-label">Total de Andamentos</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="tempoMedio">-</span>
+                            <span class="stat-label">Tempo Médio</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="unidadesEnvolvidas">-</span>
+                            <span class="stat-label">Unidades</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="ultimaAtualizacao">-</span>
+                            <span class="stat-label">Última Atualização</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h4><i data-lucide="info"></i> Informações do Processo</h4>
+                    <div class="process-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Modalidade:</span>
+                            <span class="detail-value" id="modalidadeInfo">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Pregoeiro:</span>
+                            <span class="detail-value" id="pregoeiroInfo">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Valor Estimado:</span>
+                            <span class="detail-value" id="valorInfo">-</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Data de Abertura:</span>
+                            <span class="detail-value" id="dataAberturaInfo">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card actions-card">
+                    <h4><i data-lucide="settings"></i> Ações Rápidas</h4>
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" onclick="verDetalhesCompletos()">
+                            <i data-lucide="eye"></i> Ver Detalhes Completos
+                        </button>
+                        <button class="quick-action-btn" onclick="editarProcesso()">
+                            <i data-lucide="edit"></i> Editar Processo
+                        </button>
+                        <button class="quick-action-btn" onclick="adicionarAndamento()">
+                            <i data-lucide="plus"></i> Adicionar Andamento
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1869,6 +2020,41 @@ foreach ($licitacoes_recentes as $licitacao):
             url.searchParams.set('por_pagina', novoValor);
             url.searchParams.set('pagina', '1'); // Voltar para a primeira página
             window.location.href = url.toString();
+        }
+
+        /**
+         * Funções para o novo modal de andamentos
+         */
+        function toggleFiltrosAndamentos() {
+            const filtros = document.getElementById('filtrosAndamentos');
+            if (filtros) {
+                filtros.style.display = filtros.style.display === 'none' ? 'flex' : 'none';
+            }
+        }
+
+        function recarregarAndamentos() {
+            const nupElement = document.getElementById('nup-display');
+            if (nupElement) {
+                const nup = nupElement.textContent.replace('NUP: ', '');
+                if (nup && nup !== 'Carregando...') {
+                    consultarAndamentos(nup);
+                }
+            }
+        }
+
+        function verDetalhesCompletos() {
+            // Função placeholder - pode ser implementada para mostrar detalhes completos
+            console.log('Ver detalhes completos - funcionalidade a ser implementada');
+        }
+
+        function editarProcesso() {
+            // Função placeholder - pode ser implementada para editar o processo
+            console.log('Editar processo - funcionalidade a ser implementada');
+        }
+
+        function adicionarAndamento() {
+            // Função placeholder - pode ser implementada para adicionar novo andamento
+            console.log('Adicionar andamento - funcionalidade a ser implementada');
         }
     </script>
     <script src="assets/dark-mode.js"></script>

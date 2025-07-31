@@ -13,7 +13,6 @@
     <table>
 <thead>
 <tr>
-<th>🐛 Debug</th>
 <th>NUP</th>
 <th>Número da contratação</th>
 <th>Modalidade</th>
@@ -27,17 +26,8 @@
 </tr>
 </thead>
 <tbody>
-<?php 
-$contador_linha_ajax = 0;
-foreach ($licitacoes_recentes as $licitacao): 
-    $contador_linha_ajax++;
-?>
+<?php foreach ($licitacoes_recentes as $licitacao): ?>
 <tr>
-<td style="background: #ffe6e6; font-size: 10px; text-align: center;">
-    ID:<?php echo $licitacao['id']; ?><br>
-    Linha:<?php echo $contador_linha_ajax; ?><br>
-    <small>AJAX</small>
-</td>
 <td>
 <strong><?php echo htmlspecialchars($licitacao['nup']); ?></strong>
 </td>
@@ -132,6 +122,7 @@ foreach ($licitacoes_recentes as $licitacao):
                     $url_base = "?ajax=filtrar_licitacoes&";
                     if (!empty($filtro_busca)) $url_base .= "busca=" . urlencode($filtro_busca) . "&";
                     if (!empty($filtro_situacao)) $url_base .= "situacao_filtro=" . urlencode($filtro_situacao) . "&";
+                    if (!empty($filtro_ano)) $url_base .= "ano_filtro=" . urlencode($filtro_ano) . "&";
                     $url_base .= "por_pagina=$licitacoes_por_pagina&";
                     ?>
                     

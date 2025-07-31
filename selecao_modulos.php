@@ -120,7 +120,7 @@ verificarLogin();
         }
 
         .modulo-contratos::before {
-            background: linear-gradient(90deg, #7c3aed, #5b21b6);
+            background: linear-gradient(90deg, #dc2626, #b91c1c);
         }
 
         .modulo-icon {
@@ -161,9 +161,9 @@ verificarLogin();
         }
 
         .modulo-contratos .modulo-icon {
-            background: linear-gradient(135deg, #7c3aed, #5b21b6);
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
             box-shadow: 
-                0 10px 25px rgba(124, 58, 237, 0.3),
+                0 10px 25px rgba(220, 38, 38, 0.3),
                 0 0 0 4px rgba(255, 255, 255, 0.1),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }

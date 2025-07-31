@@ -477,7 +477,7 @@ $totalPaginas = ceil($total / $limite);
                         </div>
 
                         <div style="display: flex; gap: 10px;">
-                            <button type="submit" style="background: #1e3c72; color: white; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            <button type="submit" style="background: #dc2626; color: white; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
                                 <i data-lucide="search" style="width: 16px; height: 16px;"></i> Filtrar
                             </button>
                             <a href="contratos_dashboard.php?secao=lista-contratos" style="background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 8px; text-decoration: none; font-weight: 600;">
@@ -486,6 +486,21 @@ $totalPaginas = ceil($total / $limite);
                         </div>
                     </form>
                 </div>
+
+                <!-- Ações Principais -->
+                <?php if ($podeEditar): ?>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <button onclick="sincronizarContratos()" style="background: #28a745; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Sincronizar Agora
+                    </button>
+                    <button onclick="showConfigModal()" style="background: #17a2b8; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i data-lucide="settings" style="width: 16px; height: 16px;"></i> Configurar API
+                    </button>
+                    <button onclick="gerarRelatorio()" style="background: #007bff; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i data-lucide="file-down" style="width: 16px; height: 16px;"></i> Relatório
+                    </button>
+                </div>
+                <?php endif; ?>
 
                 <!-- Lista de Contratos -->
                 <div class="contracts-section">

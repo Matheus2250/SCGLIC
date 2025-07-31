@@ -266,6 +266,9 @@ function consultarAndamentos(nup) {
                 if (data.total === 0) {
                     conteudoElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;"><i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px;"></i><h3 style="margin: 0 0 10px 0;">Nenhum andamento encontrado</h3><p style="margin: 0;">Não há dados de andamentos para este NUP.</p></div>';
                 } else {
+                    // Atualizar dados no novo modal
+                    atualizarModalAndamentos(data, nup);
+                    
                     // Gerar HTML rico com timeline dos andamentos
                     let html = generateAndamentosTimeline(data, nup);
                     conteudoElement.innerHTML = html;
@@ -286,6 +289,251 @@ function consultarAndamentos(nup) {
 }
 
 /**
+ * Atualizar dados no novo modal de andamentos
+ */
+function atualizarModalAndamentos(data, nup) {
+    console.log('Atualizando modal de andamentos:', { data, nup });
+    
+    // Buscar informações da licitação no sistema
+    const licitacao = buscarLicitacaoPorNup(nup);
+    console.log('Licitação encontrada:', licitacao);
+    
+    // Atualizar NUP e Status
+    const nupDisplay = document.getElementById('nup-display');
+    const statusDisplay = document.getElementById('status-display');
+    
+    if (nupDisplay) {
+        nupDisplay.textContent = `NUP: ${nup}`;
+    }
+    
+    if (statusDisplay) {
+        const status = licitacao ? licitacao.situacao : 'N/D';
+        statusDisplay.textContent = `Status: ${status}`;
+    }
+    
+    // Processar dados de andamentos de forma mais robusta
+    let andamentos = [];
+    let totalAndamentos = 0;
+    let processo = null;
+    
+    if (data && data.data && Array.isArray(data.data)) {
+        processo = data.data[0];
+        andamentos = processo?.andamentos || [];
+        
+        // Calcular total de andamentos mais precisamente
+        totalAndamentos = data.total_andamentos_individuais || 
+                         data.total_andamentos || 
+                         andamentos.length || 0;
+    } else if (data && data.andamentos) {
+        // Formato alternativo dos dados
+        andamentos = data.andamentos;
+        totalAndamentos = andamentos.length;
+    }
+    
+    console.log('Andamentos processados:', { andamentos, totalAndamentos });
+    
+    // Calcular estatísticas de forma mais robusta
+    const unidadesUnicas = [...new Set(andamentos.map(a => a.unidade).filter(u => u && u.trim()))];
+    
+    // Calcular tempo médio entre andamentos
+    let tempoMedio = 0;
+    if (andamentos.length > 1) {
+        const datas = andamentos
+            .map(a => new Date(a.data_hora))
+            .filter(d => !isNaN(d.getTime()))
+            .sort((a, b) => a - b);
+        
+        if (datas.length > 1) {
+            const tempoTotal = datas[datas.length - 1] - datas[0];
+            tempoMedio = Math.round(tempoTotal / (1000 * 60 * 60 * 24)); // em dias
+        }
+    }
+    
+    // Obter data da última atualização
+    const ultimaData = andamentos.length > 0 ? 
+        Math.max(...andamentos.map(a => new Date(a.data_hora).getTime())) : null;
+    
+    // Atualizar estatísticas com verificação de existência dos elementos
+    const totalAndamentosEl = document.getElementById('totalAndamentos');
+    const tempoMedioEl = document.getElementById('tempoMedio');
+    const unidadesEnvolvidasEl = document.getElementById('unidadesEnvolvidas');
+    const ultimaAtualizacaoEl = document.getElementById('ultimaAtualizacao');
+    
+    if (totalAndamentosEl) totalAndamentosEl.textContent = totalAndamentos;
+    if (tempoMedioEl) tempoMedioEl.textContent = tempoMedio > 0 ? `${tempoMedio} dias` : '-';
+    if (unidadesEnvolvidasEl) unidadesEnvolvidasEl.textContent = unidadesUnicas.length || '-';
+    if (ultimaAtualizacaoEl) {
+        ultimaAtualizacaoEl.textContent = ultimaData ? 
+            new Date(ultimaData).toLocaleDateString('pt-BR') : '-';
+    }
+    
+    // Atualizar informações do processo com verificação de existência
+    const modalidadeInfoEl = document.getElementById('modalidadeInfo');
+    const pregoeiroInfoEl = document.getElementById('pregoeiroInfo');
+    const valorInfoEl = document.getElementById('valorInfo');
+    const dataAberturaInfoEl = document.getElementById('dataAberturaInfo');
+    
+    if (licitacao) {
+        if (modalidadeInfoEl) modalidadeInfoEl.textContent = licitacao.modalidade || '-';
+        if (pregoeiroInfoEl) pregoeiroInfoEl.textContent = licitacao.pregoeiro || '-';
+        if (valorInfoEl) valorInfoEl.textContent = licitacao.valor_estimado ? formatarMoeda(licitacao.valor_estimado) : '-';
+        if (dataAberturaInfoEl) dataAberturaInfoEl.textContent = licitacao.data_abertura ? formatarDataSimples(licitacao.data_abertura) : '-';
+    } else {
+        // Valores padrão se não encontrar a licitação
+        if (modalidadeInfoEl) modalidadeInfoEl.textContent = '-';
+        if (pregoeiroInfoEl) pregoeiroInfoEl.textContent = '-';
+        if (valorInfoEl) valorInfoEl.textContent = '-';
+        if (dataAberturaInfoEl) dataAberturaInfoEl.textContent = '-';
+    }
+    
+    console.log('Modal atualizado com estatísticas:', {
+        totalAndamentos,
+        tempoMedio: tempoMedio > 0 ? `${tempoMedio} dias` : '-',
+        unidadesEnvolvidas: unidadesUnicas.length,
+        ultimaAtualizacao: ultimaData ? new Date(ultimaData).toLocaleDateString('pt-BR') : '-'
+    });
+}
+
+/**
+ * Buscar informações da licitação por NUP
+ */
+function buscarLicitacaoPorNup(nup) {
+    console.log('Buscando licitação por NUP:', nup);
+    
+    // Tentar diferentes seletores para encontrar a tabela
+    const possiveisSeletores = [
+        '#resultadosLicitacoes table tbody',
+        '#lista-licitacoes tbody',
+        'table tbody',
+        '.data-table tbody',
+        '.licitacoes-table tbody'
+    ];
+    
+    let tabela = null;
+    for (const seletor of possiveisSeletores) {
+        tabela = document.querySelector(seletor);
+        if (tabela) {
+            console.log(`Tabela encontrada com seletor: ${seletor}`);
+            break;
+        }
+    }
+    
+    if (!tabela) {
+        console.log('Nenhuma tabela encontrada');
+        return null;
+    }
+    
+    const linhas = tabela.querySelectorAll('tr');
+    console.log(`Procurando NUP ${nup} em ${linhas.length} linhas`);
+    
+    for (let linha of linhas) {
+        // Tentar diferentes formas de encontrar o NUP
+        let celulaNup = linha.querySelector('td:first-child strong') || 
+                       linha.querySelector('td:first-child') ||
+                       linha.querySelector('strong');
+        
+        // Se não encontrou, tentar procurar em todas as células
+        if (!celulaNup) {
+            const todasCelulas = linha.querySelectorAll('td');
+            for (let celula of todasCelulas) {
+                if (celula.textContent.includes(nup)) {
+                    celulaNup = celula;
+                    break;
+                }
+            }
+        }
+        
+        if (celulaNup && celulaNup.textContent.trim().includes(nup)) {
+            console.log('NUP encontrado na tabela');
+            // Extrair dados da linha
+            const colunas = linha.querySelectorAll('td');
+            console.log(`Encontradas ${colunas.length} colunas`);
+            
+            if (colunas.length >= 6) { // Mínimo 6 colunas para ter dados básicos
+                try {
+                    // Função auxiliar para extrair texto limpo
+                    const extrairTexto = (coluna, indice) => {
+                        if (!coluna || !colunas[indice]) return '';
+                        
+                        // Tentar span primeiro, depois texto direto
+                        const span = colunas[indice].querySelector('span');
+                        return span ? span.textContent.trim() : colunas[indice].textContent.trim();
+                    };
+                    
+                    // Mapear colunas de forma mais flexível
+                    const resultado = {
+                        nup: nup,
+                        numero_contratacao: extrairTexto(colunas[1], 1),
+                        modalidade: extrairTexto(colunas[2], 2),
+                        objeto: colunas[3] ? (colunas[3].getAttribute('title') || colunas[3].textContent.trim()) : '',
+                        valor_estimado: colunas[4] ? extrairValorMonetario(colunas[4].textContent) : 0,
+                        situacao: extrairTexto(colunas[5], 5),
+                        pregoeiro: colunas[6] ? extrairTexto(colunas[6], 6) : '',
+                        data_abertura: colunas[7] ? extrairTexto(colunas[7], 7) : ''
+                    };
+                    
+                    console.log('Dados extraídos da licitação:', resultado);
+                    return resultado;
+                    
+                } catch (error) {
+                    console.error('Erro ao extrair dados da linha:', error);
+                    return {
+                        nup: nup,
+                        numero_contratacao: '',
+                        modalidade: '',
+                        objeto: '',
+                        valor_estimado: 0,
+                        situacao: '',
+                        pregoeiro: '',
+                        data_abertura: ''
+                    };
+                }
+            }
+        }
+    }
+    
+    console.log('NUP não encontrado na tabela');
+    return null;
+}
+
+/**
+ * Extrair valor monetário de string
+ */
+function extrairValorMonetario(texto) {
+    const match = texto.match(/R\$\s*([\d.,]+)/);
+    if (match) {
+        return parseFloat(match[1].replace(/\./g, '').replace(',', '.'));
+    }
+    return 0;
+}
+
+/**
+ * Formatar data simples
+ */
+function formatarDataSimples(data) {
+    if (!data) return '-';
+    
+    try {
+        const date = new Date(data);
+        return date.toLocaleDateString('pt-BR');
+    } catch (e) {
+        return data;
+    }
+}
+
+/**
+ * Formatar moeda
+ */
+function formatarMoeda(valor) {
+    if (!valor || valor === 0) return 'R$ 0,00';
+    
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(valor);
+}
+
+/**
  * Gerar HTML para timeline de andamentos melhorada
  */
 function generateAndamentosTimeline(data, nup) {
@@ -298,7 +546,7 @@ function generateAndamentosTimeline(data, nup) {
     // Cabeçalho com resumo
     const processo = data.data[0];
     html += `
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <div style="background: linear-gradient(135deg, #64748b 0%, #475569 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
             <h4 style="margin: 0 0 10px 0; display: flex; align-items: center; gap: 10px;">
                 <i data-lucide="file-text"></i> NUP: ${nup}
             </h4>
