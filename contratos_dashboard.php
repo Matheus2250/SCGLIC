@@ -487,21 +487,6 @@ $totalPaginas = ceil($total / $limite);
                     </form>
                 </div>
 
-                <!-- Ações Principais -->
-                <?php if ($podeEditar): ?>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <button onclick="sincronizarContratos()" style="background: #28a745; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Sincronizar Agora
-                    </button>
-                    <button onclick="showConfigModal()" style="background: #17a2b8; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        <i data-lucide="settings" style="width: 16px; height: 16px;"></i> Configurar API
-                    </button>
-                    <button onclick="gerarRelatorio()" style="background: #007bff; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        <i data-lucide="file-down" style="width: 16px; height: 16px;"></i> Relatório
-                    </button>
-                </div>
-                <?php endif; ?>
-
                 <!-- Lista de Contratos -->
                 <div class="contracts-section">
                     <div class="section-header">

@@ -60,6 +60,15 @@ sort($areas_agrupadas);
 
 // Filtros
 $filtro_area = $_GET['area'] ?? '';
+$filtro_periodo = $_GET['periodo'] ?? '';
+$filtro_mes = $_GET['mes'] ?? '';
+
+// Paginação
+$itens_por_pagina = 20;
+$pagina_vencidas = max(1, intval($_GET['pagina_vencidas'] ?? 1));
+$pagina_nao_iniciadas = max(1, intval($_GET['pagina_nao_iniciadas'] ?? 1));
+$offset_vencidas = ($pagina_vencidas - 1) * $itens_por_pagina;
+$offset_nao_iniciadas = ($pagina_nao_iniciadas - 1) * $itens_por_pagina;
 
 // Construir WHERE para área
 $where_area = '';
@@ -73,7 +82,104 @@ if (!empty($filtro_area)) {
     }
 }
 
-// CONTRATAÇÕES VENCIDAS - QUERY MAIS FLEXÍVEL
+// Construir WHERE para filtros de tempo
+$where_tempo = '';
+$params_tempo = [];
+
+if (!empty($filtro_periodo)) {
+    switch ($filtro_periodo) {
+        case 'mes_atual':
+            $where_tempo = " AND MONTH(p.data_conclusao_processo) = MONTH(CURDATE()) AND YEAR(p.data_conclusao_processo) = YEAR(CURDATE())";
+            break;
+        case 'trimestre_atual':
+            $where_tempo = " AND QUARTER(p.data_conclusao_processo) = QUARTER(CURDATE()) AND YEAR(p.data_conclusao_processo) = YEAR(CURDATE())";
+            break;
+        case 'semestre_atual':
+            $semestre_atual = (date('n') <= 6) ? 1 : 2;
+            if ($semestre_atual == 1) {
+                $where_tempo = " AND MONTH(p.data_conclusao_processo) BETWEEN 1 AND 6 AND YEAR(p.data_conclusao_processo) = YEAR(CURDATE())";
+            } else {
+                $where_tempo = " AND MONTH(p.data_conclusao_processo) BETWEEN 7 AND 12 AND YEAR(p.data_conclusao_processo) = YEAR(CURDATE())";
+            }
+            break;
+        case 'ultimo_mes':
+            $where_tempo = " AND p.data_conclusao_processo >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
+            break;
+        case 'ultimos_3_meses':
+            $where_tempo = " AND p.data_conclusao_processo >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)";
+            break;
+        case 'ultimos_6_meses':
+            $where_tempo = " AND p.data_conclusao_processo >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
+            break;
+    }
+}
+
+if (!empty($filtro_mes) && is_numeric($filtro_mes)) {
+    $where_tempo = " AND MONTH(p.data_conclusao_processo) = ? AND YEAR(p.data_conclusao_processo) = 2025";
+    $params_tempo[] = intval($filtro_mes);
+}
+
+// Filtros de tempo para não iniciadas (usa data_inicio_processo)
+$where_tempo_inicio = '';
+$params_tempo_inicio = [];
+
+if (!empty($filtro_periodo)) {
+    switch ($filtro_periodo) {
+        case 'mes_atual':
+            $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) = MONTH(CURDATE()) AND YEAR(p.data_inicio_processo) = YEAR(CURDATE())";
+            break;
+        case 'trimestre_atual':
+            $where_tempo_inicio = " AND QUARTER(p.data_inicio_processo) = QUARTER(CURDATE()) AND YEAR(p.data_inicio_processo) = YEAR(CURDATE())";
+            break;
+        case 'semestre_atual':
+            $semestre_atual = (date('n') <= 6) ? 1 : 2;
+            if ($semestre_atual == 1) {
+                $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) BETWEEN 1 AND 6 AND YEAR(p.data_inicio_processo) = YEAR(CURDATE())";
+            } else {
+                $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) BETWEEN 7 AND 12 AND YEAR(p.data_inicio_processo) = YEAR(CURDATE())";
+            }
+            break;
+        case 'ultimo_mes':
+            $where_tempo_inicio = " AND p.data_inicio_processo >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
+            break;
+        case 'ultimos_3_meses':
+            $where_tempo_inicio = " AND p.data_inicio_processo >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)";
+            break;
+        case 'ultimos_6_meses':
+            $where_tempo_inicio = " AND p.data_inicio_processo >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
+            break;
+    }
+}
+
+if (!empty($filtro_mes) && is_numeric($filtro_mes)) {
+    $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) = ? AND YEAR(p.data_inicio_processo) = 2025";
+    $params_tempo_inicio[] = intval($filtro_mes);
+}
+
+// Query para contar total de vencidas (para paginação)
+$sql_count_vencidas = "SELECT COUNT(DISTINCT p.numero_dfd) as total
+    FROM pca_dados p
+    INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
+    WHERE pi.ano_pca = 2025
+    AND p.data_inicio_processo IS NOT NULL
+    AND YEAR(p.data_inicio_processo) = 2025
+    AND p.data_conclusao_processo IS NOT NULL
+    AND YEAR(p.data_conclusao_processo) = 2025
+    AND p.data_conclusao_processo < CURDATE()
+    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado')
+    AND p.numero_dfd IS NOT NULL 
+    AND p.numero_dfd != ''
+    $where_area
+    $where_tempo";
+
+$params_count_vencidas = array_merge($params_area, $params_tempo);
+$stmt_count_vencidas = $pdo->prepare($sql_count_vencidas);
+$stmt_count_vencidas->execute($params_count_vencidas);
+$total_vencidas_paginacao = $stmt_count_vencidas->fetchColumn();
+$total_paginas_vencidas = ceil($total_vencidas_paginacao / $itens_por_pagina);
+
+// CONTRATAÇÕES VENCIDAS - FILTROS ATUALIZADOS COM PAGINAÇÃO
+// Critério: Data início em 2025, data conclusão em 2025, nem começou nem concluiu, situação "Não iniciada"
 $sql_vencidas = "SELECT DISTINCT 
     p.numero_contratacao,
     p.numero_dfd,
@@ -88,17 +194,23 @@ $sql_vencidas = "SELECT DISTINCT
     FROM pca_dados p
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
     WHERE pi.ano_pca = 2025
+    AND p.data_inicio_processo IS NOT NULL
+    AND YEAR(p.data_inicio_processo) = 2025
     AND p.data_conclusao_processo IS NOT NULL
+    AND YEAR(p.data_conclusao_processo) = 2025
     AND p.data_conclusao_processo < CURDATE()
-    AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciado')
+    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado')
     AND p.numero_dfd IS NOT NULL 
     AND p.numero_dfd != ''
     $where_area
+    $where_tempo
     GROUP BY p.numero_dfd
-    ORDER BY dias_atraso DESC";
+    ORDER BY dias_atraso DESC
+    LIMIT $itens_por_pagina OFFSET $offset_vencidas";
 
+$params_vencidas = array_merge($params_area, $params_tempo);
 $stmt_vencidas = $pdo->prepare($sql_vencidas);
-$stmt_vencidas->execute($params_area);
+$stmt_vencidas->execute($params_vencidas);
 $contratacoes_vencidas = $stmt_vencidas->fetchAll();
 
 // DEBUG: Verificar se há dados vencidas
@@ -111,7 +223,28 @@ if (DEBUG_MODE) {
     echo "\n-->";
 }
 
-// CONTRATAÇÕES NÃO INICIADAS - QUERY MAIS FLEXÍVEL
+// Query para contar total de não iniciadas (para paginação)
+$sql_count_nao_iniciadas = "SELECT COUNT(DISTINCT p.numero_dfd) as total
+    FROM pca_dados p
+    INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
+    WHERE pi.ano_pca = 2025
+    AND p.data_inicio_processo IS NOT NULL
+    AND YEAR(p.data_inicio_processo) = 2025
+    AND p.data_inicio_processo < CURDATE() 
+    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado')
+    AND p.numero_dfd IS NOT NULL 
+    AND p.numero_dfd != ''
+    $where_area
+    $where_tempo_inicio";
+
+$params_count_nao_iniciadas = array_merge($params_area, $params_tempo_inicio);
+$stmt_count_nao_iniciadas = $pdo->prepare($sql_count_nao_iniciadas);
+$stmt_count_nao_iniciadas->execute($params_count_nao_iniciadas);
+$total_nao_iniciadas_paginacao = $stmt_count_nao_iniciadas->fetchColumn();
+$total_paginas_nao_iniciadas = ceil($total_nao_iniciadas_paginacao / $itens_por_pagina);
+
+// CONTRATAÇÕES NÃO INICIADAS - FILTROS ATUALIZADOS COM PAGINAÇÃO
+// Critério: Data início em 2025, mas não iniciaram, situação "Não iniciada"
 $sql_nao_iniciadas = "SELECT DISTINCT 
     p.numero_contratacao,
     p.numero_dfd,
@@ -127,21 +260,25 @@ $sql_nao_iniciadas = "SELECT DISTINCT
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
     WHERE pi.ano_pca = 2025
     AND p.data_inicio_processo IS NOT NULL
+    AND YEAR(p.data_inicio_processo) = 2025
     AND p.data_inicio_processo < CURDATE() 
-    AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciado')
+    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado')
     AND p.numero_dfd IS NOT NULL 
     AND p.numero_dfd != ''
     $where_area
+    $where_tempo_inicio
     GROUP BY p.numero_dfd
-    ORDER BY dias_atraso_inicio DESC";
+    ORDER BY dias_atraso_inicio DESC
+    LIMIT $itens_por_pagina OFFSET $offset_nao_iniciadas";
 
+$params_nao_iniciadas = array_merge($params_area, $params_tempo_inicio);
 $stmt_nao_iniciadas = $pdo->prepare($sql_nao_iniciadas);
-$stmt_nao_iniciadas->execute($params_area);
+$stmt_nao_iniciadas->execute($params_nao_iniciadas);
 $contratacoes_nao_iniciadas = $stmt_nao_iniciadas->fetchAll();
 
-// Calcular totais
-$total_vencidas = count($contratacoes_vencidas);
-$total_nao_iniciadas = count($contratacoes_nao_iniciadas);
+// Calcular totais (usando valores da paginação para contadores)
+$total_vencidas = $total_vencidas_paginacao;
+$total_nao_iniciadas = $total_nao_iniciadas_paginacao;
 $valor_total_vencidas = array_sum(array_column($contratacoes_vencidas, 'valor_total_contratacao'));
 $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas, 'valor_total_contratacao'));
 ?>
@@ -992,7 +1129,7 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
             <form method="GET" class="filtros-form">
                 <div class="filtro-group">
                     <label>Área Requisitante</label>
-                    <select name="area" onchange="this.form.submit()">
+                    <select name="area">
                         <option value="">Todas as áreas</option>
                         <?php foreach ($areas_agrupadas as $area): ?>
                         <option value="<?php echo htmlspecialchars($area); ?>" 
@@ -1002,6 +1139,39 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
                         <?php endforeach; ?>
                     </select>
                 </div>
+                
+                <div class="filtro-group">
+                    <label>Período</label>
+                    <select name="periodo">
+                        <option value="">Todos os períodos</option>
+                        <option value="mes_atual" <?php echo ($filtro_periodo === 'mes_atual') ? 'selected' : ''; ?>>Mês Atual</option>
+                        <option value="ultimo_mes" <?php echo ($filtro_periodo === 'ultimo_mes') ? 'selected' : ''; ?>>Último Mês</option>
+                        <option value="ultimos_3_meses" <?php echo ($filtro_periodo === 'ultimos_3_meses') ? 'selected' : ''; ?>>Últimos 3 Meses</option>
+                        <option value="ultimos_6_meses" <?php echo ($filtro_periodo === 'ultimos_6_meses') ? 'selected' : ''; ?>>Últimos 6 Meses</option>
+                        <option value="trimestre_atual" <?php echo ($filtro_periodo === 'trimestre_atual') ? 'selected' : ''; ?>>Trimestre Atual</option>
+                        <option value="semestre_atual" <?php echo ($filtro_periodo === 'semestre_atual') ? 'selected' : ''; ?>>Semestre Atual</option>
+                    </select>
+                </div>
+                
+                <div class="filtro-group">
+                    <label>Mês Específico (2025)</label>
+                    <select name="mes">
+                        <option value="">Selecionar mês</option>
+                        <option value="1" <?php echo ($filtro_mes === '1') ? 'selected' : ''; ?>>Janeiro</option>
+                        <option value="2" <?php echo ($filtro_mes === '2') ? 'selected' : ''; ?>>Fevereiro</option>
+                        <option value="3" <?php echo ($filtro_mes === '3') ? 'selected' : ''; ?>>Março</option>
+                        <option value="4" <?php echo ($filtro_mes === '4') ? 'selected' : ''; ?>>Abril</option>
+                        <option value="5" <?php echo ($filtro_mes === '5') ? 'selected' : ''; ?>>Maio</option>
+                        <option value="6" <?php echo ($filtro_mes === '6') ? 'selected' : ''; ?>>Junho</option>
+                        <option value="7" <?php echo ($filtro_mes === '7') ? 'selected' : ''; ?>>Julho</option>
+                        <option value="8" <?php echo ($filtro_mes === '8') ? 'selected' : ''; ?>>Agosto</option>
+                        <option value="9" <?php echo ($filtro_mes === '9') ? 'selected' : ''; ?>>Setembro</option>
+                        <option value="10" <?php echo ($filtro_mes === '10') ? 'selected' : ''; ?>>Outubro</option>
+                        <option value="11" <?php echo ($filtro_mes === '11') ? 'selected' : ''; ?>>Novembro</option>
+                        <option value="12" <?php echo ($filtro_mes === '12') ? 'selected' : ''; ?>>Dezembro</option>
+                    </select>
+                </div>
+                
                 <button type="submit" class="btn-filtrar">
                     <i data-lucide="search"></i> Filtrar
                 </button>
@@ -1152,6 +1322,54 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Paginação Vencidas -->
+            <?php if ($total_paginas_vencidas > 1): ?>
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    <span>Mostrando <?php echo count($contratacoes_vencidas); ?> de <?php echo $total_vencidas_paginacao; ?> resultados</span>
+                </div>
+                <div class="pagination">
+                    <?php
+                    $params_url = $_GET;
+                    unset($params_url['pagina_vencidas']);
+                    $base_url = '?' . http_build_query($params_url);
+                    $base_url = $base_url === '?' ? '?' : $base_url . '&';
+                    
+                    // Primeira página
+                    if ($pagina_vencidas > 1): ?>
+                        <a href="<?php echo $base_url; ?>pagina_vencidas=1" class="pagination-btn">
+                            <i data-lucide="chevrons-left"></i>
+                        </a>
+                        <a href="<?php echo $base_url; ?>pagina_vencidas=<?php echo $pagina_vencidas - 1; ?>" class="pagination-btn">
+                            <i data-lucide="chevron-left"></i>
+                        </a>
+                    <?php endif; ?>
+                    
+                    <?php
+                    $inicio = max(1, $pagina_vencidas - 2);
+                    $fim = min($total_paginas_vencidas, $pagina_vencidas + 2);
+                    
+                    for ($i = $inicio; $i <= $fim; $i++): ?>
+                        <a href="<?php echo $base_url; ?>pagina_vencidas=<?php echo $i; ?>" 
+                           class="pagination-btn <?php echo ($i == $pagina_vencidas) ? 'active' : ''; ?>">
+                            <?php echo $i; ?>
+                        </a>
+                    <?php endfor; ?>
+                    
+                    <!-- Última página -->
+                    <?php if ($pagina_vencidas < $total_paginas_vencidas): ?>
+                        <a href="<?php echo $base_url; ?>pagina_vencidas=<?php echo $pagina_vencidas + 1; ?>" class="pagination-btn">
+                            <i data-lucide="chevron-right"></i>
+                        </a>
+                        <a href="<?php echo $base_url; ?>pagina_vencidas=<?php echo $total_paginas_vencidas; ?>" class="pagination-btn">
+                            <i data-lucide="chevrons-right"></i>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            
             <?php else: ?>
             <div class="empty-message">
                 <div class="empty-icon"><i data-lucide="check-circle"></i></div>
@@ -1230,6 +1448,54 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Paginação Não Iniciadas -->
+            <?php if ($total_paginas_nao_iniciadas > 1): ?>
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    <span>Mostrando <?php echo count($contratacoes_nao_iniciadas); ?> de <?php echo $total_nao_iniciadas_paginacao; ?> resultados</span>
+                </div>
+                <div class="pagination">
+                    <?php
+                    $params_url = $_GET;
+                    unset($params_url['pagina_nao_iniciadas']);
+                    $base_url = '?' . http_build_query($params_url);
+                    $base_url = $base_url === '?' ? '?' : $base_url . '&';
+                    
+                    // Primeira página
+                    if ($pagina_nao_iniciadas > 1): ?>
+                        <a href="<?php echo $base_url; ?>pagina_nao_iniciadas=1" class="pagination-btn">
+                            <i data-lucide="chevrons-left"></i>
+                        </a>
+                        <a href="<?php echo $base_url; ?>pagina_nao_iniciadas=<?php echo $pagina_nao_iniciadas - 1; ?>" class="pagination-btn">
+                            <i data-lucide="chevron-left"></i>
+                        </a>
+                    <?php endif; ?>
+                    
+                    <?php
+                    $inicio = max(1, $pagina_nao_iniciadas - 2);
+                    $fim = min($total_paginas_nao_iniciadas, $pagina_nao_iniciadas + 2);
+                    
+                    for ($i = $inicio; $i <= $fim; $i++): ?>
+                        <a href="<?php echo $base_url; ?>pagina_nao_iniciadas=<?php echo $i; ?>" 
+                           class="pagination-btn <?php echo ($i == $pagina_nao_iniciadas) ? 'active' : ''; ?>">
+                            <?php echo $i; ?>
+                        </a>
+                    <?php endfor; ?>
+                    
+                    <!-- Última página -->
+                    <?php if ($pagina_nao_iniciadas < $total_paginas_nao_iniciadas): ?>
+                        <a href="<?php echo $base_url; ?>pagina_nao_iniciadas=<?php echo $pagina_nao_iniciadas + 1; ?>" class="pagination-btn">
+                            <i data-lucide="chevron-right"></i>
+                        </a>
+                        <a href="<?php echo $base_url; ?>pagina_nao_iniciadas=<?php echo $total_paginas_nao_iniciadas; ?>" class="pagination-btn">
+                            <i data-lucide="chevrons-right"></i>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            
             <?php else: ?>
             <div class="empty-message">
                 <div class="empty-icon"><i data-lucide="check-circle"></i></div>
@@ -1244,13 +1510,21 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
     <script>
         // Função para exportar dados
         function exportarAtrasadas(tipo) {
-            // Pegar filtro de área
+            // Pegar todos os filtros
             var area = document.querySelector('select[name="area"]').value;
+            var periodo = document.querySelector('select[name="periodo"]').value;
+            var mes = document.querySelector('select[name="mes"]').value;
             
             // Construir URL de exportação
             var url = 'relatorios/exportar_atrasadas_novo.php?tipo=' + tipo;
             if (area) {
                 url += '&area=' + encodeURIComponent(area);
+            }
+            if (periodo) {
+                url += '&periodo=' + encodeURIComponent(periodo);
+            }
+            if (mes) {
+                url += '&mes=' + encodeURIComponent(mes);
             }
             
             // Abrir link de download
@@ -1390,12 +1664,67 @@ document.addEventListener('DOMContentLoaded', function() {
             outline-offset: 2px;
         }
 
+        /* ==================== PAGINAÇÃO ==================== */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            border-top: 1px solid #e9ecef;
+            background: #f8f9fa;
+        }
+
+        .pagination-info {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .pagination-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            color: #495057;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .pagination-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+            color: #212529;
+        }
+
+        .pagination-btn.active {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+
+        .pagination-btn i {
+            width: 16px;
+            height: 16px;
+        }
+
         /* Print styles */
         @media print {
             .page-header,
             .filtros-card,
             .btn-exportar,
-            .btn-voltar {
+            .btn-voltar,
+            .pagination-container {
                 display: none !important;
             }
 
@@ -1415,6 +1744,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
             .stats-cards {
                 display: none;
+            }
+        }
+
+        /* Responsivo para paginação */
+        @media (max-width: 768px) {
+            .pagination-container {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px 20px;
+            }
+
+            .pagination {
+                order: -1;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .pagination-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 13px;
             }
         }
     </style>

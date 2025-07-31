@@ -147,11 +147,29 @@ try {
             // Converter data_hora para formato MySQL
             $data_hora_original = $andamento['data_hora'];
             try {
-                // Assumindo formato "dd/mm/yyyy hh:mm"
-                $data_obj = DateTime::createFromFormat('d/m/Y H:i', $data_hora_original);
+                $data_obj = null;
+                
+                // Tentar diferentes formatos de data
+                $formatos = [
+                    'Y-m-d\TH:i:s.v\Z',     // ISO 8601 com milissegundos: 2025-07-18T12:31:00.000Z
+                    'Y-m-d\TH:i:s\Z',       // ISO 8601 sem milissegundos: 2025-07-18T12:31:00Z
+                    'Y-m-d H:i:s',          // MySQL: 2025-07-18 12:31:00
+                    'd/m/Y H:i',            // Brasileiro: 18/07/2025 12:31
+                    'Y-m-d'                 // Apenas data: 2025-07-18
+                ];
+                
+                foreach ($formatos as $formato) {
+                    $data_obj = DateTime::createFromFormat($formato, $data_hora_original);
+                    if ($data_obj && $data_obj->format($formato) === $data_hora_original) {
+                        break;
+                    }
+                    $data_obj = null;
+                }
+                
                 if (!$data_obj) {
                     throw new Exception("Formato de data inválido: {$data_hora_original}");
                 }
+                
                 $data_hora_mysql = $data_obj->format('Y-m-d H:i:s');
             } catch (Exception $e) {
                 throw new Exception("Erro ao converter data '{$data_hora_original}': " . $e->getMessage());

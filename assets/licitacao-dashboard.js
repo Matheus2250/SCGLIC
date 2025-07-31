@@ -286,10 +286,14 @@ function consultarAndamentos(nup) {
 }
 
 /**
- * Gerar HTML para timeline de andamentos
+ * Gerar HTML para timeline de andamentos melhorada
  */
 function generateAndamentosTimeline(data, nup) {
     let html = '';
+    
+    // Armazenar dados originais para filtros
+    window.andamentosData = data;
+    window.andamentosOriginais = data.data[0]?.andamentos || [];
     
     // Cabeçalho com resumo
     const processo = data.data[0];
@@ -301,7 +305,7 @@ function generateAndamentosTimeline(data, nup) {
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
                 <div>
                     <strong>Total de Andamentos:</strong><br>
-                    ${data.total_andamentos_individuais || 0}
+                    <span id="totalAndamentosAtual">${data.total_andamentos_individuais || 0}</span>
                 </div>
                 <div>
                     <strong>Período:</strong><br>
@@ -309,7 +313,7 @@ function generateAndamentosTimeline(data, nup) {
                 </div>
                 <div>
                     <strong>Unidades Envolvidas:</strong><br>
-                    ${processo?.unidades_envolvidas?.length || 0}
+                    <span id="unidadesEnvolvidasAtual">${processo?.unidades_envolvidas?.length || 0}</span>
                 </div>
                 <div>
                     <strong>Tempo Total:</strong><br>
@@ -318,64 +322,185 @@ function generateAndamentosTimeline(data, nup) {
             </div>
         </div>
     `;
+
+    // Painel de filtros avançados - Layout compacto
+    html += `
+        <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <h5 style="margin: 0; color: #495057; display: flex; align-items: center; gap: 8px; font-size: 15px;">
+                    <i data-lucide="filter" style="width: 16px; height: 16px;"></i> Filtros
+                </h5>
+                <button type="button" onclick="limparFiltrosAndamentos()" 
+                        style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(220,53,69,0.3);"
+                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(220,53,69,0.4)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(220,53,69,0.3)'">
+                    <i data-lucide="x" style="width: 12px; height: 12px;"></i> Limpar
+                </button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <input type="text" id="filtroTexto" placeholder="🔍 Buscar na descrição..." 
+                           style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 13px; transition: border-color 0.2s ease;"
+                           oninput="aplicarFiltrosAndamentos()"
+                           onfocus="this.style.borderColor='#007cba'; this.style.boxShadow='0 0 0 2px rgba(0,124,186,0.1)'"
+                           onblur="this.style.borderColor='#ced4da'; this.style.boxShadow='none'">
+                </div>
+                
+                <div>
+                    <select id="filtroUnidade" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 13px; transition: border-color 0.2s ease;"
+                            onchange="aplicarFiltrosAndamentos()"
+                            onfocus="this.style.borderColor='#007cba'"
+                            onblur="this.style.borderColor='#ced4da'">
+                        <option value="">📋 Todas as unidades</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <select id="filtroUsuario" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 13px; transition: border-color 0.2s ease;"
+                            onchange="aplicarFiltrosAndamentos()"
+                            onfocus="this.style.borderColor='#007cba'"
+                            onblur="this.style.borderColor='#ced4da'">
+                        <option value="">👤 Todos os usuários</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <select id="filtroPeriodo" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 13px; transition: border-color 0.2s ease;"
+                            onchange="aplicarFiltrosAndamentos()"
+                            onfocus="this.style.borderColor='#007cba'"
+                            onblur="this.style.borderColor='#ced4da'">
+                        <option value="">📅 Todo o período</option>
+                        <option value="7">Últimos 7 dias</option>
+                        <option value="30">Últimos 30 dias</option>
+                        <option value="90">Últimos 90 dias</option>
+                        <option value="365">Último ano</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid #f1f3f4;">
+                <div style="font-size: 13px; color: #6c757d; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                    <span id="resultadosFiltro">Mostrando todos os andamentos</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" onclick="exportarAndamentosFiltrados()" 
+                            style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(40,167,69,0.3);"
+                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(40,167,69,0.4)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(40,167,69,0.3)'">
+                        <i data-lucide="download" style="width: 12px; height: 12px;"></i> CSV
+                    </button>
+                    <button type="button" onclick="imprimirAndamentos()" 
+                            style="background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(23,162,184,0.3);"
+                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(23,162,184,0.4)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(23,162,184,0.3)'">
+                        <i data-lucide="printer" style="width: 12px; height: 12px;"></i> PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
     
-    // Resumo por unidade (se disponível)
+    // Resumo por unidade - Layout horizontal compacto
     if (data.resumo_tempo_por_unidade) {
-        html += '<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">';
-        html += '<h4 style="margin: 0 0 15px 0; color: #495057;"><i data-lucide="clock"></i> Tempo por Unidade</h4>';
-        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">';
+        const unidadesCount = Object.keys(data.resumo_tempo_por_unidade).length;
+        const showCollapsed = unidadesCount > 4; // Colapsar se muitas unidades
+        
+        html += `<div id="resumoUnidades" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e9ecef;">`;
+        html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h5 style="margin: 0; color: #495057; display: flex; align-items: center; gap: 6px; font-size: 15px;">
+                    <i data-lucide="clock" style="width: 16px; height: 16px;"></i> Tempo por Unidade
+                </h5>
+                ${showCollapsed ? `
+                    <button type="button" onclick="toggleResumoUnidades()" id="btnToggleResumo" 
+                            style="background: #6f42c1; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 3px;">
+                        <i data-lucide="eye" style="width: 12px; height: 12px;"></i> Ver Detalhes
+                    </button>
+                ` : ''}
+            </div>
+        `;
+        
+        if (showCollapsed) {
+            // Versão resumida - apenas totais
+            const totalDias = Object.values(data.resumo_tempo_por_unidade).reduce((acc, tempo) => acc + (tempo.dias || 0), 0);
+            const totalUnidades = Object.keys(data.resumo_tempo_por_unidade).length;
+            
+            html += `
+                <div id="resumoCompacto" style="display: flex; justify-content: space-around; align-items: center; background: white; padding: 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #007cba;">${totalDias}</div>
+                        <div style="font-size: 12px; color: #6c757d;">Dias Total</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #28a745;">${totalUnidades}</div>
+                        <div style="font-size: 12px; color: #6c757d;">Unidades</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 20px; font-weight: bold; color: #fd7e14;">${(totalDias/totalUnidades).toFixed(1)}</div>
+                        <div style="font-size: 12px; color: #6c757d;">Média/Unidade</div>
+                    </div>
+                </div>
+                
+                <div id="resumoDetalhado" style="display: none; margin-top: 12px;">`;
+        } else {
+            html += '<div id="resumoDetalhado">';
+        }
+        
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px;">';
         
         for (const [unidade, tempoData] of Object.entries(data.resumo_tempo_por_unidade)) {
             const dias = tempoData.dias !== undefined ? tempoData.dias : 0;
             const periodos = tempoData.total_periodos || 1;
             const media = tempoData.media_dias_por_periodo !== undefined ? tempoData.media_dias_por_periodo : (dias / periodos);
+            const cor = getCorUnidade(unidade);
             
             html += `
-                <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #007cba;">
-                    <div style="font-weight: 600; color: #007cba; margin-bottom: 5px;">${unidade}</div>
-                    <div style="font-size: 14px; color: #6c757d;">
-                        ${dias} dias total<br>
-                        ${periodos} estadia(s) na unidade<br>
-                        Média: ${media.toFixed(1)} dias por estadia
+                <div style="background: white; padding: 10px; border-radius: 6px; border-left: 3px solid ${cor}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="font-weight: 600; color: ${cor}; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                        <i data-lucide="${getIconeUnidade(unidade)}" style="width: 14px; height: 14px;"></i>
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${unidade}">${unidade}</span>
+                    </div>
+                    <div style="font-size: 12px; color: #6c757d; line-height: 1.3;">
+                        <strong>${dias}d</strong> total • <strong>${periodos}</strong> estadia(s)<br>
+                        Média: <strong>${media.toFixed(1)}d</strong>
                     </div>
                 </div>
             `;
         }
-        html += '</div></div>';
+        html += '</div></div></div>';
     }
     
-    // Timeline de andamentos
-    if (processo?.andamentos && processo.andamentos.length > 0) {
-        html += '<div style="background: white; padding: 20px; border-radius: 8px;">';
-        html += '<h4 style="margin: 0 0 20px 0; color: #495057;"><i data-lucide="git-commit"></i> Timeline de Andamentos</h4>';
-        html += '<div style="position: relative;">';
-        
-        // Linha vertical da timeline
-        html += '<div style="position: absolute; left: 20px; top: 0; bottom: 0; width: 2px; background: #dee2e6;"></div>';
-        
-        processo.andamentos.forEach((andamento, index) => {
-            const isFirst = index === 0;
-            const isLast = index === processo.andamentos.length - 1;
-            
-            html += `
-                <div style="position: relative; padding-left: 60px; margin-bottom: ${isLast ? '0' : '20px'};">
-                    <div style="position: absolute; left: 11px; top: 5px; width: 18px; height: 18px; background: #007cba; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007cba;">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                            <div style="font-weight: 600; color: #007cba;">${andamento.unidade}</div>
-                            <div style="font-size: 12px; color: #6c757d; white-space: nowrap; margin-left: 15px;">
-                                ${formatarDataHora(andamento.data_hora)}
-                            </div>
-                        </div>
-                        <div style="color: #495057; margin-bottom: 5px;">${andamento.descricao}</div>
-                        ${andamento.usuario ? `<div style="font-size: 12px; color: #6c757d;"><i data-lucide="user"></i> ${andamento.usuario}</div>` : ''}
-                    </div>
+    // Container da timeline - Layout otimizado
+    html += `
+        <div id="timelineContainer" style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; max-height: 60vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; position: sticky; top: 0; background: white; z-index: 10; padding-bottom: 10px; border-bottom: 1px solid #f1f3f4;">
+                <h5 style="margin: 0; color: #495057; display: flex; align-items: center; gap: 6px; font-size: 15px;">
+                    <i data-lucide="git-commit" style="width: 16px; height: 16px;"></i> Timeline de Andamentos
+                </h5>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" onclick="alternarVisualizacao()" id="btnVisualizacao" 
+                            style="background: linear-gradient(135deg, #6f42c1 0%, #495057 100%); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(111,66,193,0.3);"
+                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(111,66,193,0.4)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(111,66,193,0.3)'">
+                        <i data-lucide="list" style="width: 12px; height: 12px;"></i> Compacta
+                    </button>
                 </div>
-            `;
-        });
-        
-        html += '</div></div>';
-    }
+            </div>
+            <div id="timelineContent" style="max-height: calc(60vh - 60px); overflow-y: auto;">
+                ${generateTimelineContent(processo?.andamentos || [])}
+            </div>
+        </div>
+    `;
+    
+    // Inicializar filtros após renderização
+    setTimeout(() => {
+        inicializarFiltrosAndamentos();
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    }, 100);
     
     return html;
 }
@@ -484,9 +609,421 @@ function initAndamentos() {
     }
 }
 
+/**
+ * Funções auxiliares para o modal de andamentos melhorado
+ */
+
+// Mapeamento de cores por tipo de unidade
+function getCorUnidade(unidade) {
+    const coresUnidades = {
+        'CGLIC': '#007cba',
+        'DIPLAN': '#28a745', 
+        'DIPLI': '#dc3545',
+        'SEGESP': '#fd7e14',
+        'CONJUR': '#6f42c1',
+        'TCU': '#20c997',
+        'AGU': '#ffc107',
+        'Secretário': '#6c757d'
+    };
+    
+    // Buscar por palavra-chave na unidade
+    for (const [key, cor] of Object.entries(coresUnidades)) {
+        if (unidade.toUpperCase().includes(key)) {
+            return cor;
+        }
+    }
+    
+    // Cor padrão baseada em hash da string
+    let hash = 0;
+    for (let i = 0; i < unidade.length; i++) {
+        hash = unidade.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const cores = ['#007cba', '#28a745', '#dc3545', '#fd7e14', '#6f42c1', '#20c997'];
+    return cores[Math.abs(hash) % cores.length];
+}
+
+// Mapeamento de ícones por tipo de unidade
+function getIconeUnidade(unidade) {
+    const iconesUnidades = {
+        'CGLIC': 'building',
+        'DIPLAN': 'calendar',
+        'DIPLI': 'gavel', 
+        'SEGESP': 'shield',
+        'CONJUR': 'scale',
+        'TCU': 'eye',
+        'AGU': 'briefcase',
+        'Secretário': 'crown'
+    };
+    
+    for (const [key, icone] of Object.entries(iconesUnidades)) {
+        if (unidade.toUpperCase().includes(key)) {
+            return icone;
+        }
+    }
+    
+    return 'building-2'; // Ícone padrão
+}
+
+// Gerar conteúdo da timeline
+function generateTimelineContent(andamentos, modoCompacto = false) {
+    if (!andamentos || andamentos.length === 0) {
+        return '<div style="text-align: center; padding: 40px; color: #6c757d;"><i data-lucide="inbox" style="width: 48px; height: 48px; margin-bottom: 15px;"></i><h4>Nenhum andamento encontrado</h4><p>Não há andamentos que correspondam aos filtros aplicados.</p></div>';
+    }
+
+    let html = '';
+    
+    if (modoCompacto) {
+        // Visualização em lista compacta
+        html += '<div style="background: #f8f9fa; border-radius: 8px; overflow: hidden;">';
+        andamentos.forEach((andamento, index) => {
+            const cor = getCorUnidade(andamento.unidade);
+            const icone = getIconeUnidade(andamento.unidade);
+            
+            html += `
+                <div style="display: flex; align-items: center; padding: 12px 16px; border-bottom: ${index === andamentos.length - 1 ? 'none' : '1px solid #dee2e6'}; background: ${index % 2 === 0 ? 'white' : '#f8f9fa'};">
+                    <div style="width: 40px; height: 40px; background: ${cor}; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; flex-shrink: 0;">
+                        <i data-lucide="${icone}" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                            <div style="font-weight: 600; color: ${cor}; margin-right: 10px;">${andamento.unidade}</div>
+                            <div style="font-size: 12px; color: #6c757d; white-space: nowrap;">
+                                ${formatarDataHora(andamento.data_hora)}
+                            </div>
+                        </div>
+                        <div style="color: #495057; font-size: 14px; line-height: 1.3; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${andamento.descricao}</div>
+                        ${andamento.usuario ? `<div style="font-size: 12px; color: #6c757d; display: flex; align-items: center; gap: 4px;"><i data-lucide="user" style="width: 12px; height: 12px;"></i> ${andamento.usuario}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+    } else {
+        // Visualização em timeline (padrão)
+        html += '<div style="position: relative;">';
+        
+        // Linha vertical da timeline
+        html += '<div style="position: absolute; left: 16px; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, #007cba, #dee2e6);"></div>';
+        
+        andamentos.forEach((andamento, index) => {
+            const isLast = index === andamentos.length - 1;
+            const cor = getCorUnidade(andamento.unidade);
+            const icone = getIconeUnidade(andamento.unidade);
+            
+            html += `
+                <div style="position: relative; padding-left: 50px; margin-bottom: ${isLast ? '0' : '15px'};">
+                    <div style="position: absolute; left: 6px; top: 6px; width: 20px; height: 20px; background: ${cor}; color: white; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; z-index: 2;">
+                        <i data-lucide="${icone}" style="width: 12px; height: 12px;"></i>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); padding: 15px; border-radius: 8px; border-left: 3px solid ${cor}; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;" onmouseover="this.style.boxShadow='0 4px 8px rgba(0,0,0,0.1)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.05)'; this.style.transform='translateY(0)'">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div style="font-weight: 600; color: ${cor}; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                                ${andamento.unidade}
+                            </div>
+                            <div style="font-size: 11px; color: #6c757d; white-space: nowrap; margin-left: 10px; background: #e9ecef; padding: 2px 6px; border-radius: 8px;">
+                                <i data-lucide="clock" style="width: 10px; height: 10px; margin-right: 2px;"></i>
+                                ${formatarDataHora(andamento.data_hora)}
+                            </div>
+                        </div>
+                        <div style="color: #495057; margin-bottom: 6px; line-height: 1.4; font-size: 13px;">${andamento.descricao}</div>
+                        ${andamento.usuario ? `<div style="font-size: 11px; color: #6c757d; display: flex; align-items: center; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f3f4;"><i data-lucide="user" style="width: 12px; height: 12px;"></i> <strong>Responsável:</strong> ${andamento.usuario}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+    }
+    
+    return html;
+}
+
+// Inicializar filtros
+function inicializarFiltrosAndamentos() {
+    if (!window.andamentosOriginais || window.andamentosOriginais.length === 0) {
+        return;
+    }
+
+    // Popular select de unidades
+    const unidades = [...new Set(window.andamentosOriginais.map(a => a.unidade))].sort();
+    const selectUnidade = document.getElementById('filtroUnidade');
+    if (selectUnidade) {
+        selectUnidade.innerHTML = '<option value="">Todas as unidades</option>';
+        unidades.forEach(unidade => {
+            selectUnidade.innerHTML += `<option value="${unidade}">${unidade}</option>`;
+        });
+    }
+
+    // Popular select de usuários
+    const usuarios = [...new Set(window.andamentosOriginais.map(a => a.usuario).filter(u => u && u.trim() !== ''))].sort();
+    const selectUsuario = document.getElementById('filtroUsuario');
+    if (selectUsuario) {
+        selectUsuario.innerHTML = '<option value="">Todos os usuários</option>';
+        usuarios.forEach(usuario => {
+            selectUsuario.innerHTML += `<option value="${usuario}">${usuario}</option>`;
+        });
+    }
+}
+
+// Aplicar filtros
+function aplicarFiltrosAndamentos() {
+    if (!window.andamentosOriginais || window.andamentosOriginais.length === 0) {
+        return;
+    }
+
+    const filtroTexto = document.getElementById('filtroTexto')?.value.toLowerCase() || '';
+    const filtroUnidade = document.getElementById('filtroUnidade')?.value || '';
+    const filtroUsuario = document.getElementById('filtroUsuario')?.value || '';
+    const filtroPeriodo = document.getElementById('filtroPeriodo')?.value || '';
+
+    let andamentosFiltrados = window.andamentosOriginais.filter(andamento => {
+        // Filtro de texto
+        if (filtroTexto && !andamento.descricao.toLowerCase().includes(filtroTexto)) {
+            return false;
+        }
+
+        // Filtro de unidade
+        if (filtroUnidade && andamento.unidade !== filtroUnidade) {
+            return false;
+        }
+
+        // Filtro de usuário
+        if (filtroUsuario && andamento.usuario !== filtroUsuario) {
+            return false;
+        }
+
+        // Filtro de período
+        if (filtroPeriodo) {
+            const diasLimite = parseInt(filtroPeriodo);
+            const dataAndamento = new Date(andamento.data_hora);
+            const dataLimite = new Date();
+            dataLimite.setDate(dataLimite.getDate() - diasLimite);
+            
+            if (dataAndamento < dataLimite) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    // Atualizar timeline
+    const timelineContent = document.getElementById('timelineContent');
+    if (timelineContent) {
+        const modoCompacto = document.getElementById('btnVisualizacao')?.innerHTML.includes('Timeline');
+        timelineContent.innerHTML = generateTimelineContent(andamentosFiltrados, modoCompacto);
+    }
+
+    // Atualizar contadores
+    const totalElement = document.getElementById('totalAndamentosAtual');
+    if (totalElement) {
+        totalElement.textContent = andamentosFiltrados.length;
+    }
+
+    const unidadesUnicas = [...new Set(andamentosFiltrados.map(a => a.unidade))].length;
+    const unidadesElement = document.getElementById('unidadesEnvolvidasAtual');
+    if (unidadesElement) {
+        unidadesElement.textContent = unidadesUnicas;
+    }
+
+    // Atualizar texto de resultado
+    const resultadoElement = document.getElementById('resultadosFiltro');
+    if (resultadoElement) {
+        const total = window.andamentosOriginais.length;
+        const mostrados = andamentosFiltrados.length;
+        
+        if (mostrados === total) {
+            resultadoElement.textContent = `Mostrando todos os ${total} andamentos`;
+        } else {
+            resultadoElement.textContent = `Mostrando ${mostrados} de ${total} andamentos`;
+        }
+    }
+
+    // Recriar ícones
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Limpar filtros
+function limparFiltrosAndamentos() {
+    document.getElementById('filtroTexto').value = '';
+    document.getElementById('filtroUnidade').value = '';
+    document.getElementById('filtroUsuario').value = '';
+    document.getElementById('filtroPeriodo').value = '';
+    aplicarFiltrosAndamentos();
+}
+
+// Alternar visualização
+function alternarVisualizacao() {
+    const btn = document.getElementById('btnVisualizacao');
+    const timelineContent = document.getElementById('timelineContent');
+    
+    if (!btn || !timelineContent) return;
+
+    const modoCompacto = btn.innerHTML.includes('Lista Compacta');
+    
+    if (modoCompacto) {
+        btn.innerHTML = '<i data-lucide="git-commit"></i> Timeline';
+        timelineContent.innerHTML = generateTimelineContent(getCurrentFilteredAndamentos(), true);
+    } else {
+        btn.innerHTML = '<i data-lucide="list"></i> Lista Compacta';
+        timelineContent.innerHTML = generateTimelineContent(getCurrentFilteredAndamentos(), false);
+    }
+
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Obter andamentos filtrados atuais
+function getCurrentFilteredAndamentos() {
+    if (!window.andamentosOriginais) return [];
+    
+    const filtroTexto = document.getElementById('filtroTexto')?.value.toLowerCase() || '';
+    const filtroUnidade = document.getElementById('filtroUnidade')?.value || '';
+    const filtroUsuario = document.getElementById('filtroUsuario')?.value || '';
+    const filtroPeriodo = document.getElementById('filtroPeriodo')?.value || '';
+
+    return window.andamentosOriginais.filter(andamento => {
+        if (filtroTexto && !andamento.descricao.toLowerCase().includes(filtroTexto)) return false;
+        if (filtroUnidade && andamento.unidade !== filtroUnidade) return false;
+        if (filtroUsuario && andamento.usuario !== filtroUsuario) return false;
+        
+        if (filtroPeriodo) {
+            const diasLimite = parseInt(filtroPeriodo);
+            const dataAndamento = new Date(andamento.data_hora);
+            const dataLimite = new Date();
+            dataLimite.setDate(dataLimite.getDate() - diasLimite);
+            if (dataAndamento < dataLimite) return false;
+        }
+        
+        return true;
+    });
+}
+
+// Exportar andamentos filtrados
+function exportarAndamentosFiltrados() {
+    const andamentos = getCurrentFilteredAndamentos();
+    
+    if (andamentos.length === 0) {
+        alert('Não há andamentos para exportar com os filtros aplicados.');
+        return;
+    }
+
+    // Criar CSV
+    let csv = 'Data/Hora,Unidade,Usuário,Descrição\n';
+    
+    andamentos.forEach(andamento => {
+        const dataHora = formatarDataHora(andamento.data_hora);
+        const unidade = (andamento.unidade || '').replace(/"/g, '""');
+        const usuario = (andamento.usuario || '').replace(/"/g, '""');
+        const descricao = (andamento.descricao || '').replace(/"/g, '""');
+        
+        csv += `"${dataHora}","${unidade}","${usuario}","${descricao}"\n`;
+    });
+
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `andamentos_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Toggle do resumo de unidades
+function toggleResumoUnidades() {
+    const resumoCompacto = document.getElementById('resumoCompacto');
+    const resumoDetalhado = document.getElementById('resumoDetalhado');
+    const btnToggle = document.getElementById('btnToggleResumo');
+    
+    if (!resumoCompacto || !resumoDetalhado || !btnToggle) return;
+    
+    const isDetalhado = resumoDetalhado.style.display !== 'none';
+    
+    if (isDetalhado) {
+        resumoDetalhado.style.display = 'none';
+        resumoCompacto.style.display = 'flex';
+        btnToggle.innerHTML = '<i data-lucide="eye" style="width: 12px; height: 12px;"></i> Ver Detalhes';
+    } else {
+        resumoDetalhado.style.display = 'block';
+        resumoCompacto.style.display = 'none';
+        btnToggle.innerHTML = '<i data-lucide="eye-off" style="width: 12px; height: 12px;"></i> Resumir';
+    }
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+// Imprimir andamentos
+function imprimirAndamentos() {
+    const andamentos = getCurrentFilteredAndamentos();
+    
+    if (andamentos.length === 0) {
+        alert('Não há andamentos para imprimir com os filtros aplicados.');
+        return;
+    }
+
+    // Criar conteúdo para impressão
+    let conteudo = `
+        <html>
+        <head>
+            <title>Andamentos do Processo</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #007cba; padding-bottom: 15px; }
+                .andamento { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+                .unidade { font-weight: bold; color: #007cba; margin-bottom: 5px; }
+                .data { font-size: 12px; color: #666; margin-bottom: 10px; }
+                .descricao { margin-bottom: 8px; }
+                .usuario { font-size: 12px; color: #666; font-style: italic; }
+                @media print { body { margin: 10px; } }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>Andamentos do Processo</h2>
+                <p>Total de andamentos: ${andamentos.length} | Data da impressão: ${new Date().toLocaleDateString('pt-BR')}</p>
+            </div>
+    `;
+
+    andamentos.forEach(andamento => {
+        conteudo += `
+            <div class="andamento">
+                <div class="unidade">${andamento.unidade}</div>
+                <div class="data">${formatarDataHora(andamento.data_hora)}</div>
+                <div class="descricao">${andamento.descricao}</div>
+                ${andamento.usuario ? `<div class="usuario">Responsável: ${andamento.usuario}</div>` : ''}
+            </div>
+        `;
+    });
+
+    conteudo += '</body></html>';
+
+    // Abrir janela de impressão
+    const janelaImpressao = window.open('', '_blank');
+    janelaImpressao.document.write(conteudo);
+    janelaImpressao.document.close();
+    janelaImpressao.focus();
+    janelaImpressao.print();
+}
+
 // Exportar funções para o escopo global
 window.abrirModalImportarAndamentos = abrirModalImportarAndamentos;
 window.consultarAndamentos = consultarAndamentos;
+window.aplicarFiltrosAndamentos = aplicarFiltrosAndamentos;
+window.limparFiltrosAndamentos = limparFiltrosAndamentos;
+window.alternarVisualizacao = alternarVisualizacao;
+window.exportarAndamentosFiltrados = exportarAndamentosFiltrados;
+window.imprimirAndamentos = imprimirAndamentos;
+window.toggleResumoUnidades = toggleResumoUnidades;
 window.testarModal = testarModal;
 window.showSection = showSection;
 window.formatarValorCorreto = formatarValorCorreto;
