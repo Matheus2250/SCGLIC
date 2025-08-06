@@ -1,0 +1,1406 @@
+/**
+ * Dark Mode System - Sistema CGLIC
+ * Implementação de modo escuro com CSS Variables
+ * Data: 01/01/2025
+ */
+
+/* ==================== VARIÁVEIS CSS - TEMA CLARO (PADRÃO ORIGINAL) ==================== */
+:root {
+  /* Backgrounds - Cores originais do projeto */
+  --bg-primary: #f5f5f5;
+  --bg-secondary: #f8f9fa;
+  --bg-sidebar: #2c3e50;
+  --bg-card: #ffffff;
+  --bg-modal: #ffffff;
+  --bg-input: #ffffff;
+  --bg-table-header: #f8f9fa;
+  --bg-table-row-hover: #f8f9fa;
+  
+  /* Text Colors - Cores originais */
+  --text-primary: #333;
+  --text-secondary: #555;
+  --text-inverse: #ffffff;
+  --text-muted: #666;
+  --text-sidebar: #ffffff;
+  
+  /* Borders - Cores originais */
+  --border-color: #ddd;
+  --border-light: #e5e5e5;
+  --border-input: #ccc;
+  
+  /* Shadows - Sutis como no original */
+  --shadow-card: rgba(0,0,0,0.1);
+  --shadow-modal: rgba(0,0,0,0.15);
+  --shadow-hover: rgba(0,0,0,0.05);
+  
+  /* Buttons - Cores originais do projeto */
+  --button-primary: #3498db;
+  --button-primary-hover: #2980b9;
+  --button-success: #27ae60;
+  --button-success-hover: #229954;
+  --button-danger: #e74c3c;
+  --button-danger-hover: #c0392b;
+  --button-warning: #f39c12;
+  --button-warning-hover: #d68910;
+  --button-secondary: #95a5a6;
+  --button-secondary-hover: #7f8c8d;
+  
+  /* Status Colors - Originais */
+  --status-success: #27ae60;
+  --status-warning: #f39c12;
+  --status-danger: #e74c3c;
+  --status-info: #3498db;
+  
+  /* Sidebar Specific */
+  --sidebar-nav-hover: rgba(255,255,255,0.1);
+  --sidebar-nav-active: rgba(255,255,255,0.2);
+}
+
+/* ==================== VARIÁVEIS CSS - TEMA ESCURO ==================== */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d3748;
+  --bg-sidebar: #1a202c;
+  --bg-card: #2d3748;
+  --bg-modal: #2d3748;
+  --bg-input: #4a5568;
+  --bg-table-header: linear-gradient(135deg, #2d3748, #4a5568);
+  --bg-table-row-hover: #4a5568;
+  
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #e2e8f0;
+  --text-inverse: #2d3748;
+  --text-muted: #a0aec0;
+  --text-sidebar: #ffffff;
+  
+  /* Borders */
+  --border-color: #4a5568;
+  --border-light: #2d3748;
+  --border-input: #718096;
+  
+  /* Shadows */
+  --shadow-card: rgba(0,0,0,0.3);
+  --shadow-modal: rgba(0,0,0,0.5);
+  --shadow-hover: rgba(0,0,0,0.4);
+  
+  /* Buttons - Cores mais suaves no escuro */
+  --button-primary: #3182ce;
+  --button-primary-hover: #2c5aa0;
+  --button-success: #38a169;
+  --button-success-hover: #2f855a;
+  --button-danger: #e53e3e;
+  --button-danger-hover: #c53030;
+  --button-warning: #d69e2e;
+  --button-warning-hover: #b7791f;
+  --button-secondary: #718096;
+  --button-secondary-hover: #4a5568;
+  
+  /* Status Colors - Adaptadas para escuro */
+  --status-success: #38a169;
+  --status-warning: #d69e2e;
+  --status-danger: #e53e3e;
+  --status-info: #3182ce;
+  
+  /* Sidebar Specific */
+  --sidebar-nav-hover: rgba(255,255,255,0.05);
+  --sidebar-nav-active: rgba(255,255,255,0.1);
+}
+
+/* ==================== TRANSIÇÕES SUAVES ==================== */
+* {
+  transition: background-color 0.3s ease, 
+              color 0.3s ease, 
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+
+/* ==================== APLICAÇÃO DAS VARIÁVEIS ==================== */
+
+/* Body e estrutura principal - SÓ APLICAR NO DARK MODE */
+[data-theme="dark"] body {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Container principal - SÓ DARK MODE */
+[data-theme="dark"] .dashboard-container,
+[data-theme="dark"] .page-container,
+[data-theme="dark"] .main-content {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Headers e títulos - SÓ DARK MODE */
+[data-theme="dark"] h1, 
+[data-theme="dark"] h2, 
+[data-theme="dark"] h3, 
+[data-theme="dark"] h4, 
+[data-theme="dark"] h5, 
+[data-theme="dark"] h6 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .dashboard-header h1,
+[data-theme="dark"] .page-header h1,
+[data-theme="dark"] .table-title,
+[data-theme="dark"] .section-title h2 {
+  color: var(--text-primary) !important;
+}
+
+/* Subtítulos e descrições - SÓ DARK MODE */
+[data-theme="dark"] .dashboard-header p,
+[data-theme="dark"] .page-header p {
+  color: var(--text-secondary) !important;
+}
+
+/* Labels e textos de formulário - SÓ DARK MODE */
+[data-theme="dark"] label {
+  color: var(--text-primary) !important;
+}
+
+/* Filtros e seus títulos - SÓ DARK MODE */
+[data-theme="dark"] .filtros-header h3,
+[data-theme="dark"] .table-header h3 {
+  color: var(--text-primary) !important;
+}
+
+/* Sidebar */
+.sidebar {
+  background-color: var(--bg-sidebar) !important;
+  color: var(--text-sidebar) !important;
+}
+
+.sidebar .nav-item {
+  color: var(--text-sidebar) !important;
+}
+
+.sidebar .nav-item:hover {
+  background-color: var(--sidebar-nav-hover) !important;
+}
+
+.sidebar .nav-item.active {
+  background-color: var(--sidebar-nav-active) !important;
+}
+
+/* Sidebar footer - mesma cor da sidebar */
+.sidebar-footer {
+  background-color: var(--bg-sidebar) !important;
+  border-top-color: var(--border-color) !important;
+}
+
+/* User info na sidebar - mesma cor */
+.sidebar .user-info,
+.sidebar .user-details {
+  background-color: var(--bg-sidebar) !important;
+  color: var(--text-sidebar) !important;
+}
+
+.sidebar .user-details h4 {
+  color: var(--text-sidebar) !important;
+}
+
+.sidebar .user-details p {
+  color: var(--text-sidebar) !important;
+}
+
+/* Header da sidebar */
+.sidebar-header {
+  background-color: var(--bg-sidebar) !important;
+  color: var(--text-sidebar) !important;
+}
+
+.sidebar-header h2 {
+  color: var(--text-sidebar) !important;
+}
+
+/* Nav sections */
+.sidebar .nav-section {
+  background-color: var(--bg-sidebar) !important;
+}
+
+.sidebar .nav-section-title {
+  color: var(--text-sidebar) !important;
+}
+
+/* Botões de ação no rodapé da sidebar */
+.sidebar .action-buttons,
+.sidebar .btn-profile,
+.sidebar .btn-logout,
+.sidebar-footer .btn,
+.sidebar-footer a,
+.sidebar-footer button {
+  background-color: var(--bg-sidebar) !important;
+  color: var(--text-sidebar) !important;
+  border-color: var(--text-sidebar) !important;
+}
+
+/* User avatar */
+.sidebar .user-avatar {
+  background-color: var(--text-sidebar) !important;
+  color: var(--bg-sidebar) !important;
+}
+
+/* Cards e containers - SÓ DARK MODE */
+[data-theme="dark"] .card,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .table-container,
+[data-theme="dark"] .data-section,
+[data-theme="dark"] .stats-grid .stat-card,
+[data-theme="dark"] .chart-card,
+[data-theme="dark"] .filtros-card {
+  background-color: var(--bg-card);
+  box-shadow: 0 4px 6px var(--shadow-card);
+  border-color: var(--border-color);
+}
+
+/* Inputs e formulários - SÓ DARK MODE */
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="url"],
+[data-theme="dark"] input[type="search"],
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--bg-input);
+  border-color: var(--border-input);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Tabelas - SÓ DARK MODE */
+[data-theme="dark"] .data-table th {
+  background: var(--bg-table-header);
+  color: var(--text-primary);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .data-table td {
+  border-bottom-color: var(--border-light);
+}
+
+[data-theme="dark"] .data-table tbody tr:hover {
+  background-color: var(--bg-table-row-hover);
+}
+
+[data-theme="dark"] table th {
+  background: var(--bg-table-header);
+  color: var(--text-primary);
+}
+
+/* Modais */
+.modal {
+  background-color: rgba(0,0,0,0.5);
+}
+
+[data-theme="dark"] .modal {
+  background-color: rgba(0,0,0,0.8);
+}
+
+/* Botões - REMOVIDO PARA MANTER ORIGINAIS NO MODO CLARO */
+
+/* Status badges - REMOVIDO PARA MANTER ORIGINAIS NO MODO CLARO */
+
+/* Navegação e abas - SÓ DARK MODE */
+[data-theme="dark"] .nav-tabs .nav-link {
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link.active {
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Paginação - SÓ DARK MODE */
+[data-theme="dark"] .pagination .page-link {
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .pagination .page-link:hover {
+  background-color: var(--bg-table-row-hover);
+}
+
+[data-theme="dark"] .pagination .page-item.active .page-link {
+  background-color: var(--button-primary);
+  border-color: var(--button-primary);
+}
+
+/* Dropdowns - SÓ DARK MODE */
+[data-theme="dark"] .dropdown-menu {
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .dropdown-item {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .dropdown-item:hover {
+  background-color: var(--bg-table-row-hover);
+}
+
+/* Alertas e notificações - SÓ DARK MODE */
+[data-theme="dark"] .alert {
+  border-color: var(--border-color);
+}
+
+/* Text colors helpers - SÓ DARK MODE */
+[data-theme="dark"] .text-primary {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Background helpers - SÓ DARK MODE */
+[data-theme="dark"] .bg-light {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .bg-white {
+  background-color: var(--bg-card) !important;
+}
+
+/* Border helpers - SÓ DARK MODE */
+[data-theme="dark"] .border {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .border-top {
+  border-top-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .border-bottom {
+  border-bottom-color: var(--border-color) !important;
+}
+
+/* ==================== COMPONENTES ESPECÍFICOS - SÓ DARK MODE ==================== */
+
+/* Dashboard específico - SÓ DARK MODE */
+[data-theme="dark"] .dashboard-header {
+  color: var(--text-primary);
+}
+
+/* Cards de estatísticas - SÓ DARK MODE */
+[data-theme="dark"] .stat-card {
+  border-top-color: var(--border-color);
+}
+
+/* Gráficos - manter fundo para legibilidade - SÓ DARK MODE */
+[data-theme="dark"] .chart-container {
+  background-color: var(--bg-card);
+  border-radius: 8px;
+}
+
+/* Loading states - SÓ DARK MODE */
+[data-theme="dark"] .loading {
+  color: var(--text-secondary);
+}
+
+/* Empty states - SÓ DARK MODE */
+[data-theme="dark"] .empty-message {
+  color: var(--text-secondary);
+}
+
+/* ==================== BOTÃO DE TOGGLE DARK MODE - SÓ DARK MODE ==================== */
+[data-theme="dark"] .theme-toggle-container {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .theme-toggle-btn {
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .theme-toggle-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+}
+
+[data-theme="dark"] .theme-toggle-btn i {
+  width: 16px;
+  height: 16px;
+}
+
+/* ==================== RESPONSIVE ADJUSTMENTS - SÓ DARK MODE ==================== */
+@media (max-width: 768px) {
+  [data-theme="dark"] .theme-toggle-btn {
+    padding: 10px;
+    font-size: 13px;
+  }
+}
+
+/* ==================== ACESSIBILIDADE ==================== */
+/* Garantir contraste adequado para leitores de tela */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Focar elementos para navegação por teclado */
+*:focus {
+  outline: 2px solid var(--button-primary);
+  outline-offset: 2px;
+}
+
+/* ==================== PRINT STYLES ==================== */
+@media print {
+  [data-theme="dark"] {
+    --bg-primary: #ffffff;
+    --bg-card: #ffffff;
+    --text-primary: #000000;
+    --text-secondary: #333333;
+  }
+}
+
+/* ==================== ANIMAÇÕES ==================== */
+@keyframes darkModeTransition {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+[data-theme="dark"] * {
+  animation: darkModeTransition 0.3s ease-out;
+}
+
+/* ==================== CORREÇÕES ESPECÍFICAS LICITAÇÕES ==================== */
+
+/* Caixa de filtros com fundo escuro correto */
+[data-theme="dark"] #lista-licitacoes div[style*="background: #f8f9fa"] {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Labels dos filtros "Buscar" e "Situação" */
+[data-theme="dark"] #formFiltrosLicitacao label {
+  color: var(--text-primary) !important;
+}
+
+/* Inputs e selects dentro dos filtros */
+[data-theme="dark"] #formFiltrosLicitacao input,
+[data-theme="dark"] #formFiltrosLicitacao select {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-input) !important;
+}
+
+/* NUP na tabela - destacar no modo escuro */
+[data-theme="dark"] #lista-licitacoes table tbody td strong {
+  color: #60a5fa !important; /* Azul claro para destaque do NUP */
+}
+
+/* NUP no modo claro */
+#lista-licitacoes table tbody td strong {
+  color: #007bff !important; /* Azul padrão no modo claro */
+}
+
+/* Correção para hover da tabela */
+[data-theme="dark"] #lista-licitacoes table tbody tr:hover {
+  background-color: #4a5568 !important;
+}
+
+[data-theme="dark"] #lista-licitacoes table tbody tr:hover td {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #lista-licitacoes table tbody tr:hover td strong {
+  color: #93c5fd !important; /* NUP ainda mais claro no hover */
+}
+
+/* Tabela geral - hover no modo claro */
+#lista-licitacoes table tbody tr:hover {
+  background-color: var(--bg-table-row-hover) !important;
+}
+
+#lista-licitacoes table tbody tr:hover td {
+  color: var(--text-primary) !important;
+}
+
+/* Outros elementos da tabela no dark mode */
+[data-theme="dark"] #lista-licitacoes table {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] #lista-licitacoes table thead th {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] #lista-licitacoes table tbody td {
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ==================== CORREÇÕES PARA CARDS E NÚMEROS ==================== */
+
+/* Cards estatísticos - números bem visíveis */
+[data-theme="dark"] .stat-card .stat-number,
+[data-theme="dark"] .stats-grid .stat-number,
+[data-theme="dark"] .card-value,
+[data-theme="dark"] .card h3,
+[data-theme="dark"] .card h2,
+[data-theme="dark"] .card .number {
+  color: #ffffff !important;
+  font-weight: bold;
+}
+
+/* Labels e textos secundários em cards */
+[data-theme="dark"] .stat-card .stat-label,
+[data-theme="dark"] .stats-grid .stat-label,
+[data-theme="dark"] .card-label,
+[data-theme="dark"] .card p {
+  color: var(--text-secondary) !important;
+}
+
+/* Todos os títulos principais */
+[data-theme="dark"] h1, 
+[data-theme="dark"] h2, 
+[data-theme="dark"] h3, 
+[data-theme="dark"] h4, 
+[data-theme="dark"] h5, 
+[data-theme="dark"] h6 {
+  color: #ffffff !important;
+}
+
+/* Texto geral */
+[data-theme="dark"] p,
+[data-theme="dark"] span,
+[data-theme="dark"] div {
+  color: var(--text-primary) !important;
+}
+
+/* Valores em geral */
+[data-theme="dark"] .value,
+[data-theme="dark"] .count,
+[data-theme="dark"] .total,
+[data-theme="dark"] strong {
+  color: #ffffff !important;
+}
+
+/* ==================== BADGES/BALÕES NA TABELA ==================== */
+
+/* Badge de modalidade - escurecer no modo escuro */
+[data-theme="dark"] #lista-licitacoes table tbody td span[style*="background: #e3f2fd"] {
+  background: #1e40af !important; /* Azul escuro */
+  color: #ffffff !important;
+}
+
+/* Badges de situação - cores escuras */
+[data-theme="dark"] .status-badge.status-em-andamento {
+  background: #1e40af !important; /* Azul escuro */
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .status-badge.status-homologado {
+  background: #166534 !important; /* Verde escuro */
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .status-badge.status-fracassado {
+  background: #dc2626 !important; /* Vermelho escuro */
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .status-badge.status-revogado {
+  background: #d97706 !important; /* Laranja escuro */
+  color: #ffffff !important;
+}
+
+/* Badge de andamentos - escurecer */
+[data-theme="dark"] #lista-licitacoes table tbody td span[style*="background: #e8f5e8"] {
+  background: #166534 !important; /* Verde escuro */
+  color: #ffffff !important;
+}
+
+/* Outros badges gerais */
+[data-theme="dark"] .badge,
+[data-theme="dark"] span[style*="background:"],
+[data-theme="dark"] span[style*="background-color:"] {
+  filter: brightness(0.7) !important;
+}
+
+/* ==================== DASHBOARD PLANEJAMENTO ==================== */
+
+/* Header do dashboard - azul mais escuro */
+[data-theme="dark"] .dashboard-header[style*="background: linear-gradient"],
+[data-theme="dark"] .dashboard-header[style*="background:linear-gradient"] {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+}
+
+/* Seletor de ano do PCA - corrigir fundo branco */
+[data-theme="dark"] .year-selector,
+[data-theme="dark"] .ano-selector,
+[data-theme="dark"] select[name="ano"],
+[data-theme="dark"] .form-control[name="ano"] {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-input) !important;
+}
+
+/* Box de seleção de ano inteira */
+[data-theme="dark"] .year-selector-container,
+[data-theme="dark"] div[style*="background: #f8f9fa"] {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Labels no seletor de ano */
+[data-theme="dark"] .year-selector-container label,
+[data-theme="dark"] .year-selector label {
+  color: var(--text-primary) !important;
+}
+
+/* ==================== IMPORTAÇÃO PCA ==================== */
+
+/* Box de importação - fundo escuro */
+[data-theme="dark"] .import-section,
+[data-theme="dark"] .upload-area,
+[data-theme="dark"] .file-upload-container {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Títulos da importação */
+[data-theme="dark"] .import-section h3,
+[data-theme="dark"] .upload-area h3,
+[data-theme="dark"] .file-upload-container h3 {
+  color: var(--text-primary) !important;
+}
+
+/* Texto da importação */
+[data-theme="dark"] .import-section p,
+[data-theme="dark"] .upload-area p,
+[data-theme="dark"] .file-upload-container p {
+  color: var(--text-secondary) !important;
+}
+
+/* Input de arquivo */
+[data-theme="dark"] input[type="file"] {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-input) !important;
+}
+
+/* ==================== LISTA DE CONTRATAÇÕES ==================== */
+
+/* Header da lista - azul mais escuro */
+[data-theme="dark"] .section-title[style*="background: linear-gradient"],
+[data-theme="dark"] .table-header[style*="background: linear-gradient"] {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+}
+
+/* Badges de categoria - corrigir cores */
+[data-theme="dark"] .badge-categoria,
+[data-theme="dark"] .categoria-badge,
+[data-theme="dark"] span[class*="categoria"] {
+  background-color: #1e40af !important;
+  color: #ffffff !important;
+}
+
+/* Hover da tabela de contratações */
+[data-theme="dark"] .contratacoes-table tbody tr:hover,
+[data-theme="dark"] .pca-table tbody tr:hover {
+  background-color: #4a5568 !important;
+}
+
+[data-theme="dark"] .contratacoes-table tbody tr:hover td,
+[data-theme="dark"] .pca-table tbody tr:hover td {
+  color: var(--text-primary) !important;
+}
+
+/* Hover da lista de importações */
+[data-theme="dark"] .importacoes-table tbody tr:hover {
+  background-color: #4a5568 !important;
+}
+
+[data-theme="dark"] .importacoes-table tbody tr:hover td {
+  color: var(--text-primary) !important;
+}
+
+/* Modais - fundo escuro */
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .modal-body,
+[data-theme="dark"] .modal-header {
+  background-color: var(--bg-modal) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .modal-title {
+  color: var(--text-primary) !important;
+}
+
+/* ==================== CONTRATAÇÕES ATRASADAS ==================== */
+
+/* Cards de contratações atrasadas */
+[data-theme="dark"] .card-atrasadas,
+[data-theme="dark"] .stats-card,
+[data-theme="dark"] .summary-card {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Números nos cards */
+[data-theme="dark"] .card-atrasadas .card-number,
+[data-theme="dark"] .stats-card .number,
+[data-theme="dark"] .summary-card .value {
+  color: #ffffff !important;
+  font-weight: bold;
+}
+
+/* Labels nos cards */
+[data-theme="dark"] .card-atrasadas .card-label,
+[data-theme="dark"] .stats-card .label,
+[data-theme="dark"] .summary-card .label {
+  color: var(--text-secondary) !important;
+}
+
+/* ==================== GESTÃO DE RISCOS ==================== */
+
+/* Container principal */
+[data-theme="dark"] .riscos-container,
+[data-theme="dark"] .risk-management {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Cards de riscos */
+[data-theme="dark"] .risk-card,
+[data-theme="dark"] .matriz-risco {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Matriz de riscos */
+[data-theme="dark"] .risk-matrix table {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .risk-matrix th,
+[data-theme="dark"] .risk-matrix td {
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ==================== BACKUP & SEGURANÇA ==================== */
+
+/* Header do backup - azul escuro */
+[data-theme="dark"] .backup-header,
+[data-theme="dark"] .security-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+  color: #ffffff !important;
+}
+
+/* Cards de backup */
+[data-theme="dark"] .backup-card,
+[data-theme="dark"] .security-card {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Hover do backup removido */
+[data-theme="dark"] .backup-list tbody tr:hover,
+[data-theme="dark"] .security-list tbody tr:hover {
+  background-color: #4a5568 !important;
+}
+
+[data-theme="dark"] .backup-list tbody tr:hover td,
+[data-theme="dark"] .security-list tbody tr:hover td {
+  color: var(--text-primary) !important;
+}
+
+/* ==================== CORREÇÕES ESPECÍFICAS POR ESTILO INLINE ==================== */
+
+/* Todos os elementos com background #f8f9fa */
+[data-theme="dark"] div[style*="background: #f8f9fa"],
+[data-theme="dark"] div[style*="background-color: #f8f9fa"] {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Headers com gradientes azuis - escurecer */
+[data-theme="dark"] div[style*="background: linear-gradient"][style*="#007bff"],
+[data-theme="dark"] div[style*="background: linear-gradient"][style*="#3498db"] {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+  color: #ffffff !important;
+}
+
+/* Textos em elementos com fundos claros */
+[data-theme="dark"] div[style*="background: #f8f9fa"] *,
+[data-theme="dark"] div[style*="background-color: #f8f9fa"] * {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] div[style*="background: #f8f9fa"] h1,
+[data-theme="dark"] div[style*="background: #f8f9fa"] h2,
+[data-theme="dark"] div[style*="background: #f8f9fa"] h3,
+[data-theme="dark"] div[style*="background: #f8f9fa"] h4 {
+  color: var(--text-primary) !important;
+}
+
+/* Filtros e forms */
+[data-theme="dark"] div[style*="background: #f8f9fa"] input,
+[data-theme="dark"] div[style*="background: #f8f9fa"] select,
+[data-theme="dark"] div[style*="background: #f8f9fa"] textarea {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-input) !important;
+}
+
+/* Labels em containers claros */
+[data-theme="dark"] div[style*="background: #f8f9fa"] label {
+  color: var(--text-primary) !important;
+}
+
+/* ==================== TABELAS GLOBAIS ==================== */
+
+/* Todas as tabelas no dark mode */
+[data-theme="dark"] table {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] table th {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] table td {
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Hover geral para todas as tabelas */
+[data-theme="dark"] table tbody tr:hover {
+  background-color: #4a5568 !important;
+}
+
+[data-theme="dark"] table tbody tr:hover td {
+  color: var(--text-primary) !important;
+}
+
+/* ==================== CORREÇÕES ESPECÍFICAS DO PROMPT ==================== */
+
+/* 1. Dashboard de Planejamento - Header azul mais escuro */
+[data-theme="dark"] #dashboard .dashboard-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+}
+
+[data-theme="dark"] #dashboard .dashboard-header h1,
+[data-theme="dark"] #dashboard .dashboard-header p {
+  color: #ffffff !important;
+}
+
+/* 2. Seletor de Ano PCA - background branco corrigido */
+[data-theme="dark"] div[style*="background: white"] {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] div[style*="background: white"] strong {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] div[style*="background: white"] select {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-input) !important;
+}
+
+/* 3. Importar PCA - header azul mais escuro */
+[data-theme="dark"] #importar-pca .dashboard-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+}
+
+[data-theme="dark"] #importar-pca .dashboard-header h1,
+[data-theme="dark"] #importar-pca .dashboard-header p {
+  color: #ffffff !important;
+}
+
+/* Box de importação dentro da seção */
+[data-theme="dark"] .upload-card {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .upload-card h3 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .upload-card p {
+  color: var(--text-secondary) !important;
+}
+
+/* 4. Lista de Contratações - header azul mais escuro */
+[data-theme="dark"] #lista-contratacoes .dashboard-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+}
+
+[data-theme="dark"] #lista-contratacoes .dashboard-header h1,
+[data-theme="dark"] #lista-contratacoes .dashboard-header p {
+  color: #ffffff !important;
+}
+
+/* 5. Badges de categoria - cores escuras com texto branco */
+[data-theme="dark"] .badge-categoria {
+  background-color: #1e40af !important;
+  color: #ffffff !important;
+}
+
+/* Badge de categoria na Lista de Contratações (linha 785) */
+[data-theme="dark"] #lista-contratacoes span[style*="background: #e3f2fd"] {
+  background-color: #1e40af !important;
+  color: #ffffff !important;
+}
+
+/* Badges no seletor de PCA (Somente Leitura/Editável) */
+[data-theme="dark"] span[style*="background: #fef3c7"] {
+  background-color: #d97706 !important; /* Laranja escuro */
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] span[style*="background: #dcfce7"] {
+  background-color: #166534 !important; /* Verde escuro */
+  color: #ffffff !important;
+}
+
+/* Badges de situação na Lista de Contratações */
+[data-theme="dark"] .situacao-badge {
+  background-color: #1e40af !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .situacao-badge.atrasado-inicio,
+[data-theme="dark"] .situacao-badge.atrasado-conclusao {
+  background-color: #dc2626 !important; /* Vermelho escuro */
+  color: #ffffff !important;
+}
+
+/* 6. Backup & Segurança - header azul escuro */
+[data-theme="dark"] #backup-sistema .dashboard-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+}
+
+[data-theme="dark"] #backup-sistema .dashboard-header h1,
+[data-theme="dark"] #backup-sistema .dashboard-header p {
+  color: #ffffff !important;
+}
+
+/* ==================== MODAIS ESPECÍFICOS DO DASHBOARD ==================== */
+
+/* Modal de reversão de importação */
+[data-theme="dark"] #modalReversaoImportacao .modal-content,
+[data-theme="dark"] #modalReversaoImportacao div[style*="background-color: white"] {
+  background-color: var(--bg-modal) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #modalReversaoImportacao h3 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #modalReversaoImportacao p {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #modalReversaoImportacao div[style*="background: #f8f9fa"] {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Modais carregados via AJAX (detalhes e histórico) */
+[data-theme="dark"] .modal .modal-content iframe,
+[data-theme="dark"] .modal-dialog,
+[data-theme="dark"] .modal-content {
+  background-color: var(--bg-modal) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* ==================== CORREÇÕES ESPECÍFICAS - CONTRATAÇÕES ATRASADAS ==================== */
+
+/* 1. HEADER DA PÁGINA - gradiente vermelho mais escuro */
+[data-theme="dark"] .page-header {
+  background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .page-header h1,
+[data-theme="dark"] .page-header p {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .page-header::before {
+  background: rgba(255,255,255,0.03) !important;
+}
+
+/* 2. CARDS DE FILTROS - fundo escuro */
+[data-theme="dark"] .filtros-card {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .filtros-header h3 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .filtro-group label {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .filtro-group select {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-input) !important;
+}
+
+/* 3. STATS CARDS - fundo escuro corrigido */
+[data-theme="dark"] .stat-card {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .stat-value {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .stat-label {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .stat-details {
+  border-top-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .stat-detail-value {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .stat-detail-label {
+  color: var(--text-muted) !important;
+}
+
+/* 4. TABS CONTAINER - fundo escuro */
+[data-theme="dark"] .tabs-container {
+  background-color: var(--bg-card) !important;
+}
+
+[data-theme="dark"] .tabs-header {
+  background-color: var(--bg-card) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .tab-button {
+  color: var(--text-secondary) !important;
+  border-bottom-color: transparent !important;
+}
+
+[data-theme="dark"] .tab-button:hover {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .tab-button.active {
+  color: var(--text-primary) !important;
+  border-bottom-color: #dc3545 !important;
+}
+
+[data-theme="dark"] .tab-badge {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .tab-button.active .tab-badge {
+  background-color: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+/* 5. SEÇÕES DE DADOS - fundo escuro */
+[data-theme="dark"] .data-section {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .section-header {
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .section-title h2 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .section-subtitle {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .count-badge {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* CORREÇÃO ESPECÍFICA - HEADERS DAS ABAS VENCIDAS/NÃO INICIADAS */
+[data-theme="dark"] .section-title.danger h2 {
+  color: #ef4444 !important; /* Vermelho claro para "Vencidas" */
+}
+
+[data-theme="dark"] .section-title.warning h2 {
+  color: #f59e0b !important; /* Laranja claro para "Não Iniciadas" */
+}
+
+/* Força todos os H2 dentro das seções de dados */
+[data-theme="dark"] .data-section h2,
+[data-theme="dark"] .tab-content h2,
+[data-theme="dark"] .section-header h2 {
+  color: var(--text-primary) !important;
+}
+
+/* Títulos específicos das abas com ícones */
+[data-theme="dark"] .section-title.danger,
+[data-theme="dark"] .section-title.warning {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .section-title.danger h2,
+[data-theme="dark"] .section-title.warning h2 {
+  color: var(--text-primary) !important;
+}
+
+/* 6. TABELAS - header e conteúdo escuro */
+[data-theme="dark"] .data-table th {
+  background: var(--bg-table-header) !important;
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .data-table td {
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border-light) !important;
+}
+
+[data-theme="dark"] .data-table tbody tr:hover {
+  background-color: var(--bg-table-row-hover) !important;
+}
+
+/* 7. BADGES ESPECÍFICOS - cores escuras adequadas */
+
+/* DFD Number */
+[data-theme="dark"] .dfd-number {
+  color: #60a5fa !important; /* Azul claro para destaque */
+}
+
+/* Título da contratação */
+[data-theme="dark"] .titulo-cell {
+  color: var(--text-primary) !important;
+}
+
+/* Badge da área - ESCURECER MAIS */
+[data-theme="dark"] .area-badge {
+  background-color: #1e3a8a !important; /* Azul ainda mais escuro */
+  color: #ffffff !important;
+  border: 1px solid #1e3a8a !important;
+}
+
+/* Badges de dias (atraso) - ESCURECER MAIS */
+[data-theme="dark"] .dias-badge.danger {
+  background-color: #991b1b !important; /* Vermelho mais escuro */
+  color: #ffffff !important;
+  border-color: #991b1b !important;
+}
+
+[data-theme="dark"] .dias-badge.warning {
+  background-color: #b45309 !important; /* Laranja mais escuro */
+  color: #ffffff !important;
+  border-color: #b45309 !important;
+}
+
+/* Badge de situação - ESCURECER MAIS */
+[data-theme="dark"] .situacao-badge {
+  background-color: #7f1d1d !important; /* Vermelho mais escuro */
+  color: #ffffff !important;
+  border: 1px solid #7f1d1d !important;
+}
+
+/* Badges de prioridade - ESCURECER MAIS */
+[data-theme="dark"] .prioridade-badge.alta {
+  background-color: #7f1d1d !important; /* Vermelho mais escuro */
+  color: #ffffff !important;
+  border: 1px solid #7f1d1d !important;
+}
+
+[data-theme="dark"] .prioridade-badge.media {
+  background-color: #92400e !important; /* Laranja mais escuro */
+  color: #ffffff !important;
+  border: 1px solid #92400e !important;
+}
+
+[data-theme="dark"] .prioridade-badge.baixa {
+  background-color: #164e63 !important; /* Cyan mais escuro */
+  color: #ffffff !important;
+  border: 1px solid #164e63 !important;
+}
+
+/* FORÇA TODOS OS BADGES NA TABELA - REGRA GERAL */
+[data-theme="dark"] .data-table .area-badge,
+[data-theme="dark"] .data-table .dias-badge,
+[data-theme="dark"] .data-table .situacao-badge,
+[data-theme="dark"] .data-table .prioridade-badge {
+  filter: brightness(0.6) !important; /* Escurece todos os badges */
+  color: #ffffff !important;
+}
+
+/* Valor da contratação */
+[data-theme="dark"] .valor-cell {
+  color: #22c55e !important; /* Verde claro */
+}
+
+/* 8. LABELS DE DADOS */
+[data-theme="dark"] .data-label {
+  color: var(--text-muted) !important;
+}
+
+/* 9. EMPTY MESSAGE */
+[data-theme="dark"] .empty-message {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .empty-title {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .empty-text {
+  color: var(--text-secondary) !important;
+}
+
+/* 10. BOTÕES - manter cores originais mas ajustar hover */
+[data-theme="dark"] .btn-voltar {
+  background: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-voltar:hover {
+  background: rgba(255,255,255,0.2) !important;
+}
+
+[data-theme="dark"] .btn-exportar {
+  background: linear-gradient(135deg, #166534, #15803d) !important;
+}
+
+[data-theme="dark"] .btn-exportar:hover {
+  background: linear-gradient(135deg, #15803d, #16a34a) !important;
+}
+
+/* 11. CONTAINER PRINCIPAL */
+[data-theme="dark"] .page-container {
+  background-color: var(--bg-primary) !important;
+}
+
+/* ==================== CORREÇÕES ADICIONAIS - FORÇA TOTAL ==================== */
+
+/* FORÇAR TODOS OS BADGES - MÁXIMA PRIORIDADE */
+[data-theme="dark"] span.area-badge,
+[data-theme="dark"] span.dias-badge,
+[data-theme="dark"] span.situacao-badge,
+[data-theme="dark"] span.prioridade-badge {
+  background-color: #1f2937 !important; /* Cinza escuro uniforme */
+  color: #ffffff !important;
+  border: 1px solid #374151 !important;
+  filter: none !important; /* Remove filtros que podem clarear */
+}
+
+/* BADGES ESPECÍFICOS COM CORES ESCURAS */
+[data-theme="dark"] span.dias-badge.danger {
+  background-color: #7f1d1d !important; /* Vermelho muito escuro */
+  border-color: #7f1d1d !important;
+}
+
+[data-theme="dark"] span.dias-badge.warning {
+  background-color: #92400e !important; /* Laranja muito escuro */
+  border-color: #92400e !important;
+}
+
+[data-theme="dark"] span.prioridade-badge.alta {
+  background-color: #7f1d1d !important; /* Vermelho muito escuro */
+  border-color: #7f1d1d !important;
+}
+
+[data-theme="dark"] span.prioridade-badge.media {
+  background-color: #92400e !important; /* Laranja muito escuro */
+  border-color: #92400e !important;
+}
+
+[data-theme="dark"] span.prioridade-badge.baixa {
+  background-color: #164e63 !important; /* Cyan muito escuro */
+  border-color: #164e63 !important;
+}
+
+/* FORÇAR HEADERS DAS ABAS - SOBRESCREVER ESTILOS INLINE */
+[data-theme="dark"] div[class*="section-title"] h2,
+[data-theme="dark"] .section-header h2,
+[data-theme="dark"] h2[style],
+[data-theme="dark"] .data-section h2 {
+  color: #ffffff !important;
+  background: none !important;
+}
+
+/* FORÇAR ÍCONES NOS HEADERS */
+[data-theme="dark"] .section-title i,
+[data-theme="dark"] .section-header i {
+  color: #ffffff !important;
+}
+
+/* SOBRESCREVER QUALQUER ESTILO INLINE DE COR */
+[data-theme="dark"] [style*="color:"] {
+  color: var(--text-primary) !important;
+}
+
+/* SOBRESCREVER ESTILOS INLINE DE BACKGROUND */
+[data-theme="dark"] [style*="background:"],
+[data-theme="dark"] [style*="background-color:"] {
+  background-color: var(--bg-card) !important;
+}
