@@ -370,7 +370,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                         <span>Qualificações</span>
                     </a>
                     <a href="contratos_dashboard.php" class="nav-item">
-                        <i data-lucide="file-contract"></i>
+                        <i data-lucide="file-text"></i>
                         <span>Contratos</span>
                     </a>
                 </div>

@@ -325,7 +325,7 @@ verificarLogin();
                 <!-- Módulo Contratos -->
                 <div class="modulo-card modulo-contratos" onclick="acessarModulo('contratos')">
                     <div class="modulo-icon">
-                        <i data-lucide="file-contract"></i>
+                        <i data-lucide="file-text"></i>
                     </div>
                     <h2 class="modulo-title">Contratos</h2>
                     <p class="modulo-description">

@@ -211,6 +211,34 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
     <link rel="stylesheet" href="assets/mobile-improvements.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <style>
+        /* FORÇAR BARRA DE ROLAGEM NA SIDEBAR */
+        .sidebar-nav {
+            overflow-y: scroll !important;
+            overflow-x: hidden !important;
+            height: calc(100vh - 180px) !important;
+            max-height: calc(100vh - 180px) !important;
+        }
+
+        .sidebar-nav::-webkit-scrollbar {
+            width: 8px !important;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1) !important;
+            border-radius: 4px !important;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.4) !important;
+            border-radius: 4px !important;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.6) !important;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -269,6 +297,10 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                     <a href="licitacao_dashboard.php" class="nav-item">
                         <i data-lucide="gavel"></i>
                         <span>Licitações</span>
+                    </a>
+                    <a href="contratos_dashboard.php" class="nav-item">
+                        <i data-lucide="file-text"></i>
+                        <span>Contratos</span>
                     </a>
                 </div>
             </nav>
