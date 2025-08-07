@@ -271,12 +271,12 @@ function gerarRelatorioHTML($andamentos, $stats, $dados_usuarios, $incluir_grafi
                 background: #f8f9fa;
             }
             .header {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
                 color: white;
                 padding: 30px;
                 border-radius: 15px;
                 margin-bottom: 30px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                box-shadow: 0 10px 30px rgba(37, 99, 235, 0.2);
             }
             .header h1 {
                 margin: 0 0 10px 0;
@@ -297,13 +297,22 @@ function gerarRelatorioHTML($andamentos, $stats, $dados_usuarios, $incluir_grafi
                 padding: 25px;
                 border-radius: 12px;
                 box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                border-left: 4px solid #667eea;
+                border-left: 4px solid #2563eb;
             }
+            .stat-card:nth-child(1) { border-left-color: #2563eb; }
+            .stat-card:nth-child(2) { border-left-color: #10b981; }
+            .stat-card:nth-child(3) { border-left-color: #f59e0b; }
+            .stat-card:nth-child(4) { border-left-color: #ef4444; }
+            
             .stat-card h3 {
                 margin: 0 0 10px 0;
-                color: #667eea;
+                color: #374151;
                 font-size: 16px;
             }
+            .stat-card:nth-child(1) h3 { color: #2563eb; }
+            .stat-card:nth-child(2) h3 { color: #10b981; }
+            .stat-card:nth-child(3) h3 { color: #f59e0b; }
+            .stat-card:nth-child(4) h3 { color: #ef4444; }
             .stat-card .value {
                 font-size: 24px;
                 font-weight: bold;
@@ -349,7 +358,7 @@ function gerarRelatorioHTML($andamentos, $stats, $dados_usuarios, $incluir_grafi
                 background: #f8f9fa;
             }
             .usuario-badge {
-                background: #667eea;
+                background: #2563eb;
                 color: white;
                 padding: 4px 8px;
                 border-radius: 12px;
@@ -357,8 +366,8 @@ function gerarRelatorioHTML($andamentos, $stats, $dados_usuarios, $incluir_grafi
                 font-weight: 500;
             }
             .tempo-badge {
-                background: #e3f2fd;
-                color: #1976d2;
+                background: #10b981;
+                color: white;
                 padding: 4px 8px;
                 border-radius: 12px;
                 font-size: 12px;
@@ -366,7 +375,7 @@ function gerarRelatorioHTML($andamentos, $stats, $dados_usuarios, $incluir_grafi
             }
             @media print {
                 body { background: white; }
-                .header { background: #667eea !important; }
+                .header { background: #2563eb !important; }
             }
         </style>
     </head>
@@ -456,24 +465,24 @@ function gerarRelatorioHTML($andamentos, $stats, $dados_usuarios, $incluir_grafi
                     label: 'Dias de Tramitação',
                     data: <?php echo json_encode(array_column($stats['tempo_por_unidade'], 'dias')); ?>,
                     backgroundColor: [
-                        'rgba(102, 126, 234, 0.8)',
-                        'rgba(118, 75, 162, 0.8)',
-                        'rgba(255, 99, 132, 0.8)',
-                        'rgba(54, 162, 235, 0.8)',
-                        'rgba(255, 206, 86, 0.8)',
-                        'rgba(75, 192, 192, 0.8)',
-                        'rgba(153, 102, 255, 0.8)',
-                        'rgba(255, 159, 64, 0.8)'
+                        'rgba(37, 99, 235, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(236, 72, 153, 0.8)',
+                        'rgba(6, 182, 212, 0.8)',
+                        'rgba(34, 197, 94, 0.8)'
                     ],
                     borderColor: [
-                        'rgba(102, 126, 234, 1)',
-                        'rgba(118, 75, 162, 1)',
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
+                        'rgba(37, 99, 235, 1)',
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(239, 68, 68, 1)',
+                        'rgba(139, 92, 246, 1)',
+                        'rgba(236, 72, 153, 1)',
+                        'rgba(6, 182, 212, 1)',
+                        'rgba(34, 197, 94, 1)'
                     ],
                     borderWidth: 2,
                     borderRadius: 8,

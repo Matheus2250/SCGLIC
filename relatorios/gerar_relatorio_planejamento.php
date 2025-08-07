@@ -99,7 +99,7 @@ function gerarRelatorioCategoria($pdo, $where, $params, $formato, $incluir_grafi
         SELECT 
             numero_dfd,
             MAX(categoria_contratacao) as categoria_contratacao,
-            MAX(valor_total_contratacao) as valor_total_dfd,
+            MAX(valor_total) as valor_total_dfd,
             MAX(titulo_contratacao) as titulo_contratacao,
             MAX(area_requisitante) as area_requisitante,
             MAX(situacao_execucao) as situacao_execucao,
@@ -151,7 +151,7 @@ function gerarRelatorioArea($pdo, $where, $params, $formato, $incluir_graficos) 
         SELECT 
             numero_dfd,
             area_requisitante,
-            SUM(valor_total_contratacao) as valor_area,
+            SUM(valor_total) as valor_area,
             MAX(titulo_contratacao) as titulo_contratacao,
             MAX(categoria_contratacao) as categoria_contratacao,
             MAX(situacao_execucao) as situacao_execucao,
@@ -159,7 +159,7 @@ function gerarRelatorioArea($pdo, $where, $params, $formato, $incluir_graficos) 
             MAX(data_conclusao_processo) as data_conclusao_processo,
             ROW_NUMBER() OVER (
                 PARTITION BY numero_dfd 
-                ORDER BY SUM(valor_total_contratacao) DESC, area_requisitante
+                ORDER BY SUM(valor_total) DESC, area_requisitante
             ) as rn
         FROM pca_dados p
         WHERE $where AND area_requisitante IS NOT NULL AND numero_dfd IS NOT NULL
@@ -218,13 +218,13 @@ function gerarRelatorioPrazos($pdo, $where, $params, $formato, $incluir_graficos
         SELECT 
             numero_dfd,
             categoria_contratacao,
-            SUM(valor_total_contratacao) as valor_categoria,
+            SUM(valor_total) as valor_categoria,
             MAX(situacao_execucao) as situacao_execucao,
             MAX(data_inicio_processo) as data_inicio_processo,
             MAX(data_conclusao_processo) as data_conclusao_processo,
             ROW_NUMBER() OVER (
                 PARTITION BY numero_dfd 
-                ORDER BY SUM(valor_total_contratacao) DESC, categoria_contratacao
+                ORDER BY SUM(valor_total) DESC, categoria_contratacao
             ) as rn
         FROM pca_dados p
         WHERE $where AND categoria_contratacao IS NOT NULL AND numero_dfd IS NOT NULL
@@ -275,7 +275,7 @@ function gerarRelatorioFinanceiro($pdo, $where, $params, $formato, $incluir_graf
         SELECT 
             numero_dfd,
             DATE_FORMAT(data_inicio_processo, '%Y-%m') as mes,
-            SUM(valor_total_contratacao) as valor_total_dfd,
+            SUM(valor_total) as valor_total_dfd,
             MAX(situacao_execucao) as situacao_execucao,
             MAX(categoria_contratacao) as categoria_contratacao,
             MAX(area_requisitante) as area_requisitante
@@ -397,29 +397,6 @@ function gerarHTMLCategoria($dados, $incluir_graficos, $params) {
                 <p><strong><i data-lucide="tag" style="width: 16px; height: 16px; display: inline-block; margin-right: 6px;"></i>Categorias Identificadas:</strong> <?php echo count($dados); ?></p>
                 <p><strong><i data-lucide="activity" style="width: 16px; height: 16px; display: inline-block; margin-right: 6px;"></i>Relatório Gerado em:</strong> <?php echo date('d/m/Y H:i:s'); ?></p>
             </div>
-            
-            <div class="summary">
-                <div class="summary-card">
-                    <h3>Categorias Analisadas</h3>
-                    <div class="value"><?php echo count($dados); ?></div>
-                    <div class="label">Diferentes Tipos</div>
-                </div>
-                <div class="summary-card">
-                    <h3>DFDs Concluídos</h3>
-                    <div class="value"><?php echo array_sum(array_column($dados, 'concluidas')); ?></div>
-                    <div class="label">Finalizados</div>
-                </div>
-                <div class="summary-card">
-                    <h3>Em Andamento</h3>
-                    <div class="value"><?php echo array_sum(array_column($dados, 'em_andamento')); ?></div>
-                    <div class="label">Executando</div>
-                </div>
-                <div class="summary-card">
-                    <h3>Valor Médio</h3>
-                    <div class="value">R$ <?php echo number_format($valor_total / $total_dfds, 0, ',', '.'); ?></div>
-                    <div class="label">Por Contratação</div>
-                </div>
-            </div>
 
             <?php if ($incluir_graficos): ?>
             <div class="charts-section">
@@ -463,7 +440,6 @@ function gerarHTMLCategoria($dados, $incluir_graficos, $params) {
                             <th style="text-align: center;">% Qtd</th>
                             <th style="text-align: right;">Valor Total</th>
                             <th style="text-align: center;">% Valor</th>
-                            <th style="text-align: center;">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -481,7 +457,6 @@ function gerarHTMLCategoria($dados, $incluir_graficos, $params) {
                                 <div class="percent-bar">
                                     <div class="percent-fill percent-quantidade" style="width: <?php echo $percent_qtd; ?>%;"></div>
                                 </div>
-                                <small style="color: #7f8c8d;"><?php echo $percent_qtd; ?>%</small>
                             </td>
                             <td style="text-align: center; font-weight: 600; color: #e74c3c;">
                                 <?php echo $percent_qtd; ?>%
@@ -491,18 +466,9 @@ function gerarHTMLCategoria($dados, $incluir_graficos, $params) {
                                 <div class="percent-bar">
                                     <div class="percent-fill percent-valor" style="width: <?php echo $percent_valor; ?>%;"></div>
                                 </div>
-                                <small style="color: #7f8c8d;"><?php echo $percent_valor; ?>%</small>
                             </td>
                             <td style="text-align: center; font-weight: 600; color: #3498db;">
                                 <?php echo $percent_valor; ?>%
-                            </td>
-                            <td style="text-align: center;">
-                                <div style="font-size: 12px; color: #27ae60; font-weight: 600;">
-                                    <i data-lucide="check-circle" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i><?php echo $item['concluidas']; ?> / <?php echo $item['total_dfds']; ?>
-                                </div>
-                                <div style="font-size: 11px; color: #7f8c8d;">
-                                    <?php echo $taxa_conclusao; ?>% concluído
-                                </div>
                             </td>
                         </tr>
                         <?php endforeach; ?>
