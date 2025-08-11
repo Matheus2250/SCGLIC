@@ -39,20 +39,31 @@ class PNCPIntegration {
         $sincronizacao_id = $this->iniciarSincronizacao($ano, $usuario_id, $tipo);
         
         try {
-            // Construir URL da API
-            $url = PNCP_API_BASE_URL . "/orgaos/" . PNCP_ORGAO_CNPJ . "/pca/{$ano}/csv";
+            // Para desenvolvimento, usar arquivo local primeiro
+            $csv_local = __DIR__ . '/../new-stuff/00394544000185 - MINISTERIO DA SAUDE - 2026.csv';
             
-            $this->log("Iniciando sincronização do PCA {$ano} via API do PNCP");
-            $this->log("URL: {$url}");
-            
-            // Fazer download do CSV
-            $csv_data = $this->baixarCSV($url);
-            
-            if (!$csv_data) {
-                throw new Exception("Falha ao baixar dados da API do PNCP");
+            if (file_exists($csv_local) && $ano == 2026) {
+                $this->log("Usando arquivo CSV local para desenvolvimento");
+                $csv_data = file_get_contents($csv_local);
+            } else {
+                // Construir URL da API
+                $url = PNCP_API_BASE_URL . "/orgaos/" . PNCP_ORGAO_CNPJ . "/pca/{$ano}/csv";
+                
+                $this->log("Iniciando sincronização do PCA {$ano} via API do PNCP");
+                $this->log("URL: {$url}");
+                
+                // Fazer download do CSV
+                $csv_data = $this->baixarCSV($url);
             }
             
-            $this->log("CSV baixado com sucesso. Tamanho: " . strlen($csv_data) . " bytes");
+            if (!$csv_data) {
+                throw new Exception("Falha ao obter dados do PNCP");
+            }
+            
+            $this->log("CSV carregado com sucesso. Tamanho: " . strlen($csv_data) . " bytes");
+            
+            // Limpar dados antigos do mesmo ano antes de processar
+            $this->limparDadosAntigos($ano);
             
             // Processar CSV
             $resultado = $this->processarCSV($csv_data, $ano);
@@ -168,16 +179,25 @@ class PNCPIntegration {
         // Detectar encoding e converter se necessário
         $csv_data = $this->detectarEConverterEncoding($csv_data);
         
-        // Converter CSV em array
-        $linhas = str_getcsv($csv_data, "\n");
+        // Converter CSV em array usando regex para lidar melhor com quebras de linha
+        $linhas = preg_split('/\r\n|\r|\n/', $csv_data);
+        
+        // Remover linhas vazias
+        $linhas = array_filter($linhas, function($linha) {
+            return !empty(trim($linha));
+        });
         
         if (empty($linhas)) {
             throw new Exception("CSV vazio ou inválido");
         }
         
+        $this->log("Total de linhas encontradas: " . count($linhas));
+        
         // Primeira linha deve conter os cabeçalhos
-        $cabecalhos = str_getcsv(array_shift($linhas));
-        $this->log("Cabeçalhos encontrados: " . implode(', ', $cabecalhos));
+        $cabecalho_linha = array_shift($linhas);
+        $cabecalhos = str_getcsv($cabecalho_linha, ';'); // Usar ponto e vírgula como separador
+        
+        $this->log("Cabeçalhos encontrados (" . count($cabecalhos) . "): " . implode(' | ', array_slice($cabecalhos, 0, 5)) . '...');
         
         // Mapear cabeçalhos para campos da tabela
         $mapeamento = $this->mapearCamposPNCP($cabecalhos);
@@ -193,38 +213,41 @@ class PNCPIntegration {
             foreach ($linhas as $numero_linha => $linha) {
                 if (empty(trim($linha))) continue;
                 
-                $campos = str_getcsv($linha);
+                $campos = str_getcsv($linha, ';'); // Usar ponto e vírgula como separador
                 
-                // Log da primeira linha para debug
-                if ($total_processados === 0) {
-                    $this->log("DEBUG - Primeira linha de dados:");
-                    $this->log("Campos: " . implode(' | ', array_slice($campos, 0, 5)));
-                }
-                
-                // Processar linha
-                $resultado_linha = $this->processarLinhaPNCP($campos, $mapeamento, $ano);
-                
-                // Log detalhado das primeiras 3 linhas
-                if ($total_processados < 3) {
-                    $this->log("DEBUG - Linha {$total_processados}: resultado = {$resultado_linha}");
-                }
-                
-                switch ($resultado_linha) {
-                    case 'novo':
-                        $novos++;
-                        break;
-                    case 'atualizado':
-                        $atualizados++;
-                        break;
-                    case 'ignorado':
-                        $ignorados++;
-                        break;
+                // Processar linha com tratamento de erro individual
+                try {
+                    $resultado_linha = $this->processarLinhaPNCP($campos, $mapeamento, $ano);
+                    
+                    // Debug para primeiras linhas da UASG 250110
+                    if (isset($campos[1]) && trim($campos[1]) === '250110' && $novos + $atualizados < 5) {
+                        $this->log("UASG 250110 - Linha " . ($numero_linha + 2) . ": {$resultado_linha} - Campos: " . count($campos));
+                        if ($resultado_linha === 'ignorado' && count($campos) > 5) {
+                            $this->log("  Dados: " . implode(' | ', array_slice($campos, 0, 6)));
+                        }
+                    }
+                    
+                    switch ($resultado_linha) {
+                        case 'novo':
+                            $novos++;
+                            break;
+                        case 'atualizado':
+                            $atualizados++;
+                            break;
+                        case 'ignorado':
+                            $ignorados++;
+                            break;
+                    }
+                } catch (Exception $e) {
+                    // Log do erro mas continua processamento
+                    $this->log("Erro na linha {$numero_linha}: " . $e->getMessage());
+                    $ignorados++;
                 }
                 
                 $total_processados++;
                 
-                // Log de progresso a cada 1000 registros (menos frequente)
-                if ($total_processados % 1000 === 0) {
+                // Log de progresso a cada 50 registros
+                if ($total_processados % 50 === 0) {
                     $this->log("Processados {$total_processados} registros... (Novos: {$novos}, Atualizados: {$atualizados}, Ignorados: {$ignorados})");
                 }
             }
@@ -254,136 +277,153 @@ class PNCPIntegration {
      * Processar uma linha individual do CSV
      */
     private function processarLinhaPNCP($campos, $mapeamento, $ano) {
-        // Criar array associativo com os dados
-        $dados = [];
-        
-        foreach ($mapeamento as $indice => $campo_bd) {
-            $dados[$campo_bd] = isset($campos[$indice]) ? trim($campos[$indice]) : null;
-        }
-        
-        // Debug: verificar se temos dados mapeados
-        $campos_preenchidos = 0;
-        foreach ($dados as $key => $value) {
-            if (!empty($value)) {
-                $campos_preenchidos++;
-            }
-        }
-        
-        // Sempre processar dados diretamente dos campos do CSV
-        // Baseado nos cabeçalhos reais: Unidade Responsável;UASG;Id do item no PCA;Categoria do Item;Identificador da Futura Contratação;Nome da Futura Contratação;Catálogo Utilizado;Classificação do Catálogo;Código da Classificação Superior (Classe/Grupo);Nome da Classificação Superior (Classe/Grupo);Código do PDM do Item;Nome do PDM do Item;Código do Item;Descrição do Item;Unidade de Fornecimento;Quantidade Estimada;Valor Unitário Estimado (R$);Valor Total Estimado (R$);Valor orçamentário estimado para o exercício (R$);Data Desejada
-        if (count($campos) >= 18) {
-            // Resetar dados para garantir mapeamento direto correto
-            $dados = [];
-            $dados['sequencial'] = $campos[2] ?? ''; // Id do item no PCA
-            $dados['categoria_item'] = $campos[3] ?? ''; // Categoria do Item
-            $dados['codigo_pncp'] = $campos[4] ?? ''; // Identificador da Futura Contratação
-            $dados['descricao_item'] = $campos[5] ?? ''; // Nome da Futura Contratação
-            $dados['subcategoria_item'] = $campos[6] ?? ''; // Catálogo Utilizado
-            $dados['observacoes'] = $campos[7] ?? ''; // Classificação do Catálogo
-            $dados['justificativa'] = $campos[13] ?? ''; // Descrição do Item
-            $dados['unidade_medida'] = $campos[14] ?? ''; // Unidade de Fornecimento
-            $dados['quantidade'] = floatval($campos[15] ?? 0); // Quantidade Estimada
-            
-            // Processar valores monetários (formato brasileiro: 1.234.567,89)
-            $valor_unitario = str_replace(['.', ','], ['', '.'], $campos[16] ?? '0');
-            $valor_total = str_replace(['.', ','], ['', '.'], $campos[17] ?? '0');
-            $dados['valor_estimado'] = floatval($valor_total) > 0 ? floatval($valor_total) : floatval($valor_unitario);
-            
-            $dados['unidade_requisitante'] = $campos[0] ?? ''; // Unidade Responsável
-            $dados['endereco_unidade'] = $campos[1] ?? ''; // UASG
-            
-            // Mapear campos adicionais para as novas colunas
-            $dados['unidade_responsavel'] = $campos[0] ?? ''; // Unidade Responsável
-            $dados['uasg'] = $campos[1] ?? ''; // UASG
-            $dados['id_item_pca'] = $campos[2] ?? ''; // Id do item no PCA
-            $dados['identificador_futura_contratacao'] = $campos[4] ?? ''; // Identificador da Futura Contratação
-            $dados['nome_futura_contratacao'] = $campos[5] ?? ''; // Nome da Futura Contratação
-            $dados['catalogo_utilizado'] = $campos[6] ?? ''; // Catálogo Utilizado
-            $dados['classificacao_catalogo'] = $campos[7] ?? ''; // Classificação do Catálogo
-            $dados['codigo_classificacao_superior'] = $campos[8] ?? ''; // Código da Classificação Superior
-            $dados['nome_classificacao_superior'] = $campos[9] ?? ''; // Nome da Classificação Superior
-            $dados['codigo_pdm_item'] = $campos[10] ?? ''; // Código do PDM do Item
-            $dados['nome_pdm_item'] = $campos[11] ?? ''; // Nome do PDM do Item
-            $dados['codigo_item'] = $campos[12] ?? ''; // Código do Item
-            $dados['descricao_item_fornecimento'] = $campos[13] ?? ''; // Descrição do Item
-            $dados['unidade'] = $campos[14] ?? ''; // Unidade de Fornecimento
-            $dados['quantidade_estimada'] = floatval($campos[15] ?? 0); // Quantidade Estimada
-            $dados['valor_unitario_estimado'] = floatval(str_replace(['.', ','], ['', '.'], $campos[16] ?? '0')); // Valor Unitário
-            $dados['valor_total_estimado'] = floatval(str_replace(['.', ','], ['', '.'], $campos[17] ?? '0')); // Valor Total
-            $dados['valor_orcamentario_exercicio'] = floatval(str_replace(['.', ','], ['', '.'], $campos[18] ?? '0')); // Valor orçamentário
-                
-            // Data desejada
-            if (!empty($campos[19])) {
-                try {
-                    $data_desejada = DateTime::createFromFormat('d/m/Y', $campos[19]);
-                    if ($data_desejada) {
-                        $dados['data_ultima_atualizacao'] = $data_desejada->format('Y-m-d');
-                        $dados['data_desejada'] = $data_desejada->format('Y-m-d');
-                    }
-                } catch (Exception $e) {
-                    // Ignorar erro de data
-                }
-            }
-        }
-        
-        // Filtro para UASG 250110 apenas
-        $uasg = $dados['uasg'] ?? $dados['endereco_unidade'] ?? $campos[1] ?? '';
-        if (!empty($uasg) && trim($uasg) !== '250110') {
-            return 'ignorado'; // Ignorar registros que não sejam da UASG 250110
-        }
-        
-        // Garantir que o campo uasg está preenchido
-        if (!empty($uasg)) {
-            $dados['uasg'] = trim($uasg);
-        }
-        
-        // Validação mínima - apenas verificar se tem sequencial e descrição
-        if (empty($dados['sequencial']) && empty($dados['descricao_item'])) {
+        // Validação básica - precisa ter pelo menos 15 campos
+        if (count($campos) < 15) {
             return 'ignorado';
         }
         
-        // Garantir que sequencial existe
-        if (empty($dados['sequencial'])) {
-            $dados['sequencial'] = uniqid('pncp_');
+        // Mapeamento direto dos campos do CSV
+        $dados = [];
+        $dados['unidade_responsavel'] = trim($campos[0] ?? '');
+        $dados['uasg'] = trim($campos[1] ?? '');
+        $dados['id_item_pca'] = trim($campos[2] ?? '');
+        $dados['categoria_item'] = trim($campos[3] ?? '');
+        $dados['identificador_futura_contratacao'] = trim($campos[4] ?? '');
+        $dados['nome_futura_contratacao'] = trim($campos[5] ?? '');
+        $dados['catalogo_utilizado'] = trim($campos[6] ?? '');
+        $dados['classificacao_catalogo'] = trim($campos[7] ?? '');
+        $dados['codigo_classificacao_superior'] = trim($campos[8] ?? '');
+        $dados['nome_classificacao_superior'] = trim($campos[9] ?? '');
+        $dados['codigo_pdm_item'] = trim($campos[10] ?? '');
+        $dados['nome_pdm_item'] = trim($campos[11] ?? '');
+        $dados['codigo_item'] = trim($campos[12] ?? '');
+        $dados['descricao_item_fornecimento'] = trim($campos[13] ?? '');
+        $dados['unidade'] = trim($campos[14] ?? '');
+        
+        // Campos opcionais
+        $dados['quantidade_estimada'] = floatval($campos[15] ?? 0);
+        $dados['valor_unitario_estimado'] = floatval(str_replace(['.', ','], ['', '.'], $campos[16] ?? '0'));
+        $dados['valor_total_estimado'] = floatval(str_replace(['.', ','], ['', '.'], $campos[17] ?? '0'));
+        $dados['valor_orcamentario_exercicio'] = floatval(str_replace(['.', ','], ['', '.'], $campos[18] ?? '0'));
+        
+        // Data desejada
+        if (!empty($campos[19])) {
+            try {
+                $data_desejada = DateTime::createFromFormat('d/m/Y', $campos[19]);
+                if ($data_desejada) {
+                    $dados['data_desejada'] = $data_desejada->format('Y-m-d');
+                }
+            } catch (Exception $e) {
+                $dados['data_desejada'] = null;
+            }
         }
         
-        // Adicionar dados fixos
+        // NORMALIZAÇÃO DOS CAMPOS OBRIGATÓRIOS PARA EVITAR CHAVE DUPLICADA
+        
+        // 1. Garantir UASG válido
+        if (empty($dados['uasg'])) {
+            $dados['uasg'] = '250110'; // UASG padrão
+        }
+        
+        // 2. Garantir ID único do item - FUNDAMENTAL PARA EVITAR DUPLICATAS
+        if (empty($dados['id_item_pca'])) {
+            if (!empty($dados['identificador_futura_contratacao'])) {
+                $dados['id_item_pca'] = $dados['identificador_futura_contratacao'];
+            } elseif (!empty($dados['codigo_item'])) {
+                $dados['id_item_pca'] = $dados['codigo_item'];
+            } else {
+                // Gerar ID único baseado no conteúdo da linha + contador interno
+                static $contador = 0;
+                $contador++;
+                $dados['id_item_pca'] = 'AUTO_' . $dados['uasg'] . '_' . $contador . '_' . substr(md5(
+                    $dados['nome_futura_contratacao'] . 
+                    $dados['categoria_item'] . 
+                    $dados['unidade_responsavel']
+                ), 0, 8);
+            }
+        }
+        
+        // 3. Validação final - aceitar qualquer registro com pelo menos um campo preenchido
+        if (empty($dados['nome_futura_contratacao']) && 
+            empty($dados['descricao_item_fornecimento']) && 
+            empty($dados['categoria_item']) && 
+            empty($dados['identificador_futura_contratacao']) &&
+            empty($dados['codigo_item'])) {
+            return 'ignorado';
+        }
+        
+        // Adicionar metadados
         $dados['orgao_cnpj'] = PNCP_ORGAO_CNPJ;
         $dados['ano_pca'] = $ano;
         $dados['data_sincronizacao'] = date('Y-m-d H:i:s');
-        
-        // Gerar hash dos dados para controle de mudanças
-        $dados['hash_dados'] = md5(json_encode($dados));
-        
-        // Salvar dados originais em JSON
+        $dados['status_sincronizacao'] = 'sucesso';
         $dados['dados_originais_json'] = json_encode($campos, JSON_UNESCAPED_UNICODE);
         
-        // Verificar se registro já existe
-        $sql_check = "SELECT id, hash_dados FROM pca_pncp 
-                      WHERE orgao_cnpj = ? AND ano_pca = ? AND sequencial = ?";
-        $stmt_check = $this->pdo->prepare($sql_check);
-        $stmt_check->execute([PNCP_ORGAO_CNPJ, $ano, $dados['sequencial']]);
-        $registro_existente = $stmt_check->fetch();
+        // Hash para controle de mudanças
+        $dados['hash_dados'] = md5(json_encode($dados));
         
-        if ($registro_existente) {
-            // Verificar se houve mudanças
-            if ($registro_existente['hash_dados'] === $dados['hash_dados']) {
-                return 'ignorado'; // Sem mudanças
+        // USAR INSERT ... ON DUPLICATE KEY UPDATE para evitar erros
+        try {
+            return $this->inserirOuAtualizarRegistroPNCP($dados);
+        } catch (Exception $e) {
+            // Se ainda der erro, tentar com ID único diferente
+            $dados['id_item_pca'] = 'RETRY_' . uniqid() . '_' . substr(md5($dados['nome_futura_contratacao']), 0, 8);
+            try {
+                return $this->inserirOuAtualizarRegistroPNCP($dados);
+            } catch (Exception $e2) {
+                $this->log("Erro ao inserir registro: " . $e2->getMessage());
+                return 'ignorado';
             }
-            
-            // Atualizar registro existente
-            $this->atualizarRegistroPNCP($registro_existente['id'], $dados);
-            return 'atualizado';
-            
-        } else {
-            // Inserir novo registro
-            $this->inserirRegistroPNCP($dados);
-            return 'novo';
         }
     }
     
     /**
-     * Inserir novo registro na tabela pca_pncp
+     * Inserir ou atualizar registro usando ON DUPLICATE KEY UPDATE
+     */
+    private function inserirOuAtualizarRegistroPNCP($dados) {
+        // Remover campos vazios para evitar erros
+        $dados = array_filter($dados, function($value) {
+            return $value !== null && $value !== '';
+        });
+        
+        // Garantir campos obrigatórios
+        if (!isset($dados['orgao_cnpj'])) $dados['orgao_cnpj'] = PNCP_ORGAO_CNPJ;
+        if (!isset($dados['data_sincronizacao'])) $dados['data_sincronizacao'] = date('Y-m-d H:i:s');
+        
+        // Preparar campos para INSERT
+        $campos_insert = array_keys($dados);
+        $placeholders = ':' . implode(', :', $campos_insert);
+        $campos_sql = implode(', ', $campos_insert);
+        
+        // Preparar campos para UPDATE 
+        $update_sql = [];
+        foreach ($campos_insert as $campo) {
+            if (!in_array($campo, ['orgao_cnpj', 'ano_pca', 'uasg', 'id_item_pca'])) {
+                $update_sql[] = "{$campo} = VALUES({$campo})";
+            }
+        }
+        
+        $sql = "INSERT INTO pca_pncp ({$campos_sql}) VALUES ({$placeholders})";
+        if (!empty($update_sql)) {
+            $sql .= " ON DUPLICATE KEY UPDATE " . implode(', ', $update_sql) . ", atualizado_em = NOW()";
+        }
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($dados);
+        
+        // Retornar resultado baseado em affected rows
+        $affected = $stmt->rowCount();
+        if ($affected === 1) {
+            return 'novo';
+        } elseif ($affected === 2) {
+            return 'atualizado';
+        } else {
+            return 'ignorado';
+        }
+    }
+    
+    /**
+     * Inserir novo registro na tabela pca_pncp (método legacy)
      */
     private function inserirRegistroPNCP($dados) {
         $campos_sql = implode(', ', array_keys($dados));
@@ -492,21 +532,26 @@ class PNCPIntegration {
      * Detectar e converter encoding do CSV
      */
     private function detectarEConverterEncoding($data) {
-        $encodings = ['UTF-8', 'ISO-8859-1', 'Windows-1252'];
-        
-        foreach ($encodings as $encoding) {
-            if (mb_check_encoding($data, $encoding)) {
-                if ($encoding !== 'UTF-8') {
-                    $this->log("Convertendo encoding de {$encoding} para UTF-8");
-                    return mb_convert_encoding($data, 'UTF-8', $encoding);
-                }
-                return $data;
-            }
+        // Remover BOM se existir
+        $bom = chr(239) . chr(187) . chr(191);
+        if (substr($data, 0, 3) === $bom) {
+            $data = substr($data, 3);
+            $this->log("BOM UTF-8 removido");
         }
         
-        // Fallback: assumir ISO-8859-1
-        $this->log("Encoding não detectado, assumindo ISO-8859-1");
-        return mb_convert_encoding($data, 'UTF-8', 'ISO-8859-1');
+        // Verificar encoding
+        $encoding = mb_detect_encoding($data, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+        
+        if ($encoding && $encoding !== 'UTF-8') {
+            $this->log("Convertendo encoding de {$encoding} para UTF-8");
+            $data = mb_convert_encoding($data, 'UTF-8', $encoding);
+        } else if (!$encoding) {
+            // Fallback: assumir ISO-8859-1
+            $this->log("Encoding não detectado, assumindo ISO-8859-1");
+            $data = mb_convert_encoding($data, 'UTF-8', 'ISO-8859-1');
+        }
+        
+        return $data;
     }
     
     /**
@@ -613,6 +658,20 @@ class PNCPIntegration {
         $stmt->execute([$ano, $ano]);
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Limpar dados antigos do mesmo ano
+     */
+    private function limparDadosAntigos($ano) {
+        $this->log("Limpando dados antigos do ano {$ano}...");
+        
+        $sql = "DELETE FROM pca_pncp WHERE orgao_cnpj = ? AND ano_pca = ?";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([PNCP_ORGAO_CNPJ, $ano]);
+        
+        $registros_removidos = $stmt->rowCount();
+        $this->log("Removidos {$registros_removidos} registros antigos");
     }
     
     /**

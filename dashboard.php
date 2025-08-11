@@ -965,52 +965,126 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                     <div id="tabela-dados-pncp" style="display: none;">
                         <!-- Filtros -->
                         <div class="filtros-card" style="margin-bottom: 20px;">
-                            <h4 style="margin: 0 0 15px 0; color: #2c3e50;">Filtros PNCP</h4>
-                            <div class="filtros-form">
+                            <h4 style="margin: 0 0 15px 0; color: #2c3e50;"><i data-lucide="filter"></i> Filtros PNCP</h4>
+                            <div class="filtros-form" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap: 15px; align-items: end;">
                                 <div>
-                                    <input type="text" id="filtro-pncp-categoria" placeholder="Categoria">
-                                </div>
-                                <div>
-                                    <select id="filtro-pncp-modalidade">
-                                        <option value="">Todas as Modalidades</option>
-                                        <option value="Pregão Eletrônico">Pregão Eletrônico</option>
-                                        <option value="Concorrência">Concorrência</option>
-                                        <option value="Tomada de Preços">Tomada de Preços</option>
-                                        <option value="Convite">Convite</option>
-                                        <option value="Dispensa">Dispensa</option>
-                                        <option value="Inexigibilidade">Inexigibilidade</option>
+                                    <label for="filtro-pncp-uasg" style="display: block; margin-bottom: 5px; font-weight: 600; color: #2c3e50;">UASG:</label>
+                                    <select id="filtro-pncp-uasg" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="">Todas as UASGs</option>
+                                        <option value="250110">250110</option>
+                                        <option value="250111">250111</option>
+                                        <option value="250112">250112</option>
+                                        <option value="250113">250113</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <select id="filtro-pncp-trimestre">
-                                        <option value="">Todos os Trimestres</option>
-                                        <option value="1">1º Trimestre</option>
-                                        <option value="2">2º Trimestre</option>
-                                        <option value="3">3º Trimestre</option>
-                                        <option value="4">4º Trimestre</option>
-                                    </select>
+                                    <label for="filtro-pncp-categoria" style="display: block; margin-bottom: 5px; font-weight: 600; color: #2c3e50;">Categoria:</label>
+                                    <input type="text" id="filtro-pncp-categoria" placeholder="Ex: Bens, Serviços..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                                 </div>
                                 <div>
-                                    <button onclick="aplicarFiltrosPNCP()" class="btn-primary">
-                                        <i data-lucide="filter"></i> Filtrar
+                                    <label for="filtro-pncp-identificador" style="display: block; margin-bottom: 5px; font-weight: 600; color: #2c3e50;">Identificador:</label>
+                                    <input type="text" id="filtro-pncp-identificador" placeholder="Identificador da Futura Contratação" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <button onclick="aplicarFiltrosPNCP()" class="btn-primary" style="padding: 8px 16px;">
+                                        <i data-lucide="search"></i> Pesquisar
+                                    </button>
+                                </div>
+                                <div>
+                                    <button onclick="limparFiltrosPNCP()" class="btn-secondary" style="padding: 8px 16px;">
+                                        <i data-lucide="x"></i> Limpar
                                     </button>
                                 </div>
                             </div>
                         </div>
                         
+                        <!-- Resumo dos Dados -->
+                        <div id="resumo-dados-pncp" style="display: none; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                                <div>
+                                    <strong style="color: #2c3e50;">Total de Registros:</strong>
+                                    <span id="total-registros-pncp" style="color: #3498db; font-weight: 600;">0</span>
+                                </div>
+                                <div>
+                                    <strong style="color: #2c3e50;">Valor Total:</strong>
+                                    <span id="valor-total-pncp" style="color: #27ae60; font-weight: 600;">R$ 0</span>
+                                </div>
+                                <div>
+                                    <strong style="color: #2c3e50;">UASGs Diferentes:</strong>
+                                    <span id="uasgs-diferentes" style="color: #8e44ad; font-weight: 600;">0</span>
+                                </div>
+                                <div>
+                                    <strong style="color: #2c3e50;">Categorias:</strong>
+                                    <span id="categorias-diferentes" style="color: #e67e22; font-weight: 600;">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Tabela de Dados -->
-                        <div style="overflow-x: auto;">
-                            <table id="table-pncp-dados">
-                                <thead>
+                        <div class="pncp-table-container" style="overflow-x: auto; border: 1px solid #e1e8ed; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <table id="table-pncp-dados" class="pncp-data-table">
+                                <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                                     <tr>
-                                        <th>Seq.</th>
-                                        <th>Categoria</th>
-                                        <th>Descrição</th>
-                                        <th>Modalidade</th>
-                                        <th>Valor Estimado</th>
-                                        <th>Trimestre</th>
-                                        <th>Situação</th>
-                                        <th>Última Atualização</th>
+                                        <th style="min-width: 120px;">
+                                            <i data-lucide="building"></i> Unidade Responsável
+                                        </th>
+                                        <th style="min-width: 80px;">
+                                            <i data-lucide="hash"></i> UASG
+                                        </th>
+                                        <th style="min-width: 100px;">
+                                            <i data-lucide="tag"></i> ID Item PCA
+                                        </th>
+                                        <th style="min-width: 120px;">
+                                            <i data-lucide="folder"></i> Categoria
+                                        </th>
+                                        <th style="min-width: 150px;">
+                                            <i data-lucide="key"></i> Identificador
+                                        </th>
+                                        <th style="min-width: 200px;">
+                                            <i data-lucide="file-text"></i> Nome da Contratação
+                                        </th>
+                                        <th style="min-width: 120px;">
+                                            <i data-lucide="book"></i> Catálogo
+                                        </th>
+                                        <th style="min-width: 150px;">
+                                            <i data-lucide="layers"></i> Classificação
+                                        </th>
+                                        <th style="min-width: 120px;">
+                                            <i data-lucide="code"></i> Código Superior
+                                        </th>
+                                        <th style="min-width: 150px;">
+                                            <i data-lucide="list"></i> Nome Superior
+                                        </th>
+                                        <th style="min-width: 100px;">
+                                            <i data-lucide="hash"></i> Código PDM
+                                        </th>
+                                        <th style="min-width: 150px;">
+                                            <i data-lucide="tag"></i> Nome PDM
+                                        </th>
+                                        <th style="min-width: 100px;">
+                                            <i data-lucide="barcode"></i> Código Item
+                                        </th>
+                                        <th style="min-width: 200px;">
+                                            <i data-lucide="align-left"></i> Descrição
+                                        </th>
+                                        <th style="min-width: 100px;">
+                                            <i data-lucide="package"></i> Unidade
+                                        </th>
+                                        <th style="min-width: 100px;">
+                                            <i data-lucide="calculator"></i> Quantidade
+                                        </th>
+                                        <th style="min-width: 120px;">
+                                            <i data-lucide="dollar-sign"></i> Valor Unitário
+                                        </th>
+                                        <th style="min-width: 120px;">
+                                            <i data-lucide="trending-up"></i> Valor Total
+                                        </th>
+                                        <th style="min-width: 140px;">
+                                            <i data-lucide="pie-chart"></i> Valor Orçamentário
+                                        </th>
+                                        <th style="min-width: 100px;">
+                                            <i data-lucide="calendar"></i> Data Desejada
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbody-pncp-dados">
@@ -1018,6 +1092,124 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                                 </tbody>
                             </table>
                         </div>
+                        
+                        <style>
+                        .pncp-data-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            font-size: 11px;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                        }
+                        
+                        .pncp-data-table th {
+                            padding: 12px 8px;
+                            text-align: left;
+                            font-weight: 600;
+                            font-size: 10px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                            border-right: 1px solid rgba(255,255,255,0.2);
+                        }
+                        
+                        .pncp-data-table th i {
+                            width: 12px;
+                            height: 12px;
+                            margin-right: 4px;
+                        }
+                        
+                        .pncp-data-table td {
+                            padding: 10px 8px;
+                            border-bottom: 1px solid #f0f0f0;
+                            border-right: 1px solid #f8f8f8;
+                            vertical-align: top;
+                            line-height: 1.4;
+                        }
+                        
+                        .pncp-data-table tbody tr:hover {
+                            background-color: #f8f9ff;
+                        }
+                        
+                        .pncp-data-table tbody tr:nth-child(even) {
+                            background-color: #fafbfc;
+                        }
+                        
+                        .pncp-data-table tbody tr:nth-child(even):hover {
+                            background-color: #f0f4ff;
+                        }
+                        
+                        /* Primeira coluna fixa */
+                        .pncp-data-table th:first-child {
+                            position: sticky;
+                            left: 0;
+                            z-index: 10;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                        }
+                        
+                        .pncp-data-table td:first-child {
+                            position: sticky;
+                            left: 0;
+                            background: white;
+                            z-index: 5;
+                            font-weight: 600;
+                            border-right: 2px solid #e1e8ed;
+                        }
+                        
+                        .pncp-data-table tbody tr:nth-child(even) td:first-child {
+                            background: #fafbfc;
+                        }
+                        
+                        .pncp-data-table tbody tr:hover td:first-child {
+                            background: #f8f9ff;
+                        }
+                        
+                        .pncp-data-table tbody tr:nth-child(even):hover td:first-child {
+                            background: #f0f4ff;
+                        }
+                        
+                        /* Badges de categoria */
+                        .categoria-badge {
+                            display: inline-block;
+                            padding: 3px 8px;
+                            border-radius: 12px;
+                            font-size: 9px;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            letter-spacing: 0.3px;
+                        }
+                        
+                        /* UASG badge */
+                        .uasg-badge {
+                            display: inline-block;
+                            padding: 4px 8px;
+                            background: #2c3e50;
+                            color: white;
+                            border-radius: 4px;
+                            font-weight: 600;
+                            font-size: 10px;
+                        }
+                        
+                        /* Valores monetários */
+                        .valor-monetario {
+                            font-weight: 600;
+                            font-family: 'Courier New', monospace;
+                        }
+                        
+                        .valor-unitario { color: #27ae60; }
+                        .valor-total { color: #2c3e50; }
+                        .valor-orcamentario { color: #8e44ad; }
+                        
+                        /* Responsivo */
+                        @media (max-width: 768px) {
+                            .pncp-data-table th,
+                            .pncp-data-table td {
+                                padding: 8px 6px;
+                            }
+                            
+                            .pncp-data-table {
+                                font-size: 10px;
+                            }
+                        }
+                        </style>
                         
                         <div id="paginacao-pncp" style="margin-top: 20px; text-align: center;">
                             <!-- Paginação será inserida via JavaScript -->

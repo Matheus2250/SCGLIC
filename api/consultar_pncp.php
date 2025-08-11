@@ -22,10 +22,9 @@ $limite = intval($_GET['limite'] ?? 20);
 
 // Filtros
 $filtros = [
+    'uasg' => $_GET['uasg'] ?? '',
     'categoria' => $_GET['categoria'] ?? '',
-    'modalidade' => $_GET['modalidade'] ?? '',
-    'trimestre' => $_GET['trimestre'] ?? '',
-    'situacao' => $_GET['situacao'] ?? '',
+    'identificador' => $_GET['identificador'] ?? '',
     'busca' => $_GET['busca'] ?? ''
 ];
 
@@ -70,28 +69,23 @@ function listarDadosPNCP($ano, $pagina, $limite, $filtros) {
     $where = ["ano_pca = ?"];
     $params = [$ano];
     
+    if (!empty($filtros['uasg'])) {
+        $where[] = "uasg = ?";
+        $params[] = $filtros['uasg'];
+    }
+    
     if (!empty($filtros['categoria'])) {
         $where[] = "categoria_item LIKE ?";
         $params[] = '%' . $filtros['categoria'] . '%';
     }
     
-    if (!empty($filtros['modalidade'])) {
-        $where[] = "modalidade_licitacao = ?";
-        $params[] = $filtros['modalidade'];
-    }
-    
-    if (!empty($filtros['trimestre'])) {
-        $where[] = "trimestre_previsto = ?";
-        $params[] = intval($filtros['trimestre']);
-    }
-    
-    if (!empty($filtros['situacao'])) {
-        $where[] = "situacao_item = ?";
-        $params[] = $filtros['situacao'];
+    if (!empty($filtros['identificador'])) {
+        $where[] = "identificador_futura_contratacao LIKE ?";
+        $params[] = '%' . $filtros['identificador'] . '%';
     }
     
     if (!empty($filtros['busca'])) {
-        $where[] = "(descricao_item LIKE ? OR codigo_pncp LIKE ? OR unidade_requisitante LIKE ?)";
+        $where[] = "(descricao_item_fornecimento LIKE ? OR identificador_futura_contratacao LIKE ? OR nome_futura_contratacao LIKE ?)";
         $params[] = '%' . $filtros['busca'] . '%';
         $params[] = '%' . $filtros['busca'] . '%';
         $params[] = '%' . $filtros['busca'] . '%';
@@ -110,29 +104,30 @@ function listarDadosPNCP($ano, $pagina, $limite, $filtros) {
     
     // Buscar dados com paginação
     $sql = "SELECT 
-                sequencial,
+                unidade_responsavel,
+                uasg,
+                id_item_pca,
                 categoria_item,
-                subcategoria_item,
-                descricao_item,
-                justificativa,
-                valor_estimado,
-                unidade_medida,
-                quantidade,
-                modalidade_licitacao,
-                trimestre_previsto,
-                mes_previsto,
-                situacao_item,
-                codigo_pncp,
-                unidade_requisitante,
-                responsavel_demanda,
-                email_responsavel,
-                telefone_responsavel,
-                observacoes,
-                data_ultima_atualizacao,
+                identificador_futura_contratacao,
+                nome_futura_contratacao,
+                catalogo_utilizado,
+                classificacao_catalogo,
+                codigo_classificacao_superior,
+                nome_classificacao_superior,
+                codigo_pdm_item,
+                nome_pdm_item,
+                codigo_item,
+                descricao_item_fornecimento,
+                unidade,
+                quantidade_estimada,
+                valor_unitario_estimado,
+                valor_total_estimado,
+                valor_orcamentario_exercicio,
+                data_desejada,
                 data_sincronizacao
             FROM pca_pncp 
             WHERE {$whereClause}
-            ORDER BY sequencial ASC
+            ORDER BY id_item_pca ASC
             LIMIT {$limite} OFFSET {$offset}";
     
     $stmt = $pdo->prepare($sql);
@@ -141,7 +136,7 @@ function listarDadosPNCP($ano, $pagina, $limite, $filtros) {
     
     // Calcular estatísticas da página
     $totalPaginas = ceil($totalRegistros / $limite);
-    $valorTotalPagina = array_sum(array_column($dados, 'valor_estimado'));
+    $valorTotalPagina = array_sum(array_column($dados, 'valor_total_estimado'));
     
     return [
         'dados' => $dados,
