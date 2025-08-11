@@ -269,46 +269,72 @@ class PNCPIntegration {
             }
         }
         
-        // Se não conseguiu mapear nenhum campo, criar sequencial a partir do índice da linha
-        if ($campos_preenchidos < 2) {
-            // Usar índice da linha como sequencial temporário
-            static $contador_linha = 0;
-            $contador_linha++;
-            $dados['sequencial'] = $contador_linha;
+        // Sempre processar dados diretamente dos campos do CSV
+        // Baseado nos cabeçalhos reais: Unidade Responsável;UASG;Id do item no PCA;Categoria do Item;Identificador da Futura Contratação;Nome da Futura Contratação;Catálogo Utilizado;Classificação do Catálogo;Código da Classificação Superior (Classe/Grupo);Nome da Classificação Superior (Classe/Grupo);Código do PDM do Item;Nome do PDM do Item;Código do Item;Descrição do Item;Unidade de Fornecimento;Quantidade Estimada;Valor Unitário Estimado (R$);Valor Total Estimado (R$);Valor orçamentário estimado para o exercício (R$);Data Desejada
+        if (count($campos) >= 18) {
+            // Resetar dados para garantir mapeamento direto correto
+            $dados = [];
+            $dados['sequencial'] = $campos[2] ?? ''; // Id do item no PCA
+            $dados['categoria_item'] = $campos[3] ?? ''; // Categoria do Item
+            $dados['codigo_pncp'] = $campos[4] ?? ''; // Identificador da Futura Contratação
+            $dados['descricao_item'] = $campos[5] ?? ''; // Nome da Futura Contratação
+            $dados['subcategoria_item'] = $campos[6] ?? ''; // Catálogo Utilizado
+            $dados['observacoes'] = $campos[7] ?? ''; // Classificação do Catálogo
+            $dados['justificativa'] = $campos[13] ?? ''; // Descrição do Item
+            $dados['unidade_medida'] = $campos[14] ?? ''; // Unidade de Fornecimento
+            $dados['quantidade'] = floatval($campos[15] ?? 0); // Quantidade Estimada
             
-            // Pegar dados diretamente dos campos originais (fallback)
-            // Baseado nos cabeçalhos reais: Unidade Responsável;UASG;Id do item no PCA;Categoria do Item;Identificador da Futura Contratação;Nome da Futura Contratação;Catálogo Utilizado;Classificação do Catálogo;Código da Classificação Superior (Classe/Grupo);Nome da Classificação Superior (Classe/Grupo);Código do PDM do Item;Nome do PDM do Item;Código do Item;Descrição do Item;Unidade de Fornecimento;Quantidade Estimada;Valor Unitário Estimado (R$);Valor Total Estimado (R$);Valor orçamentário estimado para o exercício (R$);Data Desejada
-            if (count($campos) >= 18) {
-                $dados['sequencial'] = $campos[2] ?? $contador_linha; // Id do item no PCA
-                $dados['categoria_item'] = $campos[3] ?? 'N/A'; // Categoria do Item
-                $dados['codigo_pncp'] = $campos[4] ?? ''; // Identificador da Futura Contratação
-                $dados['descricao_item'] = $campos[5] ?? 'Item PNCP'; // Nome da Futura Contratação
-                $dados['subcategoria_item'] = $campos[6] ?? ''; // Catálogo Utilizado
-                $dados['justificativa'] = $campos[13] ?? ''; // Descrição do Item
-                $dados['unidade_medida'] = $campos[14] ?? ''; // Unidade de Fornecimento
-                $dados['quantidade'] = floatval($campos[15] ?? 0); // Quantidade Estimada
+            // Processar valores monetários (formato brasileiro: 1.234.567,89)
+            $valor_unitario = str_replace(['.', ','], ['', '.'], $campos[16] ?? '0');
+            $valor_total = str_replace(['.', ','], ['', '.'], $campos[17] ?? '0');
+            $dados['valor_estimado'] = floatval($valor_total) > 0 ? floatval($valor_total) : floatval($valor_unitario);
+            
+            $dados['unidade_requisitante'] = $campos[0] ?? ''; // Unidade Responsável
+            $dados['endereco_unidade'] = $campos[1] ?? ''; // UASG
+            
+            // Mapear campos adicionais para as novas colunas
+            $dados['unidade_responsavel'] = $campos[0] ?? ''; // Unidade Responsável
+            $dados['uasg'] = $campos[1] ?? ''; // UASG
+            $dados['id_item_pca'] = $campos[2] ?? ''; // Id do item no PCA
+            $dados['identificador_futura_contratacao'] = $campos[4] ?? ''; // Identificador da Futura Contratação
+            $dados['nome_futura_contratacao'] = $campos[5] ?? ''; // Nome da Futura Contratação
+            $dados['catalogo_utilizado'] = $campos[6] ?? ''; // Catálogo Utilizado
+            $dados['classificacao_catalogo'] = $campos[7] ?? ''; // Classificação do Catálogo
+            $dados['codigo_classificacao_superior'] = $campos[8] ?? ''; // Código da Classificação Superior
+            $dados['nome_classificacao_superior'] = $campos[9] ?? ''; // Nome da Classificação Superior
+            $dados['codigo_pdm_item'] = $campos[10] ?? ''; // Código do PDM do Item
+            $dados['nome_pdm_item'] = $campos[11] ?? ''; // Nome do PDM do Item
+            $dados['codigo_item'] = $campos[12] ?? ''; // Código do Item
+            $dados['descricao_item_fornecimento'] = $campos[13] ?? ''; // Descrição do Item
+            $dados['unidade'] = $campos[14] ?? ''; // Unidade de Fornecimento
+            $dados['quantidade_estimada'] = floatval($campos[15] ?? 0); // Quantidade Estimada
+            $dados['valor_unitario_estimado'] = floatval(str_replace(['.', ','], ['', '.'], $campos[16] ?? '0')); // Valor Unitário
+            $dados['valor_total_estimado'] = floatval(str_replace(['.', ','], ['', '.'], $campos[17] ?? '0')); // Valor Total
+            $dados['valor_orcamentario_exercicio'] = floatval(str_replace(['.', ','], ['', '.'], $campos[18] ?? '0')); // Valor orçamentário
                 
-                // Processar valores monetários (formato brasileiro: 1.234.567,89)
-                $valor_unitario = str_replace(['.', ','], ['', '.'], $campos[16] ?? '0');
-                $valor_total = str_replace(['.', ','], ['', '.'], $campos[17] ?? '0');
-                $dados['valor_estimado'] = floatval($valor_total) > 0 ? floatval($valor_total) : floatval($valor_unitario);
-                
-                $dados['unidade_requisitante'] = $campos[0] ?? 'PNCP'; // Unidade Responsável
-                $dados['endereco_unidade'] = $campos[1] ?? ''; // UASG
-                $dados['observacoes'] = $campos[7] ?? ''; // Classificação do Catálogo
-                
-                // Data desejada
-                if (!empty($campos[19])) {
-                    try {
-                        $data_desejada = DateTime::createFromFormat('d/m/Y', $campos[19]);
-                        if ($data_desejada) {
-                            $dados['data_ultima_atualizacao'] = $data_desejada->format('Y-m-d');
-                        }
-                    } catch (Exception $e) {
-                        // Ignorar erro de data
+            // Data desejada
+            if (!empty($campos[19])) {
+                try {
+                    $data_desejada = DateTime::createFromFormat('d/m/Y', $campos[19]);
+                    if ($data_desejada) {
+                        $dados['data_ultima_atualizacao'] = $data_desejada->format('Y-m-d');
+                        $dados['data_desejada'] = $data_desejada->format('Y-m-d');
                     }
+                } catch (Exception $e) {
+                    // Ignorar erro de data
                 }
             }
+        }
+        
+        // Filtro para UASG 250110 apenas
+        $uasg = $dados['uasg'] ?? $dados['endereco_unidade'] ?? $campos[1] ?? '';
+        if (!empty($uasg) && trim($uasg) !== '250110') {
+            return 'ignorado'; // Ignorar registros que não sejam da UASG 250110
+        }
+        
+        // Garantir que o campo uasg está preenchido
+        if (!empty($uasg)) {
+            $dados['uasg'] = trim($uasg);
         }
         
         // Validação mínima - apenas verificar se tem sequencial e descrição
