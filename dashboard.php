@@ -325,6 +325,9 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                     <button class="nav-item <?php echo $secao_ativa === 'importar-pca' ? 'active' : ''; ?>" onclick="showSection('importar-pca')">
                         <i data-lucide="upload"></i> <span>Importar PCA</span>
                     </button>
+                    <button class="nav-item <?php echo $secao_ativa === 'pncp-integration' ? 'active' : ''; ?>" onclick="showSection('pncp-integration')">
+                        <i data-lucide="cloud-download"></i> <span>Sincronizar PNCP</span>
+                    </button>
                     <?php endif; ?>
                     <?php if (temPermissao('pca_visualizar')): ?>
                     <button class="nav-item <?php echo $secao_ativa === 'lista-contratacoes' ? 'active' : ''; ?>" onclick="showSection('lista-contratacoes')">
@@ -821,6 +824,255 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                         <!-- Paginação Melhorada -->
                         <?php echo $pagination->render(); ?>
                     <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Sincronização PNCP Section -->
+            <?php if (temPermissao('pca_importar')): ?>
+            <div id="pncp-integration" class="content-section <?php echo $secao_ativa === 'pncp-integration' ? 'active' : ''; ?>">
+                <!-- Token CSRF oculto para requisições AJAX -->
+                <?php echo getCSRFInput(); ?>
+                
+                <div class="dashboard-header">
+                    <h1><i data-lucide="cloud-download"></i> Sincronização com PNCP</h1>
+                    <p>Integração com o Portal Nacional de Contratações Públicas para dados do PCA 2026</p>
+                    
+                    <!-- Info sobre a API -->
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-top: 20px;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                            <i data-lucide="info" style="width: 24px; height: 24px;"></i>
+                            <div>
+                                <h3 style="margin: 0; color: white;">Portal Nacional de Contratações Públicas</h3>
+                                <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 14px;">Ministério da Saúde - CNPJ: 00394544000185</p>
+                            </div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                            <strong>URL da API:</strong><br>
+                            <code style="background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                                https://pncp.gov.br/api/pncp/v1/orgaos/00394544000185/pca/2026/csv
+                            </code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estatísticas PNCP -->
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-card info" id="stat-pncp-registros">
+                        <div class="stat-number" id="pncp-total-registros">-</div>
+                        <div class="stat-label">Registros PNCP</div>
+                    </div>
+                    
+                    <div class="stat-card success" id="stat-pncp-valor">
+                        <div class="stat-number" id="pncp-valor-total">-</div>
+                        <div class="stat-label">Valor Total PNCP</div>
+                    </div>
+                    
+                    <div class="stat-card warning" id="stat-ultima-sync">
+                        <div class="stat-number" id="pncp-ultima-sync">-</div>
+                        <div class="stat-label">Última Sincronização</div>
+                    </div>
+                    
+                    <div class="stat-card primary" id="stat-status-api">
+                        <div class="stat-number" id="pncp-status-api">🔄 Verificando...</div>
+                        <div class="stat-label">Status API</div>
+                    </div>
+                </div>
+
+                <!-- Ações de Sincronização -->
+                <div class="charts-grid" style="margin-bottom: 30px;">
+                    <div class="chart-card">
+                        <h3 class="chart-title"><i data-lucide="cloud-download"></i> Sincronizar Dados</h3>
+                        <p style="color: #7f8c8d; margin-bottom: 20px;">
+                            Baixe e processe os dados mais recentes do PCA 2026 diretamente da API do PNCP
+                        </p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <label style="font-weight: 600; color: #2c3e50;">Ano do PCA:</label>
+                                <select id="ano-pncp" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                    <option value="2026" selected>2026 (Atual)</option>
+                                    <option value="2025">2025</option>
+                                </select>
+                            </div>
+                            
+                            <button onclick="sincronizarPNCP(); return false;" class="btn-primary" id="btn-sincronizar-pncp" style="width: 100%;">
+                                <i data-lucide="download-cloud"></i> Sincronizar com PNCP
+                            </button>
+                            
+                            <div id="progresso-pncp" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #e9ecef;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <span style="font-weight: 600; color: #2c3e50;">Sincronizando...</span>
+                                    <span id="progresso-porcentagem" style="font-size: 14px; color: #7f8c8d;">0%</span>
+                                </div>
+                                <div style="background: #e5e7eb; border-radius: 6px; height: 12px; overflow: hidden;">
+                                    <div id="progresso-barra" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; border-radius: 6px; width: 0%; transition: width 0.3s ease;"></div>
+                                </div>
+                                <div id="progresso-mensagem" style="color: #5a6c7d; font-size: 14px; margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                                    <i data-lucide="loader-2" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i>
+                                    Preparando sincronização...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3 class="chart-title"><i data-lucide="git-compare"></i> Comparação de Dados</h3>
+                        <p style="color: #7f8c8d; margin-bottom: 20px;">
+                            Compare os dados internos com os dados oficiais do PNCP
+                        </p>
+                        
+                        <div id="comparacao-dados" style="display: none;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                                <div style="text-align: center; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+                                    <div style="font-size: 18px; font-weight: 600; color: #1976d2;" id="comp-interno-total">-</div>
+                                    <div style="font-size: 12px; color: #424242;">Dados Internos</div>
+                                </div>
+                                <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 8px;">
+                                    <div style="font-size: 18px; font-weight: 600; color: #2e7d32;" id="comp-pncp-total">-</div>
+                                    <div style="font-size: 12px; color: #424242;">PNCP Oficial</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="compararDados()" class="btn-secondary" id="btn-comparar-dados" style="width: 100%;">
+                            <i data-lucide="git-compare"></i> Comparar Dados
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Consulta de Dados PNCP -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">
+                            <i data-lucide="database"></i> Consulta de Dados PNCP - Ano 2026
+                        </h3>
+                        <div class="table-actions">
+                            <button onclick="consultarDadosPNCP()" class="btn-info">
+                                <i data-lucide="search"></i> Consultar Dados
+                            </button>
+                            <button onclick="exportarDadosPNCP()" class="btn-success" style="margin-left: 10px;">
+                                <i data-lucide="download"></i> Exportar CSV
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="loading-dados-pncp" style="display: none; text-align: center; padding: 40px; color: #7f8c8d;">
+                        <i data-lucide="loader-2" style="width: 32px; height: 32px; animation: spin 1s linear infinite;"></i>
+                        <p>Consultando dados do PNCP...</p>
+                    </div>
+                    
+                    <div id="tabela-dados-pncp" style="display: none;">
+                        <!-- Filtros -->
+                        <div class="filtros-card" style="margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 15px 0; color: #2c3e50;">Filtros PNCP</h4>
+                            <div class="filtros-form">
+                                <div>
+                                    <input type="text" id="filtro-pncp-categoria" placeholder="Categoria">
+                                </div>
+                                <div>
+                                    <select id="filtro-pncp-modalidade">
+                                        <option value="">Todas as Modalidades</option>
+                                        <option value="Pregão Eletrônico">Pregão Eletrônico</option>
+                                        <option value="Concorrência">Concorrência</option>
+                                        <option value="Tomada de Preços">Tomada de Preços</option>
+                                        <option value="Convite">Convite</option>
+                                        <option value="Dispensa">Dispensa</option>
+                                        <option value="Inexigibilidade">Inexigibilidade</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <select id="filtro-pncp-trimestre">
+                                        <option value="">Todos os Trimestres</option>
+                                        <option value="1">1º Trimestre</option>
+                                        <option value="2">2º Trimestre</option>
+                                        <option value="3">3º Trimestre</option>
+                                        <option value="4">4º Trimestre</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <button onclick="aplicarFiltrosPNCP()" class="btn-primary">
+                                        <i data-lucide="filter"></i> Filtrar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tabela de Dados -->
+                        <div style="overflow-x: auto;">
+                            <table id="table-pncp-dados">
+                                <thead>
+                                    <tr>
+                                        <th>Seq.</th>
+                                        <th>Categoria</th>
+                                        <th>Descrição</th>
+                                        <th>Modalidade</th>
+                                        <th>Valor Estimado</th>
+                                        <th>Trimestre</th>
+                                        <th>Situação</th>
+                                        <th>Última Atualização</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-pncp-dados">
+                                    <!-- Dados carregados via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div id="paginacao-pncp" style="margin-top: 20px; text-align: center;">
+                            <!-- Paginação será inserida via JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <!-- Estado vazio -->
+                    <div id="empty-dados-pncp" style="text-align: center; padding: 60px; color: #7f8c8d;">
+                        <i data-lucide="cloud-off" style="width: 64px; height: 64px; margin-bottom: 20px; opacity: 0.5;"></i>
+                        <h3 style="margin: 0 0 10px 0;">Nenhum dado do PNCP encontrado</h3>
+                        <p style="margin: 0;">Execute uma sincronização para baixar os dados do PNCP.</p>
+                    </div>
+                </div>
+
+                <!-- Histórico de Sincronizações -->
+                <div class="table-container" style="margin-top: 30px;">
+                    <div class="table-header">
+                        <h3 class="table-title">Histórico de Sincronizações PNCP</h3>
+                        <div class="table-actions">
+                            <button onclick="atualizarHistoricoPNCP()" class="btn-secondary">
+                                <i data-lucide="refresh-cw"></i> Atualizar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="loading-historico-pncp" style="text-align: center; padding: 40px; color: #7f8c8d;">
+                        <i data-lucide="loader-2" style="width: 32px; height: 32px; animation: spin 1s linear infinite;"></i>
+                        <p>Carregando histórico...</p>
+                    </div>
+                    
+                    <div id="tabela-historico-pncp" style="display: none;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Ano PCA</th>
+                                    <th>Status</th>
+                                    <th>Registros</th>
+                                    <th>Novos</th>
+                                    <th>Atualizados</th>
+                                    <th>Tempo</th>
+                                    <th>Usuário</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-historico-pncp">
+                                <!-- Dados carregados via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="empty-historico-pncp" style="display: none; text-align: center; padding: 60px; color: #7f8c8d;">
+                        <i data-lucide="history" style="width: 64px; height: 64px; margin-bottom: 20px; opacity: 0.5;"></i>
+                        <h3 style="margin: 0 0 10px 0;">Nenhuma sincronização encontrada</h3>
+                        <p style="margin: 0;">Execute sua primeira sincronização para ver o histórico.</p>
+                    </div>
                 </div>
             </div>
             <?php endif; ?>
@@ -1384,5 +1636,6 @@ window.onclick = function(event) {
     <script src="assets/ux-improvements.js"></script>
     <script src="assets/mobile-improvements.js"></script>
     <script src="assets/construtor-graficos.js"></script>
+    <script src="assets/pncp-integration.js"></script>
 </body>
 </html>

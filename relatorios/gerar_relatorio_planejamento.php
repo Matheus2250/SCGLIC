@@ -42,8 +42,8 @@ if (!empty($importacoes_ids)) {
 }
 
 // Construir WHERE
-$where = [$where_ano, 'p.data_inicio_processo BETWEEN ? AND ?'];
-$params = [$data_inicial, $data_final];
+$where = [$where_ano];
+$params = [];
 
 if (!empty($categoria)) {
     $where[] = 'p.categoria_contratacao = ?';
@@ -106,7 +106,7 @@ function gerarRelatorioCategoria($pdo, $where, $params, $formato, $incluir_grafi
             MAX(data_inicio_processo) as data_inicio_processo,
             MAX(data_conclusao_processo) as data_conclusao_processo
         FROM pca_dados p
-        WHERE $where AND categoria_contratacao IS NOT NULL AND numero_dfd IS NOT NULL
+        WHERE $where AND categoria_contratacao IS NOT NULL AND numero_dfd IS NOT NULL AND numero_dfd != ''
         GROUP BY numero_dfd
     )
     SELECT 
@@ -314,8 +314,10 @@ function gerarRelatorioFinanceiro($pdo, $where, $params, $formato, $incluir_graf
 function gerarHTMLCategoria($dados, $incluir_graficos, $params) {
     $total_dfds = array_sum(array_column($dados, 'total_dfds'));
     $valor_total = array_sum(array_column($dados, 'valor_total'));
-    $data_inicial = date('d/m/Y', strtotime($params[0]));
-    $data_final = date('d/m/Y', strtotime($params[1]));
+    $data_inicial = $_GET['data_inicial'] ?? date('Y-01-01');
+    $data_final = $_GET['data_final'] ?? date('Y-m-d');
+    $data_inicial = date('d/m/Y', strtotime($data_inicial));
+    $data_final = date('d/m/Y', strtotime($data_final));
     
     // Preparar dados para gráficos
     $categorias = [];

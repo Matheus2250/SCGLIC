@@ -185,6 +185,14 @@ function showSection(sectionId) {
                 }
             }
         }, 200);
+    } else if (sectionId === 'pncp-integration') {
+        // Inicializar módulo PNCP
+        setTimeout(() => {
+            if (window.inicializarPNCP) {
+                console.log('Inicializando módulo PNCP...');
+                window.inicializarPNCP();
+            }
+        }, 100);
     }
 }
 
