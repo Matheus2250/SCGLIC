@@ -625,7 +625,7 @@ class PNCPIntegration {
                     COUNT(*) as total_registros,
                     COUNT(DISTINCT categoria_item) as total_categorias,
                     COUNT(DISTINCT modalidade_licitacao) as total_modalidades,
-                    SUM(valor_estimado) as valor_total,
+                    SUM(COALESCE(valor_total_estimado, valor_orcamentario_exercicio, 0)) as valor_total,
                     COUNT(CASE WHEN situacao_item = 'Planejado' THEN 1 END) as planejados,
                     COUNT(CASE WHEN situacao_item = 'Em andamento' THEN 1 END) as em_andamento,
                     COUNT(CASE WHEN situacao_item = 'Concluído' THEN 1 END) as concluidos,
@@ -646,7 +646,7 @@ class PNCPIntegration {
         $sql = "SELECT 
                     'PNCP' as origem,
                     COUNT(*) as total_registros,
-                    SUM(valor_estimado) as valor_total
+                    SUM(COALESCE(valor_total_estimado, valor_orcamentario_exercicio, 0)) as valor_total
                 FROM pca_pncp WHERE ano_pca = ?
                 
                 UNION ALL

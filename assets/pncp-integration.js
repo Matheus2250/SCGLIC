@@ -429,19 +429,41 @@ function limparFiltrosPNCP() {
 }
 
 /**
+ * Buscar valor total real das estatísticas PNCP
+ */
+async function buscarValorTotalReal() {
+    const ano = document.getElementById('ano-pncp')?.value || 2026;
+    const response = await fetch(`api/pncp_integration.php?acao=estatisticas&ano=${ano}`);
+    const resultado = await response.json();
+    
+    if (resultado.sucesso && resultado.estatisticas) {
+        return parseFloat(resultado.estatisticas.valor_total) || 0;
+    }
+    
+    throw new Error('Não foi possível obter valor total das estatísticas');
+}
+
+/**
  * Atualizar resumo dos dados
  */
 function atualizarResumoDados(dados, paginacao) {
     const resumoDiv = document.getElementById('resumo-dados-pncp');
     
     if (dados && dados.length > 0) {
-        // Calcular estatísticas
-        const valorTotal = dados.reduce((sum, item) => sum + (parseFloat(item.valor_total_estimado) || 0), 0);
+        // Buscar valor total real das estatísticas (não apenas da página atual)
+        buscarValorTotalReal().then(valorTotalReal => {
+            document.getElementById('valor-total-pncp').textContent = formatarMoedaBR(valorTotalReal);
+        }).catch(() => {
+            // Fallback: calcular apenas da página atual
+            const valorTotal = dados.reduce((sum, item) => sum + (parseFloat(item.valor_total_estimado) || 0), 0);
+            document.getElementById('valor-total-pncp').textContent = formatarMoedaBR(valorTotal);
+        });
+        
+        // Calcular outras estatísticas da página atual
         const uasgsUnicas = [...new Set(dados.map(item => item.uasg).filter(u => u))].length;
         const categoriasUnicas = [...new Set(dados.map(item => item.categoria_item).filter(c => c))].length;
         
         document.getElementById('total-registros-pncp').textContent = paginacao.total_registros.toLocaleString('pt-BR');
-        document.getElementById('valor-total-pncp').textContent = formatarMoedaBR(valorTotal);
         document.getElementById('uasgs-diferentes').textContent = uasgsUnicas;
         document.getElementById('categorias-diferentes').textContent = categoriasUnicas;
         
