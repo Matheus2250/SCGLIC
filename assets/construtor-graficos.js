@@ -406,7 +406,11 @@ class ConstrutorGraficos {
                                    (chartType === 'bar' && context.chart.config.options.indexAxis === 'y');
                         },
                         anchor: function(context) {
-                            const value = context.parsed.y || context.parsed.x || context.parsed;
+                            // Verificar se parsed existe antes de acessar
+                            const parsed = context.parsed;
+                            if (!parsed) return 'center';
+                            
+                            const value = typeof parsed === 'object' ? (parsed.y || parsed.x || parsed) : parsed;
                             const maxValue = Math.max(...context.dataset.data);
                             
                             // Se o valor for muito pequeno (< 10% do máximo), colocar fora
@@ -416,7 +420,11 @@ class ConstrutorGraficos {
                             return 'center';
                         },
                         align: function(context) {
-                            const value = context.parsed.y || context.parsed.x || context.parsed;
+                            // Verificar se parsed existe antes de acessar
+                            const parsed = context.parsed;
+                            if (!parsed) return 'center';
+                            
+                            const value = typeof parsed === 'object' ? (parsed.y || parsed.x || parsed) : parsed;
                             const maxValue = Math.max(...context.dataset.data);
                             
                             // Se o valor for muito pequeno (< 10% do máximo), colocar fora
@@ -426,7 +434,11 @@ class ConstrutorGraficos {
                             return 'center';
                         },
                         color: function(context) {
-                            const value = context.parsed.y || context.parsed.x || context.parsed;
+                            // Verificar se parsed existe antes de acessar
+                            const parsed = context.parsed;
+                            if (!parsed) return 'white';
+                            
+                            const value = typeof parsed === 'object' ? (parsed.y || parsed.x || parsed) : parsed;
                             const maxValue = Math.max(...context.dataset.data);
                             
                             // Se estiver fora da barra (valor pequeno), usar cor escura

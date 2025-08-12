@@ -1024,7 +1024,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                         <!-- Tabela de Dados -->
                         <div class="pncp-table-container" style="overflow-x: auto; border: 1px solid #e1e8ed; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             <table id="table-pncp-dados" class="pncp-data-table">
-                                <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <thead>
                                     <tr>
                                         <th style="min-width: 120px;">
                                             <i data-lucide="building"></i> Unidade Responsável
@@ -1143,7 +1143,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                             position: sticky;
                             left: 0;
                             z-index: 10;
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                            background: #f8f9fa !important;
                         }
                         
                         .pncp-data-table td:first-child {
