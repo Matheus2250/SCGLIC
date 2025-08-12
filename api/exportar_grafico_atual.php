@@ -413,6 +413,63 @@ function exportarHTML($dados) {
                                 }
                             }
                         },
+                        animation: {
+                            onComplete: function(animation) {
+                                // Adicionar valores nas barras após a animação
+                                if (["bar"].includes(animation.chart.config.type)) {
+                                    const ctx = animation.chart.ctx;
+                                    const chart = animation.chart;
+                                    
+                                    ctx.font = "bold 12px Arial";
+                                    ctx.textAlign = "center";
+                                    ctx.textBaseline = "middle";
+                                    
+                                    chart.data.datasets.forEach((dataset, i) => {
+                                        const meta = chart.getDatasetMeta(i);
+                                        meta.data.forEach((bar, index) => {
+                                            const data = dataset.data[index];
+                                            let text;
+                                            
+                                            if (data > 1000000) {
+                                                text = (data / 1000000).toFixed(1) + "M";
+                                            } else if (data > 1000) {
+                                                text = (data / 1000).toFixed(0) + "k";
+                                            } else {
+                                                text = data.toLocaleString("pt-BR");
+                                            }
+                                            
+                                            const isHorizontal = chart.config.options.indexAxis === "y";
+                                            const maxValue = Math.max(...dataset.data);
+                                            const isSmallBar = data < maxValue * 0.1;
+                                            
+                                            let x, y;
+                                            
+                                            if (isHorizontal) {
+                                                y = bar.y;
+                                                if (isSmallBar) {
+                                                    x = bar.x + 30; // Fora da barra
+                                                    ctx.fillStyle = "#2c3e50";
+                                                } else {
+                                                    x = bar.x / 2; // Centro da barra
+                                                    ctx.fillStyle = "white";
+                                                }
+                                            } else {
+                                                x = bar.x;
+                                                if (isSmallBar) {
+                                                    y = bar.y - 10; // Acima da barra
+                                                    ctx.fillStyle = "#2c3e50";
+                                                } else {
+                                                    y = bar.y + (chart.chartArea.bottom - bar.y) / 2; // Centro da barra
+                                                    ctx.fillStyle = "white";
+                                                }
+                                            }
+                                            
+                                            ctx.fillText(text, x, y);
+                                        });
+                                    });
+                                }
+                            }
+                        },
                         scales: ' . (in_array($tipoGrafico, ['pie', 'doughnut']) ? '{}' : '{
                             y: {
                                 beginAtZero: true,

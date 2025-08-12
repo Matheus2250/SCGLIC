@@ -1,6 +1,10 @@
 /**
  * Construtor de Gráficos PowerBI - Sistema CGLIC
  * Sistema completo para criação de gráficos personalizados
+ * 
+ * DEPENDÊNCIAS:
+ * - Chart.js (https://cdn.jsdelivr.net/npm/chart.js)
+ * - chartjs-plugin-datalabels (https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels)
  */
 
 class ConstrutorGraficos {
@@ -393,6 +397,61 @@ class ConstrutorGraficos {
                                 return `${label}: ${value}`;
                             }
                         }
+                    },
+                    datalabels: {
+                        display: function(context) {
+                            // Exibir valores apenas em gráficos de barra
+                            const chartType = context.chart.config.type;
+                            return ['bar'].includes(chartType) || 
+                                   (chartType === 'bar' && context.chart.config.options.indexAxis === 'y');
+                        },
+                        anchor: function(context) {
+                            const value = context.parsed.y || context.parsed.x || context.parsed;
+                            const maxValue = Math.max(...context.dataset.data);
+                            
+                            // Se o valor for muito pequeno (< 10% do máximo), colocar fora
+                            if (value < maxValue * 0.1) {
+                                return context.chart.config.options.indexAxis === 'y' ? 'end' : 'end';
+                            }
+                            return 'center';
+                        },
+                        align: function(context) {
+                            const value = context.parsed.y || context.parsed.x || context.parsed;
+                            const maxValue = Math.max(...context.dataset.data);
+                            
+                            // Se o valor for muito pequeno (< 10% do máximo), colocar fora
+                            if (value < maxValue * 0.1) {
+                                return context.chart.config.options.indexAxis === 'y' ? 'right' : 'top';
+                            }
+                            return 'center';
+                        },
+                        color: function(context) {
+                            const value = context.parsed.y || context.parsed.x || context.parsed;
+                            const maxValue = Math.max(...context.dataset.data);
+                            
+                            // Se estiver fora da barra (valor pequeno), usar cor escura
+                            if (value < maxValue * 0.1) {
+                                return '#2c3e50';
+                            }
+                            return 'white';
+                        },
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        formatter: function(value, context) {
+                            // Formatação dos valores nas barras
+                            if (typeof value === 'number') {
+                                if (value > 1000000) {
+                                    return (value / 1000000).toFixed(1) + 'M';
+                                } else if (value > 1000) {
+                                    return (value / 1000).toFixed(0) + 'k';
+                                } else {
+                                    return value.toLocaleString('pt-BR');
+                                }
+                            }
+                            return value;
+                        }
                     }
                 },
                 scales: this.obterConfiguracoesEscala(tipo)
@@ -402,6 +461,11 @@ class ConstrutorGraficos {
         // Configurações específicas para barra horizontal
         if (tipo === 'horizontalBar') {
             config.options.indexAxis = 'y';
+        }
+        
+        // Registrar plugin datalabels se disponível
+        if (typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
         }
         
         // Criar gráfico
