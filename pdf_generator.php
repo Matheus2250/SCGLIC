@@ -14,7 +14,18 @@ if (!class_exists('TCPDF')) {
     exit;
 }
 
-class ReportPDF extends TCPDF {
+// CLASSE COMENTADA - Não está sendo usada devido ao die() nas funções de PDF
+/*
+// Classe ReportPDF só será definida se TCPDF estiver disponível
+if (class_exists('TCPDF')) {
+    // Definir constantes padrão se não existirem (para evitar warnings do analisador)
+    if (!defined('PDF_PAGE_ORIENTATION')) define('PDF_PAGE_ORIENTATION', 'P');
+    if (!defined('PDF_UNIT')) define('PDF_UNIT', 'mm');
+    if (!defined('PDF_PAGE_FORMAT')) define('PDF_PAGE_FORMAT', 'A4');
+    if (!defined('PDF_IMAGE_SCALE_RATIO')) define('PDF_IMAGE_SCALE_RATIO', 1.25);
+    if (!defined('PDF_FONT_MONOSPACED')) define('PDF_FONT_MONOSPACED', 'courier');
+    
+    class ReportPDF extends TCPDF {
     private $reportTitle;
     private $reportSubtitle;
     private $reportDate;
@@ -211,7 +222,9 @@ class ReportPDF extends TCPDF {
         
         return (string)$value;
     }
-}
+} // fim da classe ReportPDF
+} // fim do if (class_exists('TCPDF'))
+*/
 
 // Função para gerar relatório PDF
 function generatePDFReport($tipo, $filtros = []) {
@@ -219,63 +232,6 @@ function generatePDFReport($tipo, $filtros = []) {
     
     // FUNCIONALIDADE REMOVIDA - ReportsEngine foi deletado
     die('Funcionalidade de relatórios avançados não disponível.');
-    
-    $pdf = new ReportPDF($dadosRelatorio['titulo'], 'Relatório Gerencial');
-    
-    // Página de capa
-    $pdf->AddPage();
-    $pdf->SetFont('helvetica', 'B', 20);
-    $pdf->SetTextColor(44, 62, 80);
-    $pdf->Cell(0, 20, $dadosRelatorio['titulo'], 0, 1, 'C');
-    
-    $pdf->SetFont('helvetica', '', 12);
-    $pdf->SetTextColor(127, 140, 141);
-    $pdf->Cell(0, 10, 'Período: ' . ($filtros['data_inicial'] ?? '') . ' a ' . ($filtros['data_final'] ?? ''), 0, 1, 'C');
-    $pdf->Cell(0, 10, 'Gerado em: ' . date('d/m/Y H:i'), 0, 1, 'C');
-    
-    // Seções do relatório baseadas no tipo
-    switch ($tipo) {
-        case 'modalidade':
-            if (isset($dadosRelatorio['dados']['principal'])) {
-                $stats = [];
-                foreach ($dadosRelatorio['dados']['principal'] as $item) {
-                    $stats[$item['modalidade']] = $item['total_licitacoes'];
-                }
-                $pdf->addStatsSection($stats, 'Licitações por Modalidade');
-                
-                // Tabela detalhada
-                $headers = ['Modalidade', 'Total', 'Homologadas', 'Em Andamento', 'Valor Total'];
-                $tableData = [];
-                foreach ($dadosRelatorio['dados']['principal'] as $item) {
-                    $tableData[] = [
-                        $item['modalidade'],
-                        $item['total_licitacoes'],
-                        $item['homologadas'],
-                        $item['em_andamento'],
-                        'R$ ' . number_format($item['valor_total'] ?? 0, 2, ',', '.')
-                    ];
-                }
-                $pdf->addTableSection($tableData, $headers, 'Detalhamento por Modalidade');
-            }
-            break;
-            
-        case 'categoria':
-            if (isset($dadosRelatorio['dados']['principal'])) {
-                // Similar ao modalidade, mas para categorias
-                $stats = [];
-                foreach ($dadosRelatorio['dados']['principal'] as $item) {
-                    $stats[$item['categoria_contratacao']] = $item['total_contratacoes'];
-                }
-                $pdf->addStatsSection($stats, 'Contratações por Categoria');
-            }
-            break;
-            
-        // Adicionar outros tipos conforme necessário
-    }
-    
-    // Gerar e enviar PDF
-    $filename = $tipo . '_relatorio_' . date('Y-m-d') . '.pdf';
-    $pdf->Output($filename, 'D');
 }
 
 // Função fallback para quando TCPDF não está disponível
@@ -291,58 +247,6 @@ function generateHTMLReport() {
     
     // FUNCIONALIDADE REMOVIDA - ReportsEngine foi deletado
     die('Funcionalidade de relatórios avançados não disponível.');
-    
-    // Headers para download
-    header('Content-Type: text/html; charset=utf-8');
-    header('Content-Disposition: attachment; filename="relatorio_' . $tipo . '_' . date('Y-m-d') . '.html"');
-    
-    echo '<!DOCTYPE html>';
-    echo '<html><head><meta charset="UTF-8"><title>' . $dadosRelatorio['titulo'] . '</title>';
-    echo '<style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .stats { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
-        .stat-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; min-width: 150px; text-align: center; }
-        .stat-value { font-size: 24px; font-weight: bold; color: #3498db; }
-        .stat-label { font-size: 14px; color: #666; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f5f5f5; }
-    </style></head><body>';
-    
-    echo '<div class="header">';
-    echo '<h1>' . htmlspecialchars($dadosRelatorio['titulo']) . '</h1>';
-    echo '<p>Período: ' . htmlspecialchars($filtros['data_inicial']) . ' a ' . htmlspecialchars($filtros['data_final']) . '</p>';
-    echo '<p>Gerado em: ' . date('d/m/Y H:i') . '</p>';
-    echo '</div>';
-    
-    // Exibir dados principais se existirem
-    if (isset($dadosRelatorio['dados']['principal'])) {
-        echo '<h2>Dados Principais</h2>';
-        echo '<table>';
-        
-        $first = true;
-        foreach ($dadosRelatorio['dados']['principal'] as $item) {
-            if ($first) {
-                echo '<tr>';
-                foreach (array_keys($item) as $key) {
-                    echo '<th>' . htmlspecialchars(ucfirst(str_replace('_', ' ', $key))) . '</th>';
-                }
-                echo '</tr>';
-                $first = false;
-            }
-            
-            echo '<tr>';
-            foreach ($item as $value) {
-                echo '<td>' . htmlspecialchars($value) . '</td>';
-            }
-            echo '</tr>';
-        }
-        
-        echo '</table>';
-    }
-    
-    echo '</body></html>';
 }
 
 // Processar requisição se for chamada diretamente

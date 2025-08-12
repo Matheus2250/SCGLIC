@@ -179,7 +179,6 @@ try {
             } else {
                 throw new Exception("Risco não encontrado");
             }
-            break;
             
         case 'buscar':
             if (empty($_GET['id'])) {
