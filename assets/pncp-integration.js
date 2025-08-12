@@ -29,6 +29,9 @@ function inicializarPNCP() {
     // Carregar histórico de sincronizações
     carregarHistoricoPNCP();
     
+    // Carregar dados PNCP automaticamente
+    consultarDadosPNCP();
+    
     // Verificar status da API
     verificarStatusAPI();
     

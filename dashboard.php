@@ -949,10 +949,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                             <i data-lucide="database"></i> Consulta de Dados PNCP - Ano 2026
                         </h3>
                         <div class="table-actions">
-                            <button onclick="consultarDadosPNCP()" class="btn-info">
-                                <i data-lucide="search"></i> Consultar Dados
-                            </button>
-                            <button onclick="exportarDadosPNCP()" class="btn-success" style="margin-left: 10px;">
+                            <button onclick="exportarDadosPNCP()" class="btn-success">
                                 <i data-lucide="download"></i> Exportar CSV
                             </button>
                         </div>
