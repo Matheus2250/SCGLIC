@@ -282,10 +282,16 @@ class PNCPIntegration {
             return 'ignorado';
         }
         
+        // FILTRO POR UASG - Processar apenas registros da UASG 250110
+        $uasg = trim($campos[1] ?? '');
+        if ($uasg !== '250110') {
+            return 'ignorado';
+        }
+        
         // Mapeamento direto dos campos do CSV
         $dados = [];
         $dados['unidade_responsavel'] = trim($campos[0] ?? '');
-        $dados['uasg'] = trim($campos[1] ?? '');
+        $dados['uasg'] = $uasg;
         $dados['id_item_pca'] = trim($campos[2] ?? '');
         $dados['categoria_item'] = trim($campos[3] ?? '');
         $dados['identificador_futura_contratacao'] = trim($campos[4] ?? '');
