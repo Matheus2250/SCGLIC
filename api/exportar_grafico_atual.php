@@ -311,7 +311,7 @@ function exportarHTML($dados) {
             <h1>Gráfico Personalizado</h1>
             <p><strong>Sistema CGLIC - Ministério da Saúde</strong></p>
             <p>Gerado em: ' . date('d/m/Y H:i:s') . '</p>
-            <p>Usuário: ' . htmlspecialchars($_SESSION['usuario_nome']) . '</p>
+            <p>Usuário: ' . htmlspecialchars($_SESSION['usuario_nome'] ?? $_SESSION['usuario_email'] ?? 'Usuário não identificado') . '</p>
         </div>
         
         <div class="grafico-container">
