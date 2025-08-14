@@ -160,6 +160,44 @@ if ($moduloConfigurado) {
             $stats = $stmt->fetch();
         }
 
+        // Dados para gráficos
+        $dados_modalidade = $pdo->query("
+            SELECT modalidade, COUNT(*) as quantidade
+            FROM contratos
+            WHERE modalidade IS NOT NULL AND modalidade != ''
+            GROUP BY modalidade
+        ")->fetchAll();
+
+        $dados_area_gestora = $pdo->query("
+            SELECT 
+                CASE
+                    WHEN c.area_gestora IS NULL OR c.area_gestora = '' THEN 'Não Definido'
+                    ELSE c.area_gestora
+                END AS area_gestora,
+                COUNT(*) AS quantidade
+            FROM contratos c
+            GROUP BY c.area_gestora
+            ORDER BY quantidade DESC
+            LIMIT 5
+        ")->fetchAll();
+
+        $dados_mensal = $pdo->query("
+            SELECT
+                DATE_FORMAT(
+                    COALESCE(data_assinatura, criado_em),
+                    '%Y-%m'
+                ) as mes,
+                COUNT(*) as quantidade
+            FROM contratos
+            WHERE (data_assinatura IS NOT NULL AND data_assinatura >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH))
+            OR (data_assinatura IS NULL AND criado_em >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH))
+            GROUP BY DATE_FORMAT(
+                COALESCE(data_assinatura, criado_em),
+                '%Y-%m'
+            )
+            ORDER BY mes
+        ")->fetchAll();
+
         // Buscar alertas ativos
         $alertasQuery = "
             SELECT c.numero_contrato, c.objeto_servico as objeto, c.nome_empresa as contratado_nome, 
@@ -237,17 +275,14 @@ $totalPaginas = ceil($total / $limite);
                 
                 <div class="nav-section">
                     <div class="nav-section-title">Gerenciar & Relatórios</div>
-                    <?php if ($podeEditar): ?>
-                    <button class="nav-item" onclick="abrirModalAdicionar()">
-                        <i data-lucide="plus"></i> <span>Novo Contrato</span>
+                    <button class="nav-item" onclick="showSection('lista-contratos')">
+                        <i data-lucide="list"></i> <span>Lista de Contratos</span>
                     </button>
+                    <?php if ($podeEditar): ?>
                     <button class="nav-item" onclick="abrirImportacao()">
                         <i data-lucide="upload"></i> <span>Importar CSV</span>
                     </button>
                     <?php endif; ?>
-                    <button class="nav-item" onclick="showSection('lista-contratos')">
-                        <i data-lucide="list"></i> <span>Lista de Contratos</span>
-                    </button>
                     <button class="nav-item" onclick="gerarRelatorio()">
                         <i data-lucide="file-text"></i> <span>Relatórios</span>
                     </button>
@@ -395,6 +430,37 @@ $totalPaginas = ceil($total / $limite);
                     </div>
                 </div>
 
+                <!-- Gráficos de Análise -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3 class="chart-title"><i data-lucide="pie-chart"></i> Contratos por Modalidade</h3>
+                        <div class="chart-container">
+                            <canvas id="chartModalidade"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3 class="chart-title"><i data-lucide="building"></i> Contratos por Área Gestora</h3>
+                        <div class="chart-container">
+                            <canvas id="chartAreaGestora"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3 class="chart-title"><i data-lucide="trending-up"></i> Evolução Mensal</h3>
+                        <div class="chart-container">
+                            <canvas id="chartMensal"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3 class="chart-title"><i data-lucide="activity"></i> Status dos Contratos</h3>
+                        <div class="chart-container">
+                            <canvas id="chartStatus"></canvas>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Alertas Importantes -->
                 <?php if (!empty($alertas)): ?>
                 <div class="alerts-section">
@@ -490,19 +556,26 @@ $totalPaginas = ceil($total / $limite);
                 </div>
 
                 <!-- Ações Principais -->
-                <?php if ($podeEditar): ?>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <button onclick="abrirModalAdicionar()" style="background: #28a745; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Novo Contrato
-                    </button>
-                    <button onclick="abrirImportacao()" style="background: #17a2b8; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        <i data-lucide="upload" style="width: 16px; height: 16px;"></i> Importar CSV
-                    </button>
-                    <button onclick="gerarRelatorio()" style="background: #007bff; color: white; padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        <i data-lucide="file-down" style="width: 16px; height: 16px;"></i> Relatório
-                    </button>
+                <div class="actions-section">
+                    <?php if ($podeEditar): ?>
+                    <div class="actions-group">
+                        <button onclick="abrirModalAdicionar()" class="btn btn-success">
+                            <i data-lucide="plus"></i> Novo Contrato
+                        </button>
+                        <button onclick="abrirImportacao()" class="btn btn-info">
+                            <i data-lucide="upload"></i> Importar CSV
+                        </button>
+                    </div>
+                    <?php endif; ?>
+                    <div class="actions-group">
+                        <button onclick="gerarRelatorio()" class="btn btn-primary">
+                            <i data-lucide="file-text"></i> Relatórios
+                        </button>
+                        <button onclick="exportarContratos()" class="btn btn-secondary">
+                            <i data-lucide="download"></i> Exportar
+                        </button>
+                    </div>
                 </div>
-                <?php endif; ?>
 
                 <!-- Lista de Contratos -->
                 <div class="contracts-section">
@@ -734,7 +807,7 @@ $totalPaginas = ceil($total / $limite);
                                 <div class="form-group">
                                     <label>Número do Contrato *</label>
                                     <input type="text" name="numero_contrato" id="numero_contrato" required 
-                                           placeholder="Ex: 001/2025">
+                                           placeholder="Número do contrato">
                                 </div>
 
                                 <div class="form-group">
@@ -746,7 +819,7 @@ $totalPaginas = ceil($total / $limite);
                                 <div class="form-group">
                                     <label>Número SEI</label>
                                     <input type="text" name="numero_sei" id="numero_sei" 
-                                           placeholder="Ex: 25000.123456/2025-01">
+                                           placeholder="Número do processo SEI">
                                 </div>
 
                                 <div class="form-group full-width">
@@ -832,7 +905,7 @@ $totalPaginas = ceil($total / $limite);
                                 <div class="form-group">
                                     <label>Área Gestora</label>
                                     <input type="text" name="area_gestora" id="area_gestora" 
-                                           placeholder="Ex: CGLIC">
+                                           placeholder="Área responsável">
                                 </div>
 
                                 <div class="form-group">
@@ -908,285 +981,175 @@ $totalPaginas = ceil($total / $limite);
     <script src="assets/ux-improvements.js"></script>
     <script src="assets/contratos-dashboard.js"></script>
     
+    <!-- Dados dos Gráficos -->
     <script>
-    // Inicializar Lucide icons
-    lucide.createIcons();
-
-    // Navegação entre seções
-    function showSection(sectionId) {
-        // Esconder todas as seções
-        document.querySelectorAll('.content-section').forEach(section => {
-            section.classList.remove('active');
-        });
-        
-        // Mostrar seção selecionada
-        const targetSection = document.getElementById(sectionId);
-        if (targetSection) {
-            targetSection.classList.add('active');
-        }
-        
-        // Atualizar navegação ativa
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        
-        // Marcar item ativo
-        const activeItem = document.querySelector(`[onclick="showSection('${sectionId}')"]`);
-        if (activeItem) {
-            activeItem.classList.add('active');
-        }
-    }
-
-    // Toggle sidebar
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('collapsed');
-    }
-
-    // Setup inicial do módulo
-    async function executarSetup() {
-        if (!confirm('Deseja executar o setup do módulo de Contratos?\n\nEsta operação irá:\n- Criar as tabelas necessárias\n- Configurar views e índices\n- Preparar o sistema para gestão de contratos')) {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Aguardar Chart.js estar disponível
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js não está carregado');
             return;
         }
-        
-        try {
-            showNotification('Executando setup do módulo...', 'info');
-            
-            const response = await fetch('api/contratos_setup.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({action: 'setup'})
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showNotification('Setup executado com sucesso! Recarregando página...', 'success');
-                setTimeout(() => location.reload(), 2000);
-            } else {
-                showNotification('Erro no setup: ' + (result.error || 'Erro desconhecido'), 'error');
+
+        // Dados para os gráficos
+        const dadosModalidade = <?php echo json_encode($dados_modalidade); ?>;
+        const dadosAreaGestora = <?php echo json_encode($dados_area_gestora); ?>;
+        const dadosMensal = <?php echo json_encode($dados_mensal); ?>;
+        const dadosStats = <?php echo json_encode($stats); ?>;
+
+        // Cores do tema vermelho para os gráficos
+        const coresVermelhas = [
+            '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d', '#fca5a5',
+            '#f87171', '#ef4444', '#fee2e2', '#fecaca', '#dc2626cc'
+        ];
+
+        // Gráfico por Modalidade
+        if (dadosModalidade && dadosModalidade.length > 0) {
+            const ctx1 = document.getElementById('chartModalidade');
+            if (ctx1) {
+                new Chart(ctx1, {
+                    type: 'doughnut',
+                    data: {
+                        labels: dadosModalidade.map(item => item.modalidade),
+                        datasets: [{
+                            data: dadosModalidade.map(item => parseInt(item.quantidade)),
+                            backgroundColor: coresVermelhas.slice(0, dadosModalidade.length),
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    usePointStyle: true
+                                }
+                            }
+                        }
+                    }
+                });
             }
-        } catch (error) {
-            showNotification('Erro de conexão: ' + error.message, 'error');
         }
-    }
 
-    // Modal para adicionar contrato
-    function abrirModalAdicionar() {
-        document.getElementById('tituloModalContrato').textContent = 'Criar Novo Contrato';
-        document.getElementById('btnTextoSalvar').textContent = 'Salvar Contrato';
-        document.getElementById('contratoId').value = '';
-        document.querySelector('input[name="acao"]').value = 'criar_contrato';
-        
-        // Limpar formulário
-        document.getElementById('formContrato').reset();
-        document.getElementById('ano_contrato').value = new Date().getFullYear();
-        document.getElementById('status_contrato').value = 'ativo';
-        
-        // Mostrar primeira aba
-        mostrarAba('dados-basicos');
-        
-        // Abrir modal
-        document.getElementById('modalCriarContrato').style.display = 'block';
-        
-        // Reinicializar ícones
-        lucide.createIcons();
-    }
-
-    // Modal para editar contrato
-    async function editarContrato(id) {
-        try {
-            showNotification('Carregando dados do contrato...', 'info');
-            
-            const response = await fetch(`api/contratos_crud.php?action=get&id=${id}`);
-            const result = await response.json();
-            
-            if (result.success) {
-                const contrato = result.data;
-                
-                // Configurar modal para edição
-                document.getElementById('tituloModalContrato').textContent = 'Editar Contrato';
-                document.getElementById('btnTextoSalvar').textContent = 'Atualizar Contrato';
-                document.getElementById('contratoId').value = contrato.id;
-                document.querySelector('input[name="acao"]').value = 'editar_contrato';
-                
-                // Preencher campos
-                document.getElementById('numero_contrato').value = contrato.numero_contrato || '';
-                document.getElementById('ano_contrato').value = contrato.ano_contrato || '';
-                document.getElementById('numero_sei').value = contrato.numero_sei || '';
-                document.getElementById('nome_empresa').value = contrato.nome_empresa || '';
-                document.getElementById('cnpj_cpf').value = contrato.cnpj_cpf || '';
-                document.getElementById('modalidade').value = contrato.modalidade || '';
-                document.getElementById('objeto_servico').value = contrato.objeto_servico || '';
-                document.getElementById('valor_inicial').value = contrato.valor_inicial || '';
-                document.getElementById('valor_atual').value = contrato.valor_atual || '';
-                document.getElementById('data_assinatura').value = contrato.data_assinatura || '';
-                document.getElementById('data_inicio').value = contrato.data_inicio || '';
-                document.getElementById('data_fim').value = contrato.data_fim || '';
-                document.getElementById('status_contrato').value = contrato.status_contrato || 'ativo';
-                document.getElementById('area_gestora').value = contrato.area_gestora || '';
-                document.getElementById('finalidade').value = contrato.finalidade || '';
-                document.getElementById('fiscais').value = contrato.fiscais || '';
-                document.getElementById('observacoes').value = contrato.observacoes || '';
-                
-                // Mostrar primeira aba
-                mostrarAba('dados-basicos');
-                
-                // Abrir modal
-                document.getElementById('modalCriarContrato').style.display = 'block';
-                
-                // Reinicializar ícones
-                lucide.createIcons();
-                
-            } else {
-                showNotification('Erro ao carregar contrato: ' + (result.error || 'Erro desconhecido'), 'error');
+        // Gráfico por Área Gestora
+        if (dadosAreaGestora && dadosAreaGestora.length > 0) {
+            const ctx2 = document.getElementById('chartAreaGestora');
+            if (ctx2) {
+                new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels: dadosAreaGestora.map(item => item.area_gestora),
+                        datasets: [{
+                            label: 'Contratos',
+                            data: dadosAreaGestora.map(item => parseInt(item.quantidade)),
+                            backgroundColor: '#dc2626',
+                            borderColor: '#b91c1c',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
             }
-        } catch (error) {
-            showNotification('Erro ao carregar contrato: ' + error.message, 'error');
         }
-    }
 
-    // Excluir contrato
-    async function excluirContrato(id) {
-        if (!confirm('Tem certeza que deseja excluir este contrato?\n\nEsta ação não pode ser desfeita.')) {
-            return;
-        }
-        showNotification('Exclusão em desenvolvimento', 'info');
-        // TODO: Implementar exclusão
-    }
-
-    // Importação de CSV
-    function abrirImportacao() {
-        showNotification('Importação CSV em desenvolvimento', 'info');
-        // TODO: Implementar importação CSV
-    }
-
-    // Ver detalhes do contrato
-    async function verDetalhes(contratoId) {
-        try {
-            showNotification('Carregando detalhes do contrato...', 'info');
-            
-            const response = await fetch(`api/contratos_detalhes.php?id=${contratoId}`);
-            
-            if (!response.ok) {
-                throw new Error('Erro ao carregar detalhes');
+        // Gráfico Evolução Mensal
+        if (dadosMensal && dadosMensal.length > 0) {
+            const ctx3 = document.getElementById('chartMensal');
+            if (ctx3) {
+                new Chart(ctx3, {
+                    type: 'line',
+                    data: {
+                        labels: dadosMensal.map(item => {
+                            const [ano, mes] = item.mes.split('-');
+                            return new Date(ano, mes - 1).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+                        }),
+                        datasets: [{
+                            label: 'Contratos Assinados',
+                            data: dadosMensal.map(item => parseInt(item.quantidade)),
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#dc2626',
+                            pointBorderColor: '#b91c1c',
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
             }
-            
-            const html = await response.text();
-            
-            document.getElementById('detalhesContent').innerHTML = html;
-            document.getElementById('detalhesModal').style.display = 'block';
-            
-            // Reinicializar ícones Lucide no modal
-            lucide.createIcons();
-            
-        } catch (error) {
-            showNotification('Erro ao carregar detalhes: ' + error.message, 'error');
         }
-    }
 
-    // Gerar relatório
-    function gerarRelatorio(tipo = 'geral') {
-        showNotification('Relatórios em desenvolvimento', 'info');
-        // TODO: Implementar relatórios
-        // const params = new URLSearchParams(window.location.search);
-        // params.set('relatorio', tipo);
-        // params.set('formato', 'pdf');
-        // const url = `relatorios/relatorio_contratos.php?${params.toString()}`;
-        // window.open(url, '_blank');
-    }
-
-    // Utilitários de modal
-    function closeModal(modalId) {
-        document.getElementById(modalId).style.display = 'none';
-    }
-    
-    function fecharModal(modalId) {
-        document.getElementById(modalId).style.display = 'none';
-    }
-    
-    // Sistema de abas
-    function mostrarAba(abaId) {
-        // Remover classe active de todas as abas
-        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        
-        // Ativar aba selecionada
-        document.querySelector(`[onclick="mostrarAba('${abaId}')"]`).classList.add('active');
-        document.getElementById(abaId).classList.add('active');
-    }
-    
-    // Submit do formulário
-    document.getElementById('formContrato').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const isEdit = document.getElementById('contratoId').value !== '';
-        
-        try {
-            showNotification(isEdit ? 'Atualizando contrato...' : 'Salvando contrato...', 'info');
-            
-            const response = await fetch('api/contratos_crud.php', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showNotification(isEdit ? 'Contrato atualizado com sucesso!' : 'Contrato criado com sucesso!', 'success');
-                fecharModal('modalCriarContrato');
-                setTimeout(() => window.location.reload(), 1500);
-            } else {
-                showNotification('Erro ao salvar: ' + (result.error || 'Erro desconhecido'), 'error');
-            }
-        } catch (error) {
-            showNotification('Erro de conexão: ' + error.message, 'error');
-        }
-    });
-
-    // Fechar modais clicando fora
-    window.onclick = function(event) {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    }
-
-    // Auto-refresh para alertas (a cada 10 minutos)
-    setInterval(() => {
-        fetch('api/get_alertas.php?modulo=contratos')
-            .then(response => response.json())
-            .then(data => {
-                if (data.alertas && data.alertas.length > 0) {
-                    // Atualizar badge de alertas se necessário
-                    const badge = document.querySelector('.alerts-section .badge');
-                    if (badge) {
-                        badge.textContent = data.alertas.length;
+        // Gráfico Status dos Contratos
+        const ctx4 = document.getElementById('chartStatus');
+        if (ctx4 && dadosStats) {
+            new Chart(ctx4, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Vigentes', 'Encerrados', 'Vencidos'],
+                    datasets: [{
+                        data: [
+                            parseInt(dadosStats.contratos_vigentes || 0),
+                            parseInt(dadosStats.contratos_encerrados || 0),
+                            parseInt(dadosStats.vencidos || 0)
+                        ],
+                        backgroundColor: ['#10b981', '#dc2626', '#f59e0b'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        }
                     }
                 }
-            })
-            .catch(error => console.log('Erro ao verificar alertas:', error));
-    }, 600000); // 10 minutos
-
-    // Atalhos de teclado
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey || e.metaKey) {
-            switch(e.key) {
-                case 'n':
-                    e.preventDefault();
-                    abrirModalAdicionar();
-                    break;
-                case 'f':
-                    e.preventDefault();
-                    const buscaInput = document.querySelector('input[name="busca"]');
-                    if (buscaInput) buscaInput.focus();
-                    break;
-            }
+            });
         }
     });
     </script>
+    
 </body>
 </html>
