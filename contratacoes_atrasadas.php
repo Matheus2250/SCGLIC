@@ -89,33 +89,33 @@ $params_tempo = [];
 if (!empty($filtro_periodo)) {
     switch ($filtro_periodo) {
         case 'mes_atual':
-            $where_tempo = " AND MONTH(p.data_conclusao_processo) = MONTH(CURDATE()) AND YEAR(p.data_conclusao_processo) = YEAR(CURDATE())";
+            $where_tempo = " AND MONTH(p.data_conclusao_dfd) = MONTH(CURDATE())";
             break;
         case 'trimestre_atual':
-            $where_tempo = " AND QUARTER(p.data_conclusao_processo) = QUARTER(CURDATE()) AND YEAR(p.data_conclusao_processo) = YEAR(CURDATE())";
+            $where_tempo = " AND QUARTER(p.data_conclusao_dfd) = QUARTER(CURDATE())";
             break;
         case 'semestre_atual':
             $semestre_atual = (date('n') <= 6) ? 1 : 2;
             if ($semestre_atual == 1) {
-                $where_tempo = " AND MONTH(p.data_conclusao_processo) BETWEEN 1 AND 6 AND YEAR(p.data_conclusao_processo) = YEAR(CURDATE())";
+                $where_tempo = " AND MONTH(p.data_conclusao_dfd) BETWEEN 1 AND 6";
             } else {
-                $where_tempo = " AND MONTH(p.data_conclusao_processo) BETWEEN 7 AND 12 AND YEAR(p.data_conclusao_processo) = YEAR(CURDATE())";
+                $where_tempo = " AND MONTH(p.data_conclusao_dfd) BETWEEN 7 AND 12";
             }
             break;
         case 'ultimo_mes':
-            $where_tempo = " AND p.data_conclusao_processo >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
+            $where_tempo = " AND p.data_conclusao_dfd >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
             break;
         case 'ultimos_3_meses':
-            $where_tempo = " AND p.data_conclusao_processo >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)";
+            $where_tempo = " AND p.data_conclusao_dfd >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)";
             break;
         case 'ultimos_6_meses':
-            $where_tempo = " AND p.data_conclusao_processo >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
+            $where_tempo = " AND p.data_conclusao_dfd >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
             break;
     }
 }
 
 if (!empty($filtro_mes) && is_numeric($filtro_mes)) {
-    $where_tempo = " AND MONTH(p.data_conclusao_processo) = ? AND YEAR(p.data_conclusao_processo) = 2025";
+    $where_tempo = " AND MONTH(p.data_conclusao_dfd) = ?";
     $params_tempo[] = intval($filtro_mes);
 }
 
@@ -126,17 +126,17 @@ $params_tempo_inicio = [];
 if (!empty($filtro_periodo)) {
     switch ($filtro_periodo) {
         case 'mes_atual':
-            $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) = MONTH(CURDATE()) AND YEAR(p.data_inicio_processo) = YEAR(CURDATE())";
+            $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) = MONTH(CURDATE())";
             break;
         case 'trimestre_atual':
-            $where_tempo_inicio = " AND QUARTER(p.data_inicio_processo) = QUARTER(CURDATE()) AND YEAR(p.data_inicio_processo) = YEAR(CURDATE())";
+            $where_tempo_inicio = " AND QUARTER(p.data_inicio_processo) = QUARTER(CURDATE())";
             break;
         case 'semestre_atual':
             $semestre_atual = (date('n') <= 6) ? 1 : 2;
             if ($semestre_atual == 1) {
-                $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) BETWEEN 1 AND 6 AND YEAR(p.data_inicio_processo) = YEAR(CURDATE())";
+                $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) BETWEEN 1 AND 6";
             } else {
-                $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) BETWEEN 7 AND 12 AND YEAR(p.data_inicio_processo) = YEAR(CURDATE())";
+                $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) BETWEEN 7 AND 12";
             }
             break;
         case 'ultimo_mes':
@@ -152,7 +152,7 @@ if (!empty($filtro_periodo)) {
 }
 
 if (!empty($filtro_mes) && is_numeric($filtro_mes)) {
-    $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) = ? AND YEAR(p.data_inicio_processo) = 2025";
+    $where_tempo_inicio = " AND MONTH(p.data_inicio_processo) = ?";
     $params_tempo_inicio[] = intval($filtro_mes);
 }
 
@@ -161,12 +161,9 @@ $sql_count_vencidas = "SELECT COUNT(DISTINCT p.numero_dfd) as total
     FROM pca_dados p
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
     WHERE pi.ano_pca = 2025
-    AND p.data_inicio_processo IS NOT NULL
-    AND YEAR(p.data_inicio_processo) = 2025
-    AND p.data_conclusao_processo IS NOT NULL
-    AND YEAR(p.data_conclusao_processo) = 2025
-    AND p.data_conclusao_processo < CURDATE()
-    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado')
+    AND p.data_conclusao_dfd IS NOT NULL
+    AND p.data_conclusao_dfd < CURDATE()
+    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado' OR p.situacao_execucao IS NULL OR p.situacao_execucao = '')
     AND p.numero_dfd IS NOT NULL 
     AND p.numero_dfd != ''
     $where_area
@@ -179,27 +176,24 @@ $total_vencidas_paginacao = $stmt_count_vencidas->fetchColumn();
 $total_paginas_vencidas = ceil($total_vencidas_paginacao / $itens_por_pagina);
 
 // CONTRATAÇÕES VENCIDAS - FILTROS ATUALIZADOS COM PAGINAÇÃO
-// Critério: Data início em 2025, data conclusão em 2025, nem começou nem concluiu, situação "Não iniciada"
+// Critério: Apenas PCA 2025, nem começou nem concluiu, situação "Não iniciada"
 $sql_vencidas = "SELECT DISTINCT 
     p.numero_contratacao,
     p.numero_dfd,
     p.titulo_contratacao,
     p.area_requisitante,
     p.data_inicio_processo,
-    p.data_conclusao_processo,
+    p.data_conclusao_dfd,
     p.situacao_execucao,
     p.valor_total_contratacao,
     p.prioridade,
-    DATEDIFF(CURDATE(), p.data_conclusao_processo) as dias_atraso
+    DATEDIFF(CURDATE(), p.data_conclusao_dfd) as dias_atraso
     FROM pca_dados p
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
     WHERE pi.ano_pca = 2025
-    AND p.data_inicio_processo IS NOT NULL
-    AND YEAR(p.data_inicio_processo) = 2025
-    AND p.data_conclusao_processo IS NOT NULL
-    AND YEAR(p.data_conclusao_processo) = 2025
-    AND p.data_conclusao_processo < CURDATE()
-    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado')
+    AND p.data_conclusao_dfd IS NOT NULL
+    AND p.data_conclusao_dfd < CURDATE()
+    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado' OR p.situacao_execucao IS NULL OR p.situacao_execucao = '')
     AND p.numero_dfd IS NOT NULL 
     AND p.numero_dfd != ''
     $where_area
@@ -215,7 +209,7 @@ $contratacoes_vencidas = $stmt_vencidas->fetchAll();
 
 // DEBUG: Verificar se há dados vencidas
 if (DEBUG_MODE) {
-    $debug_vencidas = $pdo->query("SELECT COUNT(*) FROM pca_dados p INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id WHERE pi.ano_pca = 2025 AND p.data_conclusao_processo < CURDATE() AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')")->fetchColumn();
+    $debug_vencidas = $pdo->query("SELECT COUNT(*) FROM pca_dados p INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id WHERE pi.ano_pca = 2025 AND p.data_conclusao_dfd < CURDATE() AND (p.situacao_execucao IS NULL OR p.situacao_execucao = '' OR p.situacao_execucao = 'Não iniciado')")->fetchColumn();
     
     echo "<!-- DEBUG CONTRATAÇÕES VENCIDAS:";
     echo "\nTotal que atendem critérios vencidas: " . $debug_vencidas;
@@ -229,9 +223,8 @@ $sql_count_nao_iniciadas = "SELECT COUNT(DISTINCT p.numero_dfd) as total
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
     WHERE pi.ano_pca = 2025
     AND p.data_inicio_processo IS NOT NULL
-    AND YEAR(p.data_inicio_processo) = 2025
     AND p.data_inicio_processo < CURDATE() 
-    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado')
+    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado' OR p.situacao_execucao IS NULL OR p.situacao_execucao = '')
     AND p.numero_dfd IS NOT NULL 
     AND p.numero_dfd != ''
     $where_area
@@ -244,14 +237,14 @@ $total_nao_iniciadas_paginacao = $stmt_count_nao_iniciadas->fetchColumn();
 $total_paginas_nao_iniciadas = ceil($total_nao_iniciadas_paginacao / $itens_por_pagina);
 
 // CONTRATAÇÕES NÃO INICIADAS - FILTROS ATUALIZADOS COM PAGINAÇÃO
-// Critério: Data início em 2025, mas não iniciaram, situação "Não iniciada"
+// Critério: Apenas PCA 2025, mas não iniciaram, situação "Não iniciada"
 $sql_nao_iniciadas = "SELECT DISTINCT 
     p.numero_contratacao,
     p.numero_dfd,
     p.titulo_contratacao,
     p.area_requisitante,
     p.data_inicio_processo,
-    p.data_conclusao_processo,
+    p.data_conclusao_dfd,
     p.situacao_execucao,
     p.valor_total_contratacao,
     p.prioridade,
@@ -260,9 +253,8 @@ $sql_nao_iniciadas = "SELECT DISTINCT
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
     WHERE pi.ano_pca = 2025
     AND p.data_inicio_processo IS NOT NULL
-    AND YEAR(p.data_inicio_processo) = 2025
     AND p.data_inicio_processo < CURDATE() 
-    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado')
+    AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado' OR p.situacao_execucao IS NULL OR p.situacao_execucao = '')
     AND p.numero_dfd IS NOT NULL 
     AND p.numero_dfd != ''
     $where_area
@@ -1154,7 +1146,7 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
                 </div>
                 
                 <div class="filtro-group">
-                    <label>Mês Específico (2025)</label>
+                    <label>Mês Específico (PCA 2025)</label>
                     <select name="mes">
                         <option value="">Selecionar mês</option>
                         <option value="1" <?php echo ($filtro_mes === '1') ? 'selected' : ''; ?>>Janeiro</option>
@@ -1293,7 +1285,7 @@ $valor_total_nao_iniciadas = array_sum(array_column($contratacoes_nao_iniciadas,
                             <td>
                                 <div class="data-info">
                                     <span class="data-label">Conclusão</span>
-                                    <strong><?php echo formatarData($contratacao['data_conclusao_processo']); ?></strong>
+                                    <strong><?php echo formatarData($contratacao['data_conclusao_dfd']); ?></strong>
                                 </div>
                             </td>
                             <td>
