@@ -17,7 +17,7 @@
 <th>Número da contratação</th>
 <th>Modalidade</th>
 <th>Objeto</th>
-<th>Valor Estimado</th>
+<th>Valor Homologado</th>
 <th>Situação</th>
 <th>Pregoeiro</th>
 <th>Data Abertura</th>
@@ -40,7 +40,7 @@
                             echo htmlspecialchars(strlen($objeto) > 80 ? substr($objeto, 0, 80) . '...' : $objeto); 
                             ?>
 </td>
-<td style="font-weight: 600; color: #27ae60;"><?php echo formatarMoeda($licitacao['valor_estimado'] ?? 0); ?></td>
+<td style="font-weight: 600; color: #27ae60;"><?php echo formatarMoeda($licitacao['valor_homologado'] ?? 0); ?></td>
 <td>
 <span class="status-badge status-<?php echo strtolower(str_replace('_', '-', $licitacao['situacao'])); ?>">
 <?php echo str_replace('_', ' ', $licitacao['situacao']); ?>
@@ -101,7 +101,7 @@
                         $fim = min($pagina_atual * $licitacoes_por_pagina, $total_licitacoes);
                         ?>
                         Mostrando <?php echo $inicio; ?> a <?php echo $fim; ?> de <?php echo $total_licitacoes; ?> licitações<br>
-                        Valor total estimado (página atual): <?php echo formatarMoeda(array_sum(array_column($licitacoes_recentes, 'valor_estimado'))); ?>
+                        Valor total homologado (página atual): <?php echo formatarMoeda(array_sum(array_column($licitacoes_recentes, 'valor_homologado'))); ?>
                     </div>
                     
                     <!-- Seletor de itens por página -->

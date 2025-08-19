@@ -376,7 +376,7 @@ function atualizarModalAndamentos(data, nup) {
     if (licitacao) {
         if (modalidadeInfoEl) modalidadeInfoEl.textContent = licitacao.modalidade || '-';
         if (pregoeiroInfoEl) pregoeiroInfoEl.textContent = licitacao.pregoeiro || '-';
-        if (valorInfoEl) valorInfoEl.textContent = licitacao.valor_estimado ? formatarMoeda(licitacao.valor_estimado) : '-';
+        if (valorInfoEl) valorInfoEl.textContent = licitacao.valor_homologado ? formatarMoeda(licitacao.valor_homologado) : '-';
         if (dataAberturaInfoEl) dataAberturaInfoEl.textContent = licitacao.data_abertura ? formatarDataSimples(licitacao.data_abertura) : '-';
     } else {
         // Valores padrão se não encontrar a licitação

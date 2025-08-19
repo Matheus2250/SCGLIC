@@ -1251,7 +1251,7 @@ $contratacoes_pca = $pdo->query("
 <th>Número da contratação</th>
 <th>Modalidade</th>
 <th>Objeto</th>
-<th>Valor Estimado</th>
+<th>Valor Homologado</th>
 <th>Situação</th>
 <th>Pregoeiro</th>
 <th>Data Abertura</th>
@@ -1278,7 +1278,7 @@ foreach ($licitacoes_recentes as $licitacao):
                             echo htmlspecialchars(strlen($objeto) > 80 ? substr($objeto, 0, 80) . '...' : $objeto); 
                             ?>
 </td>
-<td style="font-weight: 600; color: #27ae60;"><?php echo formatarMoeda($licitacao['valor_estimado'] ?? 0); ?></td>
+<td style="font-weight: 600; color: #27ae60;"><?php echo formatarMoeda($licitacao['valor_homologado'] ?? 0); ?></td>
 <td>
 <span class="status-badge status-<?php echo strtolower(str_replace('_', '-', $licitacao['situacao'])); ?>">
 <?php echo str_replace('_', ' ', $licitacao['situacao']); ?>
@@ -1339,7 +1339,7 @@ foreach ($licitacoes_recentes as $licitacao):
                         $fim = min($pagina_atual * $licitacoes_por_pagina, $total_licitacoes);
                         ?>
                         Mostrando <?php echo $inicio; ?> a <?php echo $fim; ?> de <?php echo $total_licitacoes; ?> licitações<br>
-                        Valor total estimado (página atual): <?php echo formatarMoeda(array_sum(array_column($licitacoes_recentes, 'valor_estimado'))); ?>
+                        Valor total homologado (página atual): <?php echo formatarMoeda(array_sum(array_column($licitacoes_recentes, 'valor_homologado'))); ?>
                     </div>
                     
                     <!-- Seletor de itens por página -->
@@ -1584,9 +1584,9 @@ foreach ($licitacoes_recentes as $licitacao):
                         </h4>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Valor Estimado (R$) *</label>
-                                <input type="text" name="valor_estimado" id="valor_estimado_criar" placeholder="0,00" required>
-                                <small style="color: #6b7280; font-size: 12px;">Valor estimado para a contratação</small>
+                                <label>Valor Homologado (R$) *</label>
+                                <input type="text" name="valor_homologado" id="valor_homologado_criar" placeholder="0,00" required>
+                                <small style="color: #6b7280; font-size: 12px;">Valor homologado para a contratação</small>
                             </div>
 
                             <div class="form-group">
@@ -1915,8 +1915,8 @@ foreach ($licitacoes_recentes as $licitacao):
                     </div>
 
                     <div class="form-group">
-                        <label>Valor Estimado (R$)</label>
-                        <input type="text" name="valor_estimado" id="edit_valor_estimado" placeholder="0,00">
+                        <label>Valor Homologado (R$)</label>
+                        <input type="text" name="valor_homologado" id="edit_valor_homologado" placeholder="0,00">
                     </div>
 
                     <div class="form-group">
@@ -2048,7 +2048,7 @@ foreach ($licitacoes_recentes as $licitacao):
                             <input type="checkbox" name="campos[]" value="objeto" checked> Objeto
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                            <input type="checkbox" name="campos[]" value="valor_estimado" checked> Valor Estimado
+                            <input type="checkbox" name="campos[]" value="valor_homologado" checked> Valor Homologado
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                             <input type="checkbox" name="campos[]" value="situacao" checked> Situação
@@ -2272,7 +2272,7 @@ foreach ($licitacoes_recentes as $licitacao):
                             <span class="detail-value" id="pregoeiroInfo">-</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">Valor Estimado:</span>
+                            <span class="detail-label">Valor Homologado:</span>
                             <span class="detail-value" id="valorInfo">-</span>
                         </div>
                         <div class="detail-row">
