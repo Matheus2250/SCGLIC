@@ -72,16 +72,22 @@ try {
     $pagamentos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     
     // Buscar documentos
-    $stmt = $conn->prepare("
-        SELECT d.*, u.nome as criado_por_nome
-        FROM contratos_documentos d
-        LEFT JOIN usuarios u ON d.criado_por = u.id
-        WHERE d.contrato_id = ? 
-        ORDER BY d.criado_em DESC
-    ");
-    $stmt->bind_param("i", $contratoId);
-    $stmt->execute();
-    $documentos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    // Tentar buscar documentos com tratamento de erro
+    try {
+        $stmt = $conn->prepare("
+            SELECT d.*, u.nome as criado_por_nome
+            FROM contratos_documentos d
+            LEFT JOIN usuarios u ON d.criado_por = u.id
+            WHERE d.contrato_id = ? 
+            ORDER BY COALESCE(d.criado_em, d.id) DESC
+        ");
+        $stmt->bind_param("i", $contratoId);
+        $stmt->execute();
+        $documentos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    } catch (Exception $e) {
+        // Tabela pode não existir ou campo pode não existir
+        $documentos = [];
+    }
     
 } catch (Exception $e) {
     echo '<div class="error">Erro ao carregar dados: ' . htmlspecialchars($e->getMessage()) . '</div>';

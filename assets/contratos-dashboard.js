@@ -9,9 +9,42 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
+    
+    // Configurar sistema
+    setupNavigation();
+    setupSidebar();
 });
 
-// Navegação entre seções
+// Função para inicializar Lucide de forma simples e confiável
+function initializeLucide() {
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        try {
+            lucide.createIcons();
+        } catch (error) {
+            // Silently retry once
+            setTimeout(() => {
+                try {
+                    lucide.createIcons();
+                } catch (e) {
+                    // Fail silently
+                }
+            }, 500);
+        }
+    }
+}
+
+// Configurar navegação - SIMPLIFICADO
+function setupNavigation() {
+    // Garantir função global
+    window.showSection = showSection;
+}
+
+// Configurar sidebar - SIMPLIFICADO
+function setupSidebar() {
+    window.toggleSidebar = toggleSidebar;
+}
+
+// Navegação entre seções - VERSÃO SIMPLIFICADA
 function showSection(sectionId) {
     // Esconder todas as seções
     document.querySelectorAll('.content-section').forEach(section => {
@@ -30,19 +63,74 @@ function showSection(sectionId) {
     });
     
     // Marcar item ativo
-    const activeItem = document.querySelector(`[onclick="showSection('${sectionId}')"]`);
+    const activeItem = document.querySelector(`[onclick*="showSection('${sectionId}')"]`);
     if (activeItem) {
         activeItem.classList.add('active');
     }
-}
-
-// Toggle sidebar
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) {
-        sidebar.classList.toggle('collapsed');
+    
+    // Auto-colapsar sidebar em mobile
+    if (window.innerWidth <= 768) {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar && sidebar.classList.contains('mobile-open')) {
+            sidebar.classList.remove('mobile-open');
+        }
+    }
+    
+    // Recriar ícones
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
     }
 }
+
+// Toggle sidebar - VERSÃO SIMPLIFICADA baseada no dashboard principal
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const toggleIcon = document.querySelector('#sidebarToggle i');
+    
+    if (sidebar) {
+        const isMobile = window.innerWidth <= 768;
+        
+        if (isMobile) {
+            // Mobile: toggle mobile-open class
+            sidebar.classList.toggle('mobile-open');
+            
+            if (toggleIcon) {
+                if (sidebar.classList.contains('mobile-open')) {
+                    toggleIcon.setAttribute('data-lucide', 'x');
+                } else {
+                    toggleIcon.setAttribute('data-lucide', 'menu');
+                }
+            }
+        } else {
+            // Desktop: toggle collapsed class
+            sidebar.classList.toggle('collapsed');
+            
+            if (toggleIcon) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleIcon.setAttribute('data-lucide', 'panel-left-open');
+                } else {
+                    toggleIcon.setAttribute('data-lucide', 'menu');
+                }
+            }
+        }
+        
+        // Atualizar ícones
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+}
+
+// Garantir navegação funcione globalmente
+window.showSection = showSection;
+window.toggleSidebar = toggleSidebar;
+
+// Inicializar Lucide também no window.load como backup
+window.addEventListener('load', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
 
 // Setup inicial do módulo
 async function executarSetup() {
@@ -90,9 +178,6 @@ function abrirModalAdicionar() {
         if (statusInput) statusInput.value = 'ativo';
     }
     
-    // Mostrar primeira aba
-    mostrarAba('dados-basicos');
-    
     // Abrir modal
     const modal = document.getElementById('modalCriarContrato');
     if (modal) {
@@ -100,9 +185,11 @@ function abrirModalAdicionar() {
     }
     
     // Reinicializar ícones
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }, 100);
 }
 
 // Modal para editar contrato
@@ -111,6 +198,11 @@ async function editarContrato(id) {
         showNotification('Carregando dados do contrato...', 'info');
         
         const response = await fetch(`api/contratos_crud.php?action=get&id=${id}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
         const result = await response.json();
         
         if (result.success) {
@@ -138,9 +230,6 @@ async function editarContrato(id) {
                 }
             });
             
-            // Mostrar primeira aba
-            mostrarAba('dados-basicos');
-            
             // Abrir modal
             const modal = document.getElementById('modalCriarContrato');
             if (modal) {
@@ -148,9 +237,13 @@ async function editarContrato(id) {
             }
             
             // Reinicializar ícones
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
+            setTimeout(() => {
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }, 100);
+            
+            showNotification('Dados carregados com sucesso!', 'success');
             
         } else {
             showNotification('Erro ao carregar contrato: ' + (result.error || 'Erro desconhecido'), 'error');
@@ -169,11 +262,6 @@ async function excluirContrato(id) {
     // TODO: Implementar exclusão
 }
 
-// Importação de CSV
-function abrirImportacao() {
-    showNotification('Importação CSV em desenvolvimento', 'info');
-    // TODO: Implementar importação CSV
-}
 
 // Ver detalhes do contrato
 async function verDetalhes(contratoId) {
@@ -210,7 +298,50 @@ function gerarRelatorio(tipo = 'geral') {
     // TODO: Implementar relatórios
 }
 
-// Exportar contratos
+// Função para confirmar exclusão
+function confirmarExclusao(contratoId, numeroContrato) {
+    const confirmacao = confirm(`Tem certeza de que deseja excluir o contrato ${numeroContrato}?\n\nEsta ação não pode ser desfeita.`);
+    
+    if (confirmacao) {
+        excluirContratoFunc(contratoId);
+    }
+}
+
+// Função para excluir contrato
+async function excluirContratoFunc(contratoId) {
+    try {
+        showNotification('Excluindo contrato...', 'info');
+        
+        const formData = new FormData();
+        formData.append('acao', 'excluir_contrato');
+        formData.append('id', contratoId);
+        
+        const response = await fetch('process.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Contrato excluído com sucesso!', 'success');
+            // Recarregar página após 2 segundos
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            showNotification('Erro ao excluir contrato: ' + result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao excluir contrato:', error);
+        showNotification('Erro ao excluir contrato', 'error');
+    }
+}
+
+// Função duplicada removida - usando apenas a versão completa acima
+
+// Exportar contratos - função atualizada
 function exportarContratos(formato = 'csv') {
     // Pegar filtros atuais da página
     const params = new URLSearchParams(window.location.search);
@@ -225,20 +356,17 @@ function exportarContratos(formato = 'csv') {
     exportUrl.searchParams.set('status', status);
     exportUrl.searchParams.set('vencimento', vencimento);
     
-    // Mostrar opções de exportação
-    if (confirm(`Exportar contratos em formato ${formato.toUpperCase()}?\n\nFiltros aplicados:\n- Busca: ${busca || 'Nenhuma'}\n- Status: ${status || 'Todos'}\n- Vencimento: ${vencimento || 'Todos'}`)) {
-        showNotification('Preparando exportação...', 'info');
-        
-        // Abrir em nova aba
-        window.open(exportUrl.href, '_blank');
-        
-        setTimeout(() => {
-            showNotification('Exportação iniciada! Verifique os downloads.', 'success');
-        }, 1000);
-    }
+    showNotification('Preparando exportação...', 'info');
+    
+    // Abrir em nova aba
+    window.open(exportUrl.href, '_blank');
+    
+    setTimeout(() => {
+        showNotification('Exportação iniciada! Verifique os downloads.', 'success');
+    }, 1000);
 }
 
-// Utilitários de modal
+// Utilitários de modal - SIMPLIFICADOS
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -250,23 +378,36 @@ function fecharModal(modalId) {
     closeModal(modalId);
 }
 
-// Sistema de abas
-function mostrarAba(abaId) {
-    // Remover classe active de todas as abas
-    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    
-    // Ativar aba selecionada
-    const tabButton = document.querySelector(`[onclick="mostrarAba('${abaId}')"]`);
-    const tabContent = document.getElementById(abaId);
-    
-    if (tabButton) tabButton.classList.add('active');
-    if (tabContent) tabContent.classList.add('active');
+// Função para abrir modal - SIMPLES
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'block';
+        
+        // Focar no primeiro input
+        setTimeout(() => {
+            const firstInput = modal.querySelector('input:not([type="hidden"]), select, textarea');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        }, 100);
+    }
 }
 
-// Inicializar eventos quando DOM estiver pronto
+// Sistema básico de validação
+function validateField(field) {
+    const value = field.value.trim();
+    const isValid = value !== '';
+    
+    field.classList.toggle('error', !isValid);
+    field.classList.toggle('valid', isValid);
+    
+    return isValid;
+}
+
+
+// Configurar submit do formulário quando DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
-    // Submit do formulário
     const form = document.getElementById('formContrato');
     if (form) {
         form.addEventListener('submit', async function(e) {
@@ -299,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Fechar modais clicando fora
+    // Fechamento de modais
     window.onclick = function(event) {
         const modals = document.querySelectorAll('.modal');
         modals.forEach(modal => {
@@ -308,6 +449,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Fechar modal com ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const visibleModal = document.querySelector('.modal[style*="block"]');
+            if (visibleModal) {
+                visibleModal.style.display = 'none';
+            }
+        }
+    });
 
     // Auto-refresh para alertas (a cada 10 minutos)
     setInterval(() => {

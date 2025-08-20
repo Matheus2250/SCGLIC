@@ -54,16 +54,21 @@ try {
     $historico = $stmt_historico->fetchAll();
     
     // Buscar anexos se existirem
-    $stmt_anexos = $pdo->prepare("
-        SELECT a.*, u.nome as criado_por_nome,
-               DATE_FORMAT(a.criado_em, '%d/%m/%Y %H:%i') as criado_em_formatado
-        FROM contratos_anexos a
-        LEFT JOIN usuarios u ON a.criado_por = u.id
-        WHERE a.contrato_id = ?
-        ORDER BY a.criado_em DESC
-    ");
-    $stmt_anexos->execute([$contratoId]);
-    $anexos = $stmt_anexos->fetchAll();
+    try {
+        $stmt_anexos = $pdo->prepare("
+            SELECT a.*, u.nome as criado_por_nome,
+                   DATE_FORMAT(COALESCE(a.criado_em, NOW()), '%d/%m/%Y %H:%i') as criado_em_formatado
+            FROM contratos_anexos a
+            LEFT JOIN usuarios u ON a.criado_por = u.id
+            WHERE a.contrato_id = ?
+            ORDER BY COALESCE(a.criado_em, a.id) DESC
+        ");
+        $stmt_anexos->execute([$contratoId]);
+        $anexos = $stmt_anexos->fetchAll();
+    } catch (Exception $e) {
+        // Tabela pode não existir ainda, usar array vazio
+        $anexos = [];
+    }
     
 } catch (Exception $e) {
     echo '<div class="error-message"><i data-lucide="alert-circle"></i> Erro ao carregar dados: ' . htmlspecialchars($e->getMessage()) . '</div>';
@@ -109,7 +114,7 @@ $diasRestantes = calcularDiasRestantes($contrato['data_fim']);
             <div class="info-grid">
                 <!-- Dados Básicos -->
                 <div class="info-section">
-                    <h4><i data-lucide="file-contract"></i> Dados do Contrato</h4>
+                    <h4><i data-lucide="file-text"></i> Dados do Contrato</h4>
                     <div class="info-row">
                         <label>Número/Ano:</label>
                         <span class="highlight"><?= htmlspecialchars($contrato['numero_contrato']) ?>/<?= htmlspecialchars($contrato['ano_contrato']) ?></span>

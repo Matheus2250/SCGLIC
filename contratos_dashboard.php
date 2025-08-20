@@ -106,6 +106,16 @@ if ($moduloConfigurado) {
 
     $whereClause = implode(' AND ', $whereConditions);
 
+    // Debug: verificar se filtros estão sendo aplicados
+    if (count($whereConditions) > 1) {
+        error_log("Filtros aplicados: " . print_r([
+            'status' => $filtroStatus,
+            'modalidade' => $filtroModalidade, 
+            'vencimento' => $filtroVencimento,
+            'busca' => $busca
+        ], true));
+    }
+
     try {
         // Buscar contratos
         $query = "
@@ -132,7 +142,7 @@ if ($moduloConfigurado) {
         $contratos = $stmt->fetchAll();
 
         // Contar total para paginação
-        $countQuery = "SELECT COUNT(DISTINCT c.id) as total FROM contratos c WHERE {$whereClause}";
+        $countQuery = "SELECT COUNT(*) as total FROM contratos c WHERE {$whereClause}";
         $stmt = $pdo->prepare($countQuery);
         if (!empty($params)) {
             $stmt->execute($params);
@@ -140,6 +150,9 @@ if ($moduloConfigurado) {
             $stmt->execute();
         }
         $total = $stmt->fetch()['total'];
+
+        // Debug: comparar contagens
+        error_log("Total para paginação: $total");
 
         // Buscar estatísticas
         $statsQuery = "
@@ -158,45 +171,60 @@ if ($moduloConfigurado) {
         $stmt = $pdo->query($statsQuery);
         if ($stmt) {
             $stats = $stmt->fetch();
+            // Debug: comparar com stats
+            error_log("Stats total_contratos: " . $stats['total_contratos']);
+            error_log("Diferença: " . ($stats['total_contratos'] - $total));
         }
 
         // Dados para gráficos
-        $dados_modalidade = $pdo->query("
-            SELECT modalidade, COUNT(*) as quantidade
-            FROM contratos
-            WHERE modalidade IS NOT NULL AND modalidade != ''
-            GROUP BY modalidade
-        ")->fetchAll();
+        try {
+            $dados_modalidade = $pdo->query("
+                SELECT modalidade, COUNT(*) as quantidade
+                FROM contratos
+                WHERE modalidade IS NOT NULL AND modalidade != ''
+                GROUP BY modalidade
+            ")->fetchAll() ?: [];
+        } catch (Exception $e) {
+            $dados_modalidade = [];
+        }
 
-        $dados_area_gestora = $pdo->query("
-            SELECT 
-                CASE
-                    WHEN c.area_gestora IS NULL OR c.area_gestora = '' THEN 'Não Definido'
-                    ELSE c.area_gestora
-                END AS area_gestora,
-                COUNT(*) AS quantidade
-            FROM contratos c
-            GROUP BY c.area_gestora
-            ORDER BY quantidade DESC
-            LIMIT 5
-        ")->fetchAll();
+        try {
+            $dados_area_gestora = $pdo->query("
+                SELECT 
+                    CASE
+                        WHEN c.area_gestora IS NULL OR c.area_gestora = '' THEN 'Não Definido'
+                        ELSE c.area_gestora
+                    END AS area_gestora,
+                    COUNT(*) AS quantidade
+                FROM contratos c
+                GROUP BY c.area_gestora
+                ORDER BY quantidade DESC
+                LIMIT 5
+            ")->fetchAll() ?: [];
+        } catch (Exception $e) {
+            $dados_area_gestora = [];
+        }
 
-        $dados_mensal = $pdo->query("
-            SELECT
-                DATE_FORMAT(
+        try {
+            $dados_mensal = $pdo->query("
+                SELECT
+                    DATE_FORMAT(
+                        COALESCE(data_assinatura, criado_em),
+                        '%Y-%m'
+                    ) as mes,
+                    COUNT(*) as quantidade
+                FROM contratos
+                WHERE (data_assinatura IS NOT NULL AND data_assinatura >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH))
+                OR (data_assinatura IS NULL AND criado_em >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH))
+                GROUP BY DATE_FORMAT(
                     COALESCE(data_assinatura, criado_em),
                     '%Y-%m'
-                ) as mes,
-                COUNT(*) as quantidade
-            FROM contratos
-            WHERE (data_assinatura IS NOT NULL AND data_assinatura >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH))
-            OR (data_assinatura IS NULL AND criado_em >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH))
-            GROUP BY DATE_FORMAT(
-                COALESCE(data_assinatura, criado_em),
-                '%Y-%m'
-            )
-            ORDER BY mes
-        ")->fetchAll();
+                )
+                ORDER BY mes
+            ")->fetchAll() ?: [];
+        } catch (Exception $e) {
+            $dados_mensal = [];
+        }
 
         // Buscar alertas ativos
         $alertasQuery = "
@@ -236,6 +264,11 @@ if ($moduloConfigurado) {
         // Em caso de erro, definir valores padrão
         error_log("Erro no dashboard de contratos: " . $e->getMessage());
     }
+} else {
+    // Módulo não configurado - inicializar variáveis vazias
+    $dados_modalidade = [];
+    $dados_area_gestora = [];
+    $dados_mensal = [];
 }
 
 $totalPaginas = ceil($total / $limite);
@@ -262,7 +295,7 @@ $totalPaginas = ceil($total / $limite);
                 <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
                     <i data-lucide="menu"></i>
                 </button>
-                <h2><i data-lucide="file-contract"></i> Contratos</h2>
+                <h2><i data-lucide="file-text"></i> Contratos</h2>
             </div>
             
             <nav class="sidebar-nav">
@@ -278,11 +311,6 @@ $totalPaginas = ceil($total / $limite);
                     <button class="nav-item" onclick="showSection('lista-contratos')">
                         <i data-lucide="list"></i> <span>Lista de Contratos</span>
                     </button>
-                    <?php if ($podeEditar): ?>
-                    <button class="nav-item" onclick="abrirImportacao()">
-                        <i data-lucide="upload"></i> <span>Importar CSV</span>
-                    </button>
-                    <?php endif; ?>
                     <button class="nav-item" onclick="gerarRelatorio()">
                         <i data-lucide="file-text"></i> <span>Relatórios</span>
                     </button>
@@ -308,11 +336,11 @@ $totalPaginas = ceil($total / $limite);
                         <span>Planejamento</span>
                     </a>
                     <a href="licitacao_dashboard.php" class="nav-item">
-                        <i data-lucide="gavel"></i>
+                        <i data-lucide="scale"></i>
                         <span>Licitações</span>
                     </a>
                     <a href="qualificacao_dashboard.php" class="nav-item">
-                        <i data-lucide="award"></i>
+                        <i data-lucide="star"></i>
                         <span>Qualificações</span>
                     </a>
                 </div>
@@ -365,7 +393,6 @@ $totalPaginas = ceil($total / $limite);
                             <p>O módulo de Contratos precisa ser configurado antes do uso. Este módulo permite:</p>
                             <ul>
                                 <li><strong>Gestão completa de contratos</strong> - Controle de vigências, valores e aditivos</li>
-                                <li><strong>Importação de dados CSV</strong> - Carregamento em lote de contratos existentes</li>
                                 <li><strong>Alertas inteligentes</strong> - Notificações de vencimento e irregularidades</li>
                                 <li><strong>Relatórios gerenciais</strong> - Análises financeiras e operacionais</li>
                             </ul>
@@ -374,7 +401,6 @@ $totalPaginas = ceil($total / $limite);
                                 <h3>Passos para configuração:</h3>
                                 <ol>
                                     <li>Execute o script SQL para criar as tabelas necessárias</li>
-                                    <li>Importe os dados de contratos existentes (CSV)</li>
                                     <li>Configure alertas e notificações</li>
                                 </ol>
                             </div>
@@ -383,9 +409,6 @@ $totalPaginas = ceil($total / $limite);
                             <div class="setup-actions">
                                 <button onclick="executarSetup()" class="btn btn-primary">
                                     <i data-lucide="play"></i> Executar Setup
-                                </button>
-                                <button onclick="abrirImportacao()" class="btn btn-secondary">
-                                    <i data-lucide="upload"></i> Importar Contratos
                                 </button>
                             </div>
                             <?php else: ?>
@@ -509,23 +532,20 @@ $totalPaginas = ceil($total / $limite);
                     <p>Visualize e gerencie todos os contratos da UASG 250110</p>
                 </div>
 
-                <!-- Filtros e Ações -->
-                <div class="filter-section" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
-                    <form method="GET" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: end;">
+                <!-- Filtros -->
+                <div class="filtros-container">
+                    <form method="GET" class="filtros-form">
                         <input type="hidden" name="secao" value="lista-contratos">
                         
-                        <div style="flex: 1; min-width: 250px;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #1e3c72;">
-                                <i data-lucide="search" style="width: 16px; height: 16px;"></i> Buscar:
-                            </label>
+                        <div class="filtro-grupo busca-grupo">
+                            <label><i data-lucide="search"></i> Buscar Contratos</label>
                             <input type="text" name="busca" placeholder="Número, objeto ou contratado..." 
-                                   value="<?= htmlspecialchars($busca) ?>" 
-                                   style="width: 100%; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                   value="<?= htmlspecialchars($busca) ?>">
                         </div>
                         
-                        <div style="min-width: 150px;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #1e3c72;">Status:</label>
-                            <select name="status" style="width: 100%; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        <div class="filtro-grupo">
+                            <label>Status</label>
+                            <select name="status">
                                 <option value="">Todos os Status</option>
                                 <option value="ativo" <?= $filtroStatus === 'ativo' ? 'selected' : '' ?>>Ativo</option>
                                 <option value="inativo" <?= $filtroStatus === 'inativo' ? 'selected' : '' ?>>Inativo</option>
@@ -534,9 +554,9 @@ $totalPaginas = ceil($total / $limite);
                             </select>
                         </div>
 
-                        <div style="min-width: 150px;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #1e3c72;">Vencimento:</label>
-                            <select name="vencimento" style="width: 100%; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        <div class="filtro-grupo">
+                            <label>Vencimento</label>
+                            <select name="vencimento">
                                 <option value="">Todos os Prazos</option>
                                 <option value="vencidos" <?= $filtroVencimento === 'vencidos' ? 'selected' : '' ?>>Vencidos</option>
                                 <option value="30_dias" <?= $filtroVencimento === '30_dias' ? 'selected' : '' ?>>Vencem em 30 dias</option>
@@ -544,45 +564,37 @@ $totalPaginas = ceil($total / $limite);
                             </select>
                         </div>
 
-                        <div style="display: flex; gap: 10px;">
-                            <button type="submit" style="background: #dc2626; color: white; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                                <i data-lucide="search" style="width: 16px; height: 16px;"></i> Filtrar
+                        <div class="filtro-acoes">
+                            <button type="submit" class="btn-filtrar">
+                                <i data-lucide="search"></i> Filtrar
                             </button>
-                            <a href="contratos_dashboard.php?secao=lista-contratos" style="background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 8px; text-decoration: none; font-weight: 600;">
-                                <i data-lucide="x" style="width: 16px; height: 16px;"></i> Limpar
+                            <a href="contratos_dashboard.php?secao=lista-contratos" class="btn-limpar">
+                                <i data-lucide="x"></i> Limpar
                             </a>
                         </div>
                     </form>
                 </div>
 
                 <!-- Ações Principais -->
-                <div class="actions-section">
+                <div class="dashboard-actions">
                     <?php if ($podeEditar): ?>
-                    <div class="actions-group">
-                        <button onclick="abrirModalAdicionar()" class="btn btn-success">
-                            <i data-lucide="plus"></i> Novo Contrato
-                        </button>
-                        <button onclick="abrirImportacao()" class="btn btn-info">
-                            <i data-lucide="upload"></i> Importar CSV
-                        </button>
-                    </div>
+                    <button onclick="abrirModalAdicionar()" class="btn-action btn-primary">
+                        <i data-lucide="plus-circle"></i>
+                        <span>Novo Contrato</span>
+                    </button>
                     <?php endif; ?>
-                    <div class="actions-group">
-                        <button onclick="gerarRelatorio()" class="btn btn-primary">
-                            <i data-lucide="file-text"></i> Relatórios
-                        </button>
-                        <button onclick="exportarContratos()" class="btn btn-secondary">
-                            <i data-lucide="download"></i> Exportar
-                        </button>
-                    </div>
+                    <button onclick="exportarContratos()" class="btn-action btn-secondary">
+                        <i data-lucide="download"></i>
+                        <span>Exportar Contratos</span>
+                    </button>
                 </div>
 
                 <!-- Lista de Contratos -->
                 <div class="contracts-section">
-                    <div class="section-header">
-                        <h3><i data-lucide="list"></i> Lista de Contratos</h3>
-                        <div class="section-meta">
-                            Mostrando <?= count($contratos) ?> de <?= number_format($total) ?> contratos
+                    <div class="lista-header">
+                        <div class="lista-title">
+                            <h2><i data-lucide="list"></i> Contratos Cadastrados</h2>
+                            <p>Mostrando <?= count($contratos) ?> de <?= number_format($total) ?> contratos</p>
                         </div>
                     </div>
 
@@ -636,8 +648,15 @@ $totalPaginas = ceil($total / $limite);
                                         <?= htmlspecialchars($contrato['numero_sei'] ?: 'N/I') ?>
                                     </td>
                                     <td>
-                                        <span style="background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
-                                            <?= htmlspecialchars($contrato['modalidade'] ?: 'N/I') ?>
+                                        <span class="modalidade-badge" title="<?= htmlspecialchars($contrato['modalidade'] ?: 'N/I') ?>">
+                                            <?php 
+                                            $modalidade = $contrato['modalidade'] ?: 'N/I';
+                                            if (strlen($modalidade) > 15) {
+                                                echo htmlspecialchars(substr($modalidade, 0, 12) . '...');
+                                            } else {
+                                                echo htmlspecialchars($modalidade);
+                                            }
+                                            ?>
                                         </span>
                                     </td>
                                     <td title="<?= htmlspecialchars($contrato['objeto_servico'] ?: '') ?>">
@@ -674,24 +693,20 @@ $totalPaginas = ceil($total / $limite);
                                         N/I
                                         <?php endif; ?>
                                     </td>
-                                    <td style="text-align: center;">
-                                        <button onclick="verDetalhes(<?= $contrato['id'] ?>)" 
-                                                style="background: #3b82f6; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; margin: 0 2px;" 
-                                                title="Ver detalhes">
-                                            <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
-                                        </button>
-                                        <?php if ($podeEditar): ?>
-                                        <button onclick="editarContrato(<?= $contrato['id'] ?>)" 
-                                                style="background: #f59e0b; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; margin: 0 2px;" 
-                                                title="Editar">
-                                            <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
-                                        </button>
-                                        <button onclick="excluirContrato(<?= $contrato['id'] ?>)" 
-                                                style="background: #ef4444; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; margin: 0 2px;" 
-                                                title="Excluir">
-                                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-                                        </button>
-                                        <?php endif; ?>
+                                    <td>
+                                        <div class="table-actions">
+                                            <button class="action-btn btn-view" onclick="verDetalhes(<?= $contrato['id'] ?>)" title="Ver detalhes">
+                                                <i data-lucide="eye"></i>
+                                            </button>
+                                            <?php if ($podeEditar): ?>
+                                            <button class="action-btn btn-edit" onclick="editarContrato(<?= $contrato['id'] ?>)" title="Editar contrato">
+                                                <i data-lucide="edit"></i>
+                                            </button>
+                                            <button class="action-btn btn-delete" onclick="confirmarExclusao(<?= $contrato['id'] ?>, '<?= htmlspecialchars($contrato['numero_contrato']) ?>')" title="Excluir contrato">
+                                                <i data-lucide="trash-2"></i>
+                                            </button>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -773,173 +788,163 @@ $totalPaginas = ceil($total / $limite);
         </div>
     </div>
 
-    <!-- Modal para Criar/Editar Contrato -->
+    <!-- Modal para Criar/Editar Contrato - SIMPLIFICADO -->
     <div id="modalCriarContrato" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-content" style="max-width: 1000px;">
             <div class="modal-header">
-                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                <h3>
                     <i data-lucide="plus-circle"></i> <span id="tituloModalContrato">Criar Novo Contrato</span>
                 </h3>
-                <span class="close" onclick="fecharModal('modalCriarContrato')">&times;</span>
+                <button class="modal-close" onclick="fecharModal('modalCriarContrato')">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
             <div class="modal-body">
-                <!-- Sistema de Abas -->
-                <div class="tabs-container">
-                    <div class="tabs-header">
-                        <button type="button" class="tab-button active" onclick="mostrarAba('dados-basicos')">
-                            <i data-lucide="file-text"></i> Dados Básicos
-                        </button>
-                        <button type="button" class="tab-button" onclick="mostrarAba('valores-datas')">
-                            <i data-lucide="calendar"></i> Valores e Datas
-                        </button>
-                        <button type="button" class="tab-button" onclick="mostrarAba('gestao-controle')">
-                            <i data-lucide="users"></i> Gestão e Controle
-                        </button>
+                <form id="formContrato">
+                    <input type="hidden" id="contratoId" name="id">
+                    <input type="hidden" name="acao" value="criar_contrato">
+
+                    <!-- Seção 1: Dados Básicos -->
+                    <div class="form-section">
+                        <h4><i data-lucide="file-text"></i> Dados Básicos do Contrato</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Número do Contrato *</label>
+                                <input type="text" name="numero_contrato" id="numero_contrato" required 
+                                       placeholder="Número do contrato">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Ano do Contrato *</label>
+                                <input type="number" name="ano_contrato" id="ano_contrato" required 
+                                       min="2020" max="2030" value="2025">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Número SEI</label>
+                                <input type="text" name="numero_sei" id="numero_sei" 
+                                       placeholder="Número do processo SEI">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Status do Contrato</label>
+                                <select name="status_contrato" id="status_contrato">
+                                    <option value="ativo">Ativo</option>
+                                    <option value="inativo">Inativo</option>
+                                    <option value="suspenso">Suspenso</option>
+                                    <option value="encerrado">Encerrado</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label>Nome da Empresa *</label>
+                                <input type="text" name="nome_empresa" id="nome_empresa" required 
+                                       placeholder="Nome completo da empresa contratada">
+                            </div>
+
+                            <div class="form-group">
+                                <label>CNPJ/CPF</label>
+                                <input type="text" name="cnpj_cpf" id="cnpj_cpf" 
+                                       placeholder="00.000.000/0001-00">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Modalidade</label>
+                                <select name="modalidade" id="modalidade">
+                                    <option value="">Selecione...</option>
+                                    <option value="Pregão Eletrônico">Pregão Eletrônico</option>
+                                    <option value="Pregão Presencial">Pregão Presencial</option>
+                                    <option value="Concorrência">Concorrência</option>
+                                    <option value="Tomada de Preços">Tomada de Preços</option>
+                                    <option value="Convite">Convite</option>
+                                    <option value="Inexigibilidade">Inexigibilidade</option>
+                                    <option value="Dispensa">Dispensa</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label>Objeto/Serviço *</label>
+                                <textarea name="objeto_servico" id="objeto_servico" required 
+                                          placeholder="Descreva detalhadamente o objeto do contrato" 
+                                          rows="3"></textarea>
+                            </div>
+                        </div>
                     </div>
 
-                    <form id="formContrato">
-                        <input type="hidden" id="contratoId" name="id">
-                        <input type="hidden" name="acao" value="criar_contrato">
+                    <!-- Seção 2: Valores e Vigência -->
+                    <div class="form-section">
+                        <h4><i data-lucide="calendar"></i> Valores e Vigência</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Valor Inicial (R$)</label>
+                                <input type="number" name="valor_inicial" id="valor_inicial" 
+                                       step="0.01" min="0" placeholder="0,00">
+                            </div>
 
-                        <!-- Aba Dados Básicos -->
-                        <div class="tab-content active" id="dados-basicos">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label>Número do Contrato *</label>
-                                    <input type="text" name="numero_contrato" id="numero_contrato" required 
-                                           placeholder="Número do contrato">
-                                </div>
+                            <div class="form-group">
+                                <label>Valor Atual (R$)</label>
+                                <input type="number" name="valor_atual" id="valor_atual" 
+                                       step="0.01" min="0" placeholder="0,00">
+                            </div>
 
-                                <div class="form-group">
-                                    <label>Ano do Contrato *</label>
-                                    <input type="number" name="ano_contrato" id="ano_contrato" required 
-                                           min="2020" max="2030" value="2025">
-                                </div>
+                            <div class="form-group">
+                                <label>Data de Assinatura</label>
+                                <input type="date" name="data_assinatura" id="data_assinatura">
+                            </div>
 
-                                <div class="form-group">
-                                    <label>Número SEI</label>
-                                    <input type="text" name="numero_sei" id="numero_sei" 
-                                           placeholder="Número do processo SEI">
-                                </div>
+                            <div class="form-group">
+                                <label>Data de Início da Vigência</label>
+                                <input type="date" name="data_inicio" id="data_inicio">
+                            </div>
 
-                                <div class="form-group full-width">
-                                    <label>Nome da Empresa *</label>
-                                    <input type="text" name="nome_empresa" id="nome_empresa" required 
-                                           placeholder="Nome completo da empresa contratada">
-                                </div>
-
-                                <div class="form-group">
-                                    <label>CNPJ/CPF</label>
-                                    <input type="text" name="cnpj_cpf" id="cnpj_cpf" 
-                                           placeholder="00.000.000/0001-00">
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Modalidade</label>
-                                    <select name="modalidade" id="modalidade">
-                                        <option value="">Selecione...</option>
-                                        <option value="Pregão Eletrônico">Pregão Eletrônico</option>
-                                        <option value="Pregão Presencial">Pregão Presencial</option>
-                                        <option value="Concorrência">Concorrência</option>
-                                        <option value="Tomada de Preços">Tomada de Preços</option>
-                                        <option value="Convite">Convite</option>
-                                        <option value="Inexigibilidade">Inexigibilidade</option>
-                                        <option value="Dispensa">Dispensa</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group full-width">
-                                    <label>Objeto/Serviço *</label>
-                                    <textarea name="objeto_servico" id="objeto_servico" required 
-                                              placeholder="Descreva detalhadamente o objeto do contrato" 
-                                              rows="3"></textarea>
-                                </div>
+                            <div class="form-group">
+                                <label>Data de Fim da Vigência</label>
+                                <input type="date" name="data_fim" id="data_fim">
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Aba Valores e Datas -->
-                        <div class="tab-content" id="valores-datas">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label>Valor Inicial</label>
-                                    <input type="number" name="valor_inicial" id="valor_inicial" 
-                                           step="0.01" min="0" placeholder="0,00">
-                                </div>
+                    <!-- Seção 3: Gestão e Controle -->
+                    <div class="form-section">
+                        <h4><i data-lucide="users"></i> Gestão e Controle</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Área Gestora</label>
+                                <input type="text" name="area_gestora" id="area_gestora" 
+                                       placeholder="Área responsável">
+                            </div>
 
-                                <div class="form-group">
-                                    <label>Valor Atual</label>
-                                    <input type="number" name="valor_atual" id="valor_atual" 
-                                           step="0.01" min="0" placeholder="0,00">
-                                </div>
+                            <div class="form-group">
+                                <label>Finalidade</label>
+                                <input type="text" name="finalidade" id="finalidade" 
+                                       placeholder="Finalidade do contrato">
+                            </div>
 
-                                <div class="form-group">
-                                    <label>Data de Assinatura</label>
-                                    <input type="date" name="data_assinatura" id="data_assinatura">
-                                </div>
+                            <div class="form-group full-width">
+                                <label>Fiscais Responsáveis</label>
+                                <textarea name="fiscais" id="fiscais" 
+                                          placeholder="Nome dos fiscais responsáveis pelo contrato" 
+                                          rows="2"></textarea>
+                            </div>
 
-                                <div class="form-group">
-                                    <label>Data de Início da Vigência</label>
-                                    <input type="date" name="data_inicio" id="data_inicio">
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Data de Fim da Vigência</label>
-                                    <input type="date" name="data_fim" id="data_fim">
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Status do Contrato</label>
-                                    <select name="status_contrato" id="status_contrato">
-                                        <option value="ativo">Ativo</option>
-                                        <option value="inativo">Inativo</option>
-                                        <option value="suspenso">Suspenso</option>
-                                        <option value="encerrado">Encerrado</option>
-                                    </select>
-                                </div>
+                            <div class="form-group full-width">
+                                <label>Observações</label>
+                                <textarea name="observacoes" id="observacoes" 
+                                          placeholder="Observações gerais sobre o contrato" 
+                                          rows="3"></textarea>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Aba Gestão e Controle -->
-                        <div class="tab-content" id="gestao-controle">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label>Área Gestora</label>
-                                    <input type="text" name="area_gestora" id="area_gestora" 
-                                           placeholder="Área responsável">
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Finalidade</label>
-                                    <input type="text" name="finalidade" id="finalidade" 
-                                           placeholder="Finalidade do contrato">
-                                </div>
-
-                                <div class="form-group full-width">
-                                    <label>Fiscais Responsáveis</label>
-                                    <textarea name="fiscais" id="fiscais" 
-                                              placeholder="Nome dos fiscais responsáveis pelo contrato" 
-                                              rows="2"></textarea>
-                                </div>
-
-                                <div class="form-group full-width">
-                                    <label>Observações</label>
-                                    <textarea name="observacoes" id="observacoes" 
-                                              placeholder="Observações gerais sobre o contrato" 
-                                              rows="3"></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-actions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
-                            <button type="submit" class="btn btn-primary">
-                                <i data-lucide="save"></i> <span id="btnTextoSalvar">Salvar Contrato</span>
-                            </button>
-                            <button type="button" onclick="fecharModal('modalCriarContrato')" class="btn btn-secondary">
-                                <i data-lucide="x"></i> Cancelar
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i data-lucide="save"></i> <span id="btnTextoSalvar">Salvar Contrato</span>
+                        </button>
+                        <button type="button" onclick="fecharModal('modalCriarContrato')" class="btn btn-secondary">
+                            <i data-lucide="x"></i> Cancelar
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -948,7 +953,7 @@ $totalPaginas = ceil($total / $limite);
     <div id="detalhesModal" class="modal modal-large">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i data-lucide="file-contract"></i> Detalhes do Contrato</h3>
+                <h3><i data-lucide="file-text"></i> Detalhes do Contrato</h3>
                 <button class="modal-close" onclick="closeModal('detalhesModal')">
                     <i data-lucide="x"></i>
                 </button>
@@ -1020,12 +1025,21 @@ $totalPaginas = ceil($total / $limite);
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                top: 10,
+                                bottom: 20,
+                                left: 10,
+                                right: 10
+                            }
+                        },
                         plugins: {
                             legend: {
                                 position: 'bottom',
                                 labels: {
-                                    padding: 15,
-                                    usePointStyle: true
+                                    padding: 12,
+                                    usePointStyle: true,
+                                    boxWidth: 12
                                 }
                             }
                         }
@@ -1053,6 +1067,14 @@ $totalPaginas = ceil($total / $limite);
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                top: 10,
+                                bottom: 15,
+                                left: 5,
+                                right: 5
+                            }
+                        },
                         plugins: {
                             legend: {
                                 display: false
@@ -1063,6 +1085,12 @@ $totalPaginas = ceil($total / $limite);
                                 beginAtZero: true,
                                 ticks: {
                                     stepSize: 1
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 0
                                 }
                             }
                         }
@@ -1097,6 +1125,14 @@ $totalPaginas = ceil($total / $limite);
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                top: 10,
+                                bottom: 15,
+                                left: 5,
+                                right: 5
+                            }
+                        },
                         plugins: {
                             legend: {
                                 display: false
@@ -1107,6 +1143,12 @@ $totalPaginas = ceil($total / $limite);
                                 beginAtZero: true,
                                 ticks: {
                                     stepSize: 1
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 0
                                 }
                             }
                         }
@@ -1136,12 +1178,21 @@ $totalPaginas = ceil($total / $limite);
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 10,
+                            bottom: 20,
+                            left: 10,
+                            right: 10
+                        }
+                    },
                     plugins: {
                         legend: {
                             position: 'bottom',
                             labels: {
-                                padding: 15,
-                                usePointStyle: true
+                                padding: 12,
+                                usePointStyle: true,
+                                boxWidth: 12
                             }
                         }
                     }
