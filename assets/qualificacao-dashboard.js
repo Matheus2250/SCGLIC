@@ -1048,6 +1048,7 @@ function criarModalEdicao() {
                                 <option value="">Selecione a modalidade</option>
                                 <option value="PREGÃO">PREGÃO</option>
                                 <option value="CONCURSO">CONCURSO</option>
+                                <option value="CONCORRÊNCIA">CONCORRÊNCIA</option>
                                 <option value="INEXIGIBILIDADE">INEXIGIBILIDADE</option>
                                 <option value="DISPENSA">DISPENSA</option>
                                 <option value="IRP">IRP</option>

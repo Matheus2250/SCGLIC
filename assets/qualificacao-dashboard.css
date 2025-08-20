@@ -38,6 +38,11 @@
     color: white;
 }
 
+.badge-concorrencia {
+    background-color: #d35400;
+    color: white;
+}
+
 .badge-inexigibilidade {
     background-color: #e74c3c;
     color: white;
