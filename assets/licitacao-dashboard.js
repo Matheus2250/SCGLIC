@@ -1907,55 +1907,74 @@ function verDetalhes(id) {
  */
 function editarLicitacao(id) {
     const modal = document.getElementById('modalEdicao');
+    
+    if (!modal) {
+        console.error('Modal de edição não encontrado');
+        alert('Erro: Modal de edição não está disponível');
+        return;
+    }
 
     // Buscar dados via AJAX
     fetch('api/get_licitacao.php?id=' + id)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Erro HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 const lic = data.data;
 
-                // Preencher todos os campos do formulário
-                document.getElementById('edit_id').value = lic.id;
-                document.getElementById('edit_nup').value = lic.nup;
-                document.getElementById('edit_data_entrada_dipli').value = lic.data_entrada_dipli || '';
-                document.getElementById('edit_resp_instrucao').value = lic.resp_instrucao || '';
-                document.getElementById('edit_area_demandante').value = lic.area_demandante || '';
-                document.getElementById('edit_pregoeiro').value = lic.pregoeiro || '';
-                document.getElementById('edit_modalidade').value = lic.modalidade;
-                document.getElementById('edit_tipo').value = lic.tipo;
+                // Preencher todos os campos do formulário - COM VERIFICAÇÃO DE EXISTÊNCIA
+                const setValueSafe = (id, value) => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.value = value || '';
+                    } else {
+                        console.warn(`Campo não encontrado: ${id}`);
+                    }
+                };
+
+                setValueSafe('edit_id', lic.id);
+                setValueSafe('edit_nup', lic.nup);
+                setValueSafe('edit_data_entrada_dipli', lic.data_entrada_dipli);
+                setValueSafe('edit_resp_instrucao', lic.resp_instrucao);
+                setValueSafe('edit_area_demandante', lic.area_demandante);
+                setValueSafe('edit_pregoeiro', lic.pregoeiro);
+                setValueSafe('edit_modalidade', lic.modalidade);
+                setValueSafe('edit_tipo', lic.tipo);
 
                 // Preencher campo de contratação
-                document.getElementById('edit_input_contratacao').value = lic.numero_contratacao || '';
-                document.getElementById('edit_titulo_contratacao_selecionado').value = lic.titulo_contratacao || '';
-
-                document.getElementById('edit_ano').value = lic.ano || new Date().getFullYear();
+                setValueSafe('edit_input_contratacao', lic.numero_contratacao);
+                setValueSafe('edit_titulo_contratacao_selecionado', lic.titulo_contratacao);
+                setValueSafe('edit_ano', lic.ano || new Date().getFullYear());
 
                 // Formatar valores monetários
                 if (lic.valor_estimado) {
-                    document.getElementById('edit_valor_estimado').value = parseFloat(lic.valor_estimado).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                    setValueSafe('edit_valor_estimado', parseFloat(lic.valor_estimado).toLocaleString('pt-BR', {minimumFractionDigits: 2}));
                 } else {
-                    document.getElementById('edit_valor_estimado').value = '';
+                    setValueSafe('edit_valor_estimado', '');
                 }
 
-                document.getElementById('edit_data_abertura').value = lic.data_abertura || '';
-                document.getElementById('edit_data_homologacao').value = lic.data_homologacao || '';
+                setValueSafe('edit_data_abertura', lic.data_abertura);
+                setValueSafe('edit_data_homologacao', lic.data_homologacao);
 
                 if (lic.valor_homologado) {
-                    document.getElementById('edit_valor_homologado').value = parseFloat(lic.valor_homologado).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                    setValueSafe('edit_valor_homologado', parseFloat(lic.valor_homologado).toLocaleString('pt-BR', {minimumFractionDigits: 2}));
                 } else {
-                    document.getElementById('edit_valor_homologado').value = '';
+                    setValueSafe('edit_valor_homologado', '');
                 }
 
                 if (lic.economia) {
-                    document.getElementById('edit_economia').value = parseFloat(lic.economia).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                    setValueSafe('edit_economia', parseFloat(lic.economia).toLocaleString('pt-BR', {minimumFractionDigits: 2}));
                 } else {
-                    document.getElementById('edit_economia').value = '';
+                    setValueSafe('edit_economia', '');
                 }
 
-                document.getElementById('edit_link').value = lic.link || '';
-                document.getElementById('edit_situacao').value = lic.situacao;
-                document.getElementById('edit_objeto').value = lic.objeto;
+                setValueSafe('edit_link', lic.link);
+                setValueSafe('edit_situacao', lic.situacao);
+                setValueSafe('edit_objeto', lic.objeto);
 
                 // Mostrar modal
                 modal.style.display = 'block';
@@ -1965,11 +1984,13 @@ function editarLicitacao(id) {
                     lucide.createIcons();
                 }
             } else {
-                alert('Erro ao carregar dados da licitação');
+                console.error('Erro da API:', data.message);
+                alert('Erro ao carregar dados da licitação: ' + (data.message || 'Erro desconhecido'));
             }
         })
         .catch(error => {
-            alert('Erro ao conectar com o servidor');
+            console.error('Erro de conexão:', error);
+            alert('Erro ao conectar com o servidor: ' + error.message);
         });
 }
 

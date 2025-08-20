@@ -23,13 +23,9 @@ if (!temPermissao('licitacao_visualizar')) {
 header('Content-Type: application/json; charset=utf-8');
  
 try {
-
     // Verificar se foi passado o ID
-
     if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-
         throw new Exception('ID da licitação não fornecido ou inválido.');
-
     }
 
     $id = intval($_GET['id']);
@@ -48,15 +44,12 @@ try {
             WHERE l.id = ?";
 
     $stmt = $pdo->prepare($sql);
-
     $stmt->execute([$id]);
-
+    
     $licitacao = $stmt->fetch(PDO::FETCH_ASSOC);
-
+    
     if (!$licitacao) {
-
         throw new Exception('Licitação não encontrada.');
-
     }
 
     // Retornar dados
@@ -84,6 +77,3 @@ try {
     ], JSON_UNESCAPED_UNICODE);
 
 }
-
-?>
- 
