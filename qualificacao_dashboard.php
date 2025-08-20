@@ -440,7 +440,7 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                                         <option value="CONCORRÊNCIA" <?php echo $filtro_modalidade === 'CONCORRÊNCIA' ? 'selected' : ''; ?>>CONCORRÊNCIA</option>
                                         <option value="INEXIGIBILIDADE" <?php echo $filtro_modalidade === 'INEXIGIBILIDADE' ? 'selected' : ''; ?>>INEXIGIBILIDADE</option>
                                         <option value="DISPENSA" <?php echo $filtro_modalidade === 'DISPENSA' ? 'selected' : ''; ?>>DISPENSA</option>
-                                        <option value="IRP" <?php echo $filtro_modalidade === 'IRP' ? 'selected' : ''; ?>>IRP</option>
+                                        <option value="PREGÃO SRP" <?php echo $filtro_modalidade === 'PREGÃO SRP' ? 'selected' : ''; ?>>PREGÃO SRP</option>
                                         <option value="ADESÃO" <?php echo $filtro_modalidade === 'ADESÃO' ? 'selected' : ''; ?>>ADESÃO</option>
                                     </select>
                                 </div>
@@ -498,7 +498,7 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                                             case 'CONCORRÊNCIA': $modalidade_class = 'badge-concorrencia'; break;
                                             case 'INEXIGIBILIDADE': $modalidade_class = 'badge-inexigibilidade'; break;
                                             case 'DISPENSA': $modalidade_class = 'badge-dispensa'; break;
-                                            case 'IRP': $modalidade_class = 'badge-irp'; break;
+                                            case 'PREGÃO SRP': $modalidade_class = 'badge-pregao-srp'; break;
                                             case 'ADESÃO': $modalidade_class = 'badge-adesao'; break;
                                             default: $modalidade_class = 'badge-default';
                                         }
@@ -1002,7 +1002,7 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                                         <option value="CONCORRÊNCIA">CONCORRÊNCIA</option>
                                         <option value="INEXIGIBILIDADE">INEXIGIBILIDADE</option>
                                         <option value="DISPENSA">DISPENSA</option>
-                                        <option value="IRP">IRP</option>
+                                        <option value="PREGÃO SRP">PREGÃO SRP</option>
                                         <option value="ADESÃO">ADESÃO</option>
                                     </select>
                                 </div>
@@ -1120,7 +1120,7 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                             <option value="CONCORRÊNCIA">CONCORRÊNCIA</option>
                             <option value="INEXIGIBILIDADE">INEXIGIBILIDADE</option>
                             <option value="DISPENSA">DISPENSA</option>
-                            <option value="IRP">IRP</option>
+                            <option value="PREGÃO SRP">PREGÃO SRP</option>
                             <option value="ADESÃO">ADESÃO</option>
                         </select>
                     </div>

@@ -1051,7 +1051,7 @@ function criarModalEdicao() {
                                 <option value="CONCORRÊNCIA">CONCORRÊNCIA</option>
                                 <option value="INEXIGIBILIDADE">INEXIGIBILIDADE</option>
                                 <option value="DISPENSA">DISPENSA</option>
-                                <option value="IRP">IRP</option>
+                                <option value="PREGÃO SRP">PREGÃO SRP</option>
                                 <option value="ADESÃO">ADESÃO</option>
                             </select>
                         </div>
