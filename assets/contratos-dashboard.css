@@ -37,7 +37,7 @@
 }
 
 .chart-title {
-    margin: 0 0 15px 0;
+    margin: 0 0 8px 0;
     color: #2c3e50;
     font-size: 18px;
     font-weight: 600;
@@ -56,7 +56,7 @@
     position: relative;
     height: 350px;
     width: 100%;
-    padding: 10px;
+    padding: 5px 10px 10px 10px;
     box-sizing: border-box;
 }
 
@@ -80,7 +80,7 @@
     
     .chart-container {
         height: 280px;
-        padding: 8px;
+        padding: 3px 8px 8px 8px;
     }
     
     .chart-title {
@@ -91,7 +91,7 @@
 @media (max-width: 480px) {
     .chart-container {
         height: 240px;
-        padding: 5px;
+        padding: 2px 5px 5px 5px;
     }
     
     .chart-card {
@@ -116,11 +116,35 @@
     padding: 20px;
     overflow-y: auto;
     transition: all 0.3s ease;
+    margin-left: 280px; /* Largura da sidebar */
+}
+
+/* Quando sidebar está colapsada */
+.sidebar.collapsed ~ .main-content {
+    margin-left: 70px; /* Largura da sidebar colapsada */
 }
 
 /* ========================================
-   SIDEBAR - USANDO ESTILOS PADRÃO DO SISTEMA
+   SIDEBAR - DEFINIÇÕES PRINCIPAIS
 ======================================== */
+
+.sidebar {
+    width: 280px;
+    background: #2c3e50;
+    color: white;
+    flex-shrink: 0;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
 
 /* Sidebar usa estilos do style.css e dashboard.css */
 
@@ -1906,6 +1930,11 @@
     
     .main-content {
         padding: 15px;
+        margin-left: 0;
+    }
+    
+    /* Em mobile, sidebar não afeta o margin do main-content */
+    .sidebar.collapsed + .main-content {
         margin-left: 0;
     }
     
