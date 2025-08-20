@@ -1059,12 +1059,16 @@ $contratacoes_pca = $pdo->query("
             <span>Menu Principal</span>
         </a>
         <a href="dashboard.php" class="nav-item">
-            <i data-lucide="calendar-check"></i>
+            <i data-lucide="clipboard-check"></i>
             <span>Planejamento</span>
         </a>
         <a href="qualificacao_dashboard.php" class="nav-item">
             <i data-lucide="award"></i>
             <span>Qualificações</span>
+        </a>
+        <a href="contratos_dashboard.php" class="nav-item">
+            <i data-lucide="file-text"></i>
+            <span>Contratos</span>
         </a>
     </div>
 </nav>

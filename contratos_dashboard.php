@@ -336,11 +336,11 @@ $totalPaginas = ceil($total / $limite);
                         <span>Planejamento</span>
                     </a>
                     <a href="licitacao_dashboard.php" class="nav-item">
-                        <i data-lucide="scale"></i>
+                        <i data-lucide="gavel"></i>
                         <span>Licitações</span>
                     </a>
                     <a href="qualificacao_dashboard.php" class="nav-item">
-                        <i data-lucide="star"></i>
+                        <i data-lucide="award"></i>
                         <span>Qualificações</span>
                     </a>
                 </div>

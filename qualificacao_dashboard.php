@@ -291,7 +291,7 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                         <span>Menu Principal</span>
                     </a>
                     <a href="dashboard.php" class="nav-item">
-                        <i data-lucide="calendar-check"></i>
+                        <i data-lucide="clipboard-check"></i>
                         <span>Planejamento</span>
                     </a>
                     <a href="licitacao_dashboard.php" class="nav-item">
