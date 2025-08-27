@@ -397,6 +397,16 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                             <p>Total: <?php echo number_format($total_qualificacoes); ?> qualificações</p>
                         </div>
                         
+                        <!-- Toggle de Visualização -->
+                        <div class="view-toggle">
+                            <button onclick="toggleQualificacaoView('lista')" class="view-toggle-btn active" id="btn-lista-qualif">
+                                <i data-lucide="list"></i> Lista
+                            </button>
+                            <button onclick="toggleQualificacaoView('cards')" class="view-toggle-btn" id="btn-cards-qualif">
+                                <i data-lucide="grid-3x3"></i> Cards
+                            </button>
+                        </div>
+                        
                         <div class="table-actions">
                             <button onclick="abrirModal('modalCriarQualificacao')" class="btn-primary">
                                 <i data-lucide="plus-circle"></i> Nova Qualificação
@@ -469,7 +479,9 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                         </form>
                     </div>
                     
-                    <table>
+                    <!-- Visualização em Tabela -->
+                    <div class="table-qualificacoes-view">
+                        <table>
                         <thead>
                             <tr>
                                 <th>NUP</th>
@@ -523,6 +535,16 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                                     </td>
                                     <td><span class="valor-verde"><?php echo formatarMoeda($qualificacao['valor_estimado']); ?></span></td>
                                     <td class="table-actions">
+                                        <?php if (empty($qualificacao['numero_dfd']) && empty($qualificacao['numero_contratacao'])): ?>
+                                            <button onclick="abrirVinculacaoPCA(<?php echo $qualificacao['id']; ?>)" title="Vincular com o PCA" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; margin-right: 4px; font-size: 11px; font-weight: 600;">
+                                                <i data-lucide="link" style="width: 12px; height: 12px;"></i> PCA
+                                            </button>
+                                        <?php else: ?>
+                                            <span title="Vinculado ao PCA" style="background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; padding: 4px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-right: 4px; display: inline-flex; align-items: center; gap: 3px;">
+                                                <i data-lucide="check" style="width: 10px; height: 10px;"></i> PCA
+                                            </span>
+                                        <?php endif; ?>
+                                        
                                         <button onclick="visualizarQualificacao(<?php echo $qualificacao['id']; ?>)" title="Ver Detalhes" style="background: #6c757d; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; margin-right: 4px;">
                                             <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
                                         </button>
@@ -597,6 +619,168 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                         <?php endif; ?>
                     </div>
                     <?php endif; ?>
+                    
+                    </div>
+                    <!-- Fim da Visualização em Tabela -->
+                    
+                    <!-- Visualização em Cards -->
+                    <div class="cards-qualificacoes-view" style="display: none;">
+                        <?php if (!empty($qualificacoes_recentes)): ?>
+                            <div class="qualificacoes-grid">
+                                <?php foreach ($qualificacoes_recentes as $qualificacao): ?>
+                                    <?php
+                                    $status_class = '';
+                                    switch($qualificacao['status']) {
+                                        case 'EM ANÁLISE': $status_class = 'status-analise'; break;
+                                        case 'CONCLUÍDO': $status_class = 'status-concluido'; break;
+                                        default: $status_class = 'status-pendente'; break;
+                                    }
+                                    ?>
+                                    <div class="qualificacao-card">
+                                        <!-- Header do Card -->
+                                        <div class="card-header">
+                                            <div class="card-id">
+                                                <strong><?php echo htmlspecialchars($qualificacao['nup']); ?></strong>
+                                            </div>
+                                            <div class="card-status">
+                                                <span class="status-badge <?php echo $status_class; ?>">
+                                                    <?php echo htmlspecialchars($qualificacao['status']); ?>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Body do Card -->
+                                        <div class="card-body">
+                                            <h3 class="card-title"><?php echo htmlspecialchars($qualificacao['objeto']); ?></h3>
+                                            
+                                            <div class="card-details">
+                                                <div class="card-detail-item">
+                                                    <span class="card-detail-label">Área Demandante</span>
+                                                    <span class="card-detail-value"><?php echo htmlspecialchars($qualificacao['area_demandante']); ?></span>
+                                                </div>
+                                                
+                                                <div class="card-detail-item">
+                                                    <span class="card-detail-label">Responsável</span>
+                                                    <span class="card-detail-value"><?php echo htmlspecialchars($qualificacao['responsavel']); ?></span>
+                                                </div>
+                                                
+                                                <div class="card-detail-item">
+                                                    <span class="card-detail-label">Modalidade</span>
+                                                    <span class="card-detail-value modalidade-badge badge-<?php echo strtolower($qualificacao['modalidade']); ?>">
+                                                        <?php echo htmlspecialchars($qualificacao['modalidade']); ?>
+                                                    </span>
+                                                </div>
+                                                
+                                                <div class="card-detail-item">
+                                                    <span class="card-detail-label">Valor Estimado</span>
+                                                    <span class="card-detail-value valor"><?php echo formatarMoeda($qualificacao['valor_estimado']); ?></span>
+                                                </div>
+                                                
+                                                <?php if (!empty($qualificacao['numero_dfd']) || !empty($qualificacao['numero_contratacao'])): ?>
+                                                <div class="vinculacao-pca">
+                                                    <i data-lucide="link"></i>
+                                                    <span>Vinculado ao PCA</span>
+                                                    <?php if (!empty($qualificacao['numero_dfd'])): ?>
+                                                        <small>DFD: <?php echo htmlspecialchars($qualificacao['numero_dfd']); ?></small>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Footer com Ações -->
+                                        <div class="card-actions">
+                                            <!-- Botão Vincular (se disponível) -->
+                                            <?php if (empty($qualificacao['numero_dfd']) && empty($qualificacao['numero_contratacao'])): ?>
+                                                <div class="vincular-container">
+                                                    <button onclick="abrirVinculacaoPCA(<?php echo $qualificacao['id']; ?>)" 
+                                                            class="btn-card btn-vincular" title="Vincular com o PCA">
+                                                        <i data-lucide="link"></i> Vincular com o PCA
+                                                    </button>
+                                                </div>
+                                            <?php endif; ?>
+                                            
+                                            <!-- Botões de Ação Secundários -->
+                                            <div class="actions-secondary">
+                                                <button onclick="visualizarQualificacao(<?php echo $qualificacao['id']; ?>)" 
+                                                        class="btn-card btn-card-detalhes" title="Ver detalhes">
+                                                    <i data-lucide="eye"></i> Detalhes
+                                                </button>
+                                                
+                                                <button onclick="editarQualificacao(<?php echo $qualificacao['id']; ?>)"
+                                                        class="btn-card btn-card-editar" title="Editar">
+                                                    <i data-lucide="edit"></i> Editar
+                                                </button>
+                                                
+                                                <button onclick="excluirQualificacao(<?php echo $qualificacao['id']; ?>)"
+                                                        class="btn-card btn-card-excluir" title="Excluir">
+                                                    <i data-lucide="trash-2"></i> Excluir
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="cards-empty">
+                                <i data-lucide="inbox" style="width: 48px; height: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+                                <p>Nenhuma qualificação cadastrada ainda.</p>
+                                <p><small>Total de qualificações: <?php echo count($qualificacoes_recentes ?? []); ?></small></p>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <!-- Paginação para Cards (igual à da tabela) -->
+                        <?php if ($total_qualificacoes > 0 && $total_paginas > 1): ?>
+                        <div class="pagination-container">
+                            <div class="pagination-info">
+                                <span>Mostrando <?php echo number_format($inicio_item); ?> a <?php echo number_format($fim_item); ?> de <?php echo number_format($total_qualificacoes); ?> qualificações</span>
+                            </div>
+                            
+                            <div class="pagination">
+                                <?php
+                                $query_params = $_GET;
+                                $base_url = '?' . http_build_query(array_merge($query_params, ['pagina' => '']));
+                                $base_url = rtrim($base_url, '=');
+                                ?>
+                                
+                                <!-- Primeira página -->
+                                <?php if ($pagina_atual > 1): ?>
+                                    <a href="<?php echo $base_url; ?>=1" class="pagination-btn">
+                                        <i data-lucide="chevrons-left"></i>
+                                    </a>
+                                    <a href="<?php echo $base_url; ?>=<?php echo $pagina_atual - 1; ?>" class="pagination-btn">
+                                        <i data-lucide="chevron-left"></i>
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <!-- Páginas numeradas -->
+                                <?php
+                                $inicio_pag = max(1, $pagina_atual - 2);
+                                $fim_pag = min($total_paginas, $pagina_atual + 2);
+                                
+                                for ($i = $inicio_pag; $i <= $fim_pag; $i++):
+                                ?>
+                                    <a href="<?php echo $base_url; ?>=<?php echo $i; ?>" 
+                                       class="pagination-btn <?php echo $i === $pagina_atual ? 'active' : ''; ?>">
+                                        <?php echo $i; ?>
+                                    </a>
+                                <?php endfor; ?>
+                                
+                                <!-- Última página -->
+                                <?php if ($pagina_atual < $total_paginas): ?>
+                                    <a href="<?php echo $base_url; ?>=<?php echo $pagina_atual + 1; ?>" class="pagination-btn">
+                                        <i data-lucide="chevron-right"></i>
+                                    </a>
+                                    <a href="<?php echo $base_url; ?>=<?php echo $total_paginas; ?>" class="pagination-btn">
+                                        <i data-lucide="chevrons-right"></i>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    <!-- Fim da Visualização em Cards -->
+                    
                 </div>
             </section>
             
@@ -1014,6 +1198,19 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                                         <option value="EM ANÁLISE">EM ANÁLISE</option>
                                         <option value="CONCLUÍDO">CONCLUÍDO</option>
                                     </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Número do DFD (opcional)</label>
+                                    <input type="text" name="numero_dfd" id="numero_dfd_criar" placeholder="Ex: 12345.123456/2024-12" readonly>
+                                    <button type="button" onclick="abrirSeletorContratacao()" class="btn-secondary" style="margin-top: 8px;">
+                                        <i data-lucide="search"></i> Selecionar do PCA
+                                    </button>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Número da Contratação (opcional)</label>
+                                    <input type="text" name="numero_contratacao" id="numero_contratacao_criar" placeholder="Título da contratação" readonly>
                                 </div>
                             </div>
                         </div>

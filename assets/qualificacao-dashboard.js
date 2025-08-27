@@ -719,8 +719,16 @@ document.addEventListener('DOMContentLoaded', function() {
     restoreSidebarState();
     restoreActiveSection();
     
+    // Só restaurar preferência se estivermos na página de qualificações
+    if (document.getElementById('btn-lista-qualif') && document.getElementById('btn-cards-qualif')) {
+        restoreQualificacaoViewPreference();
+    }
+    
     // Inicializar formulários
     initializeForms();
+    
+    // Configurar busca de contratação no formulário
+    configurarBuscaFormulario();
     
     // Configurar resize handler com debounce
     const debouncedResize = debounce(handleResize, 250);
@@ -1491,10 +1499,436 @@ function resetarFormularioQualificacao() {
     mostrarAbaQualificacao('informacoes-gerais');
 }
 
+// ==================== SISTEMA DE TOGGLE LISTA/CARDS ====================
+
+/**
+ * Toggle entre visualização Lista e Cards para qualificações
+ */
+function toggleQualificacaoView(viewType) {
+    console.log('toggleQualificacaoView chamado com:', viewType);
+    
+    const tableView = document.querySelector('.table-qualificacoes-view');
+    const cardsView = document.querySelector('.cards-qualificacoes-view');
+    const btnLista = document.getElementById('btn-lista-qualif');
+    const btnCards = document.getElementById('btn-cards-qualif');
+    
+    console.log('Elementos encontrados:', {
+        tableView: !!tableView,
+        cardsView: !!cardsView,
+        btnLista: !!btnLista,
+        btnCards: !!btnCards
+    });
+    
+    if (!tableView || !cardsView || !btnLista || !btnCards) {
+        console.error('Elementos do toggle de visualização não encontrados');
+        console.log('tableView:', tableView);
+        console.log('cardsView:', cardsView);
+        console.log('btnLista:', btnLista);
+        console.log('btnCards:', btnCards);
+        return;
+    }
+    
+    if (viewType === 'cards') {
+        // Mostrar cards, esconder tabela
+        tableView.style.display = 'none';
+        cardsView.style.display = 'block';
+        
+        // Atualizar botões
+        btnLista.classList.remove('active');
+        btnCards.classList.add('active');
+        
+        // Salvar preferência
+        localStorage.setItem('qualificacaoViewPreference', 'cards');
+        console.log('Modo cards ativado');
+    } else {
+        // Mostrar tabela, esconder cards
+        tableView.style.display = 'block';
+        cardsView.style.display = 'none';
+        
+        // Atualizar botões
+        btnLista.classList.add('active');
+        btnCards.classList.remove('active');
+        
+        // Salvar preferência
+        localStorage.setItem('qualificacaoViewPreference', 'lista');
+        console.log('Modo lista ativado');
+    }
+    
+    // Reinicializar ícones Lucide
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Restaurar preferência de visualização salva
+ */
+function restoreQualificacaoViewPreference() {
+    const savedPreference = localStorage.getItem('qualificacaoViewPreference') || 'lista';
+    console.log('Restaurando preferência de visualização:', savedPreference);
+    
+    // Aguardar um pouco para garantir que o DOM foi totalmente carregado
+    setTimeout(() => {
+        toggleQualificacaoView(savedPreference);
+    }, 100);
+}
+
+// ==================== VINCULAÇÃO COM PCA ====================
+
+/**
+ * Abrir modal de vinculação com o PCA
+ */
+function abrirVinculacaoPCA(qualificacaoId) {
+    // Criar modal dinamicamente se não existir
+    if (!document.getElementById('modalVinculacaoPCA')) {
+        criarModalVinculacaoPCA();
+    }
+    
+    // Configurar modal
+    document.getElementById('qualificacao_id_vinculacao').value = qualificacaoId;
+    
+    // Mostrar modal
+    const modal = document.getElementById('modalVinculacaoPCA');
+    modal.style.display = 'block';
+    modal.classList.add('show');
+    
+    // Reinicializar ícones
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Criar modal de vinculação com PCA
+ */
+function criarModalVinculacaoPCA() {
+    const modalHTML = `
+        <div id="modalVinculacaoPCA" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                        <i data-lucide="link"></i> Vincular com o PCA
+                    </h3>
+                    <span class="close" onclick="fecharModal('modalVinculacaoPCA')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p>Vincule esta qualificação com uma contratação do PCA:</p>
+                    
+                    <form id="formVinculacaoPCA" action="process.php" method="POST">
+                        <input type="hidden" name="acao" value="vincular_qualificacao_pca">
+                        <input type="hidden" id="qualificacao_id_vinculacao" name="qualificacao_id">
+                        
+                        <div class="form-group form-full">
+                            <label>Selecionar Contratação do PCA</label>
+                            <input type="text" id="busca_contratacao" placeholder="Digite para buscar contratação no PCA (DFD ou título)..." autocomplete="off">
+                            <div id="resultados_busca" class="busca-resultados" style="display: none;"></div>
+                            <input type="hidden" name="numero_dfd">
+                            <input type="hidden" name="numero_contratacao">
+                            <div id="contratacao_selecionada_modal" class="contratacao-preview" style="display: none;">
+                                <div class="preview-header">
+                                    <i data-lucide="check-circle"></i>
+                                    <span>Contratação Selecionada:</span>
+                                    <button type="button" onclick="limparSelecaoContratacaoModal()" class="btn-limpar">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                                <div class="preview-content">
+                                    <strong id="preview_dfd_modal"></strong>
+                                    <span id="preview_titulo_modal"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 15px; justify-content: flex-end; padding: 20px; border-top: 1px solid #e5e7eb;">
+                    <button type="button" class="btn-secondary" onclick="fecharModal('modalVinculacaoPCA')">
+                        <i data-lucide="x"></i> Cancelar
+                    </button>
+                    <button type="submit" form="formVinculacaoPCA" class="btn-primary">
+                        <i data-lucide="link"></i> Vincular
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Configurar busca em tempo real
+    const campoBusca = document.getElementById('busca_contratacao');
+    if (campoBusca) {
+        let timeoutBusca;
+        campoBusca.addEventListener('input', function() {
+            clearTimeout(timeoutBusca);
+            const termo = this.value.trim();
+            
+            if (termo.length >= 3) {
+                timeoutBusca = setTimeout(() => buscarContratacoesPCA(termo), 500);
+            } else {
+                document.getElementById('resultados_busca').style.display = 'none';
+            }
+        });
+    }
+    
+    // Configurar evento de submit do formulário
+    const form = document.getElementById('formVinculacaoPCA');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            // Mostrar loading
+            submitBtn.innerHTML = '<i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i> Vinculando...';
+            submitBtn.disabled = true;
+            
+            fetch('process.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message || 'Qualificação vinculada com sucesso!', 'success');
+                    fecharModal('modalVinculacaoPCA');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification(data.message || 'Erro ao vincular qualificação', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showNotification('Erro de conexão', 'error');
+            })
+            .finally(() => {
+                // Restaurar botão
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                // Reinicializar ícones
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            });
+        });
+    }
+}
+
+/**
+ * Buscar contratações do PCA
+ */
+function buscarContratacoesPCA(termo) {
+    fetch('process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'acao=buscar_contratacoes_pca&termo=' + encodeURIComponent(termo)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.contratacoes) {
+            mostrarResultadosBusca(data.contratacoes);
+        } else {
+            document.getElementById('resultados_busca').style.display = 'none';
+        }
+    })
+    .catch(error => {
+        console.error('Erro na busca:', error);
+        document.getElementById('resultados_busca').style.display = 'none';
+    });
+}
+
+/**
+ * Mostrar resultados da busca
+ */
+function mostrarResultadosBusca(contratacoes) {
+    const container = document.getElementById('resultados_busca');
+    if (!container) return;
+    
+    let html = '';
+    contratacoes.forEach(contratacao => {
+        html += `
+            <div class="resultado-item" onclick="selecionarContratacao('${contratacao.numero_dfd}', '${contratacao.titulo_contratacao}')">
+                <strong>${contratacao.numero_dfd}</strong>
+                <span>${contratacao.titulo_contratacao}</span>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    container.style.display = contratacoes.length > 0 ? 'block' : 'none';
+}
+
+/**
+ * Selecionar contratação da busca
+ */
+function selecionarContratacao(numeroDfd, tituloContratacao) {
+    document.querySelector('input[name="numero_dfd"]').value = numeroDfd;
+    document.querySelector('input[name="numero_contratacao"]').value = tituloContratacao;
+    document.getElementById('resultados_busca').style.display = 'none';
+    document.getElementById('busca_contratacao').value = `${numeroDfd} - ${tituloContratacao}`;
+}
+
 // Disponibilizar funções das abas globalmente
 window.mostrarAbaQualificacao = mostrarAbaQualificacao;
 window.proximaAbaQualificacao = proximaAbaQualificacao;
 window.abaAnteriorQualificacao = abaAnteriorQualificacao;
 window.resetarFormularioQualificacao = resetarFormularioQualificacao;
+
+// ==================== BUSCA NO FORMULÁRIO DE CADASTRO ====================
+
+/**
+ * Configurar busca no formulário de cadastro
+ */
+function configurarBuscaFormulario() {
+    const campoBusca = document.getElementById('busca_contratacao_form');
+    if (campoBusca) {
+        let timeoutBusca;
+        campoBusca.addEventListener('input', function() {
+            clearTimeout(timeoutBusca);
+            const termo = this.value.trim();
+            
+            if (termo.length >= 3) {
+                timeoutBusca = setTimeout(() => buscarContratacoesPCAForm(termo), 500);
+            } else {
+                document.getElementById('resultados_busca_form').style.display = 'none';
+            }
+        });
+    }
+}
+
+/**
+ * Buscar contratações do PCA para o formulário
+ */
+function buscarContratacoesPCAForm(termo) {
+    fetch('process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'acao=buscar_contratacoes_pca&termo=' + encodeURIComponent(termo)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.contratacoes) {
+            mostrarResultadosBuscaForm(data.contratacoes);
+        } else {
+            document.getElementById('resultados_busca_form').style.display = 'none';
+        }
+    })
+    .catch(error => {
+        console.error('Erro na busca:', error);
+        document.getElementById('resultados_busca_form').style.display = 'none';
+    });
+}
+
+/**
+ * Mostrar resultados da busca no formulário
+ */
+function mostrarResultadosBuscaForm(contratacoes) {
+    const container = document.getElementById('resultados_busca_form');
+    if (!container) return;
+    
+    let html = '';
+    contratacoes.forEach(contratacao => {
+        const valor = contratacao.valor_estimado ? parseFloat(contratacao.valor_estimado).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : 'N/A';
+        html += `
+            <div class="resultado-item" onclick="selecionarContratacaoForm('${contratacao.numero_dfd}', '${contratacao.titulo_contratacao}', '${contratacao.area_requisitante || ''}', '${valor}')">
+                <strong>${contratacao.numero_dfd}</strong>
+                <span>${contratacao.titulo_contratacao}</span>
+                <small style="color: #95a5a6; font-size: 10px; display: block;">${contratacao.area_requisitante || ''} • ${valor}</small>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    container.style.display = contratacoes.length > 0 ? 'block' : 'none';
+}
+
+/**
+ * Selecionar contratação no formulário
+ */
+function selecionarContratacaoForm(numeroDfd, tituloContratacao, areaRequisitante, valor) {
+    // Preencher campos ocultos
+    document.getElementById('numero_dfd_criar').value = numeroDfd;
+    document.getElementById('numero_contratacao_criar').value = tituloContratacao;
+    
+    // Mostrar preview da seleção
+    document.getElementById('preview_dfd').textContent = numeroDfd;
+    document.getElementById('preview_titulo').textContent = tituloContratacao;
+    document.getElementById('contratacao_selecionada').style.display = 'block';
+    
+    // Esconder campo de busca e resultados
+    document.getElementById('busca_contratacao_form').style.display = 'none';
+    document.getElementById('resultados_busca_form').style.display = 'none';
+    
+    // Reinicializar ícones
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Limpar seleção de contratação no formulário
+ */
+function limparSelecaoContratacao() {
+    document.getElementById('numero_dfd_criar').value = '';
+    document.getElementById('numero_contratacao_criar').value = '';
+    document.getElementById('busca_contratacao_form').value = '';
+    document.getElementById('busca_contratacao_form').style.display = 'block';
+    document.getElementById('contratacao_selecionada').style.display = 'none';
+    document.getElementById('resultados_busca_form').style.display = 'none';
+    
+    // Focus no campo de busca
+    document.getElementById('busca_contratacao_form').focus();
+}
+
+/**
+ * Limpar seleção no modal
+ */
+function limparSelecaoContratacaoModal() {
+    document.querySelector('#formVinculacaoPCA input[name="numero_dfd"]').value = '';
+    document.querySelector('#formVinculacaoPCA input[name="numero_contratacao"]').value = '';
+    document.getElementById('busca_contratacao').value = '';
+    document.getElementById('busca_contratacao').style.display = 'block';
+    document.getElementById('contratacao_selecionada_modal').style.display = 'none';
+    document.getElementById('resultados_busca').style.display = 'none';
+    
+    // Focus no campo de busca
+    document.getElementById('busca_contratacao').focus();
+}
+
+/**
+ * Atualizar função de seleção no modal
+ */
+function selecionarContratacaoModal(numeroDfd, tituloContratacao) {
+    // Preencher campos ocultos
+    document.querySelector('#formVinculacaoPCA input[name="numero_dfd"]').value = numeroDfd;
+    document.querySelector('#formVinculacaoPCA input[name="numero_contratacao"]').value = tituloContratacao;
+    
+    // Mostrar preview da seleção
+    document.getElementById('preview_dfd_modal').textContent = numeroDfd;
+    document.getElementById('preview_titulo_modal').textContent = tituloContratacao;
+    document.getElementById('contratacao_selecionada_modal').style.display = 'block';
+    
+    // Esconder campo de busca e resultados
+    document.getElementById('busca_contratacao').style.display = 'none';
+    document.getElementById('resultados_busca').style.display = 'none';
+    
+    // Reinicializar ícones
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+// Disponibilizar funções de toggle e vinculação globalmente
+window.toggleQualificacaoView = toggleQualificacaoView;
+window.abrirVinculacaoPCA = abrirVinculacaoPCA;
+window.selecionarContratacao = selecionarContratacaoModal; // Usar nova função para modal
+window.limparSelecaoContratacao = limparSelecaoContratacao;
+window.limparSelecaoContratacaoModal = limparSelecaoContratacaoModal;
+window.configurarBuscaFormulario = configurarBuscaFormulario;
 
 console.log('📋 Qualificação Dashboard JavaScript carregado com sucesso!');

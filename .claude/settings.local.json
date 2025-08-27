@@ -40,8 +40,12 @@
       "Bash(del \"C:\\xampp\\htdocs\\sistema_licitacao\\debug_tabela.php\")",
       "Bash(del \"C:\\xampp\\htdocs\\sistema_licitacao\\debug_construtor_graficos.php\")",
       "Bash(del \"C:\\xampp\\htdocs\\sistema_licitacao\\contratos_dashboard_csv.php\")",
-      "Bash(del \"C:\\xampp\\htdocs\\sistema_licitacao\\debug_contratacoes.php\")"
+      "Bash(del \"C:\\xampp\\htdocs\\sistema_licitacao\\debug_contratacoes.php\")",
+      "Bash(git checkout:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "C:\\xampp\\mysql\\bin"
+    ]
   }
 }

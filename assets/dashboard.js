@@ -1,10 +1,310 @@
 /**
  * Dashboard JavaScript - Sistema CGLIC
  * Funcionalidades do painel de controle principal
+ * Inclui sistema de visualização em cards para contratações
  */
 
 // Variável global para armazenar dados do PHP
 let dashboardData = {};
+
+// ==================== SISTEMA DE CARDS CONTRATAÇÕES ====================
+
+/**
+ * Alternar entre visualização de tabela e cards
+ */
+function toggleContratacaoView(viewType) {
+    const tableView = document.querySelector('.table-contratacoes-view');
+    const cardsView = document.querySelector('.cards-contratacoes-view');
+    const listBtn = document.querySelector('.view-toggle-btn[onclick*="lista"]');
+    const cardsBtn = document.querySelector('.view-toggle-btn[onclick*="cards"]');
+    
+    // Atualizar botões ativos
+    if (listBtn && cardsBtn) {
+        listBtn.classList.toggle('active', viewType === 'lista');
+        cardsBtn.classList.toggle('active', viewType === 'cards');
+    }
+    
+    // Mostrar/ocultar visualizações
+    if (tableView && cardsView) {
+        if (viewType === 'lista') {
+            tableView.style.display = 'block';
+            cardsView.style.display = 'none';
+        } else {
+            tableView.style.display = 'none';
+            cardsView.style.display = 'block';
+        }
+    }
+    
+    // Salvar preferência do usuário
+    localStorage.setItem('contratacao_view_preference', viewType);
+    
+    // Reinicializar ícones Lucide
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Restaurar visualização preferida do usuário
+ */
+function restoreContratacaoViewPreference() {
+    const savedView = localStorage.getItem('contratacao_view_preference') || 'lista';
+    toggleContratacaoView(savedView);
+}
+
+/**
+ * Abrir modal de qualificação para contratação
+ */
+function abrirQualificacaoContratacao(numeroDfd, tituloContratacao) {
+    // Criar modal dinamicamente se não existir
+    if (!document.getElementById('modalQualificacaoContratacao')) {
+        criarModalQualificacaoContratacao();
+    }
+    
+    const modal = document.getElementById('modalQualificacaoContratacao');
+    const form = document.getElementById('formQualificacaoContratacao');
+    const titleElement = document.getElementById('qualificacaoContratacaoTitle');
+    
+    // Preencher dados do modal
+    if (titleElement) {
+        titleElement.textContent = `Qualificar Contratação - DFD: ${numeroDfd}`;
+    }
+    
+    // Preencher NUP com número DFD (removendo espaços)
+    const nupInput = form.querySelector('input[name="nup"]');
+    if (nupInput) {
+        nupInput.value = numeroDfd;
+    }
+    
+    // Preencher objeto com título da contratação
+    const objetoTextarea = form.querySelector('textarea[name="objeto"]');
+    if (objetoTextarea && tituloContratacao) {
+        objetoTextarea.value = tituloContratacao;
+    }
+    
+    // Exibir modal
+    modal.style.display = 'block';
+    
+    // Reset para primeira aba
+    if (typeof mostrarAbaQualificacao === 'function') {
+        mostrarAbaQualificacao('informacoes-gerais');
+    }
+    
+    // Focus no primeiro campo
+    const firstInput = form.querySelector('input[name="area_demandante"]');
+    if (firstInput) {
+        setTimeout(() => firstInput.focus(), 100);
+    }
+    
+    // Reinicializar ícones
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Fechar modal de qualificação
+ */
+function fecharQualificacaoContratacao() {
+    const modal = document.getElementById('modalQualificacaoContratacao');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Criar modal de qualificação dinamicamente - USANDO O FORMULÁRIO EXISTENTE
+ */
+function criarModalQualificacaoContratacao() {
+    const modalHTML = `
+        <div id="modalQualificacaoContratacao" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 900px;">
+                <div class="modal-header">
+                    <h3 id="qualificacaoContratacaoTitle" style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                        <i data-lucide="plus-circle"></i> Criar Nova Qualificação
+                    </h3>
+                    <span class="close" onclick="fecharQualificacaoContratacao()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <!-- Sistema de Abas -->
+                    <div class="tabs-container">
+                        <div class="tabs-header">
+                            <button type="button" class="tab-button active" onclick="mostrarAbaQualificacao('informacoes-gerais')">
+                                <i data-lucide="info"></i> Informações Gerais
+                            </button>
+                            <button type="button" class="tab-button" onclick="mostrarAbaQualificacao('detalhes-objeto')">
+                                <i data-lucide="file-text"></i> Detalhes do Objeto
+                            </button>
+                            <button type="button" class="tab-button" onclick="mostrarAbaQualificacao('valores-observacoes')">
+                                <i data-lucide="dollar-sign"></i> Valores e Observações
+                            </button>
+                        </div>
+
+                        <form action="process.php" method="POST" id="formQualificacaoContratacao">
+                            <input type="hidden" name="acao" value="criar_qualificacao">
+                            <input type="hidden" name="numero_dfd" value="">
+
+                            <!-- Aba 1: Informações Gerais -->
+                            <div id="aba-informacoes-gerais" class="tab-content active">
+                                <h4 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
+                                    <i data-lucide="info"></i> Informações Gerais
+                                </h4>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>NUP (Número Único de Protocolo) *</label>
+                                        <input type="text" name="nup" id="nup_criar" required placeholder="xxxxx.xxxxxx/xxxx-xx" maxlength="20">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Área Demandante *</label>
+                                        <input type="text" name="area_demandante" required placeholder="Nome da área solicitante">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Responsável *</label>
+                                        <input type="text" name="responsavel" required placeholder="Nome do responsável">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Modalidade *</label>
+                                        <select name="modalidade" required>
+                                            <option value="">Selecione a modalidade</option>
+                                            <option value="PREGÃO">PREGÃO</option>
+                                            <option value="CONCURSO">CONCURSO</option>
+                                            <option value="CONCORRÊNCIA">CONCORRÊNCIA</option>
+                                            <option value="INEXIGIBILIDADE">INEXIGIBILIDADE</option>
+                                            <option value="DISPENSA">DISPENSA</option>
+                                            <option value="PREGÃO SRP">PREGÃO SRP</option>
+                                            <option value="ADESÃO">ADESÃO</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Status *</label>
+                                        <select name="status" required>
+                                            <option value="">Selecione o status</option>
+                                            <option value="EM ANÁLISE">EM ANÁLISE</option>
+                                            <option value="CONCLUÍDO">CONCLUÍDO</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Aba 2: Detalhes do Objeto -->
+                            <div id="aba-detalhes-objeto" class="tab-content">
+                                <h4 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
+                                    <i data-lucide="file-text"></i> Detalhes do Objeto
+                                </h4>
+                                <div class="form-grid">
+                                    <div class="form-group form-full">
+                                        <label>Objeto *</label>
+                                        <textarea name="objeto" required placeholder="Descrição detalhada do objeto da qualificação" rows="5"></textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Palavras-Chave</label>
+                                        <input type="text" name="palavras_chave" placeholder="Ex: equipamentos, serviços, tecnologia">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Aba 3: Valores e Observações -->
+                            <div id="aba-valores-observacoes" class="tab-content">
+                                <h4 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
+                                    <i data-lucide="dollar-sign"></i> Valores e Observações
+                                </h4>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Valor Estimado (R$) *</label>
+                                        <input type="text" name="valor_estimado" class="currency" required placeholder="R$ 0,00">
+                                    </div>
+
+                                    <div class="form-group form-full">
+                                        <label>Observações</label>
+                                        <textarea name="observacoes" placeholder="Observações adicionais sobre a qualificação" rows="6"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botões de Ação -->
+                            <div style="margin-top: 20px; display: flex; gap: 15px; justify-content: flex-end; align-items: center; padding-top: 15px; border-top: 2px solid #e9ecef;">
+                                <button type="button" id="btn-anterior-qualificacao" onclick="abaAnteriorQualificacao()" class="btn-secondary" style="display: none;">
+                                    <i data-lucide="chevron-left"></i> Anterior
+                                </button>
+                                <button type="button" id="btn-proximo-qualificacao" onclick="proximaAbaQualificacao()" class="btn-primary">
+                                    Próximo <i data-lucide="chevron-right"></i>
+                                </button>
+                                <button type="button" onclick="fecharQualificacaoContratacao()" class="btn-secondary">
+                                    <i data-lucide="x"></i> Cancelar
+                                </button>
+                                <button type="reset" class="btn-secondary" onclick="resetarFormularioQualificacao()">
+                                    <i data-lucide="refresh-cw"></i> Limpar
+                                </button>
+                                <button type="submit" class="btn-success" id="btn-criar-qualificacao" style="display: none;">
+                                    <i data-lucide="check"></i> Criar Qualificação
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Adicionar event listener para fechar modal clicando fora
+    const modal = document.getElementById('modalQualificacaoContratacao');
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            fecharQualificacaoContratacao();
+        }
+    });
+    
+    // Adicionar funções necessárias para as abas
+    if (!window.mostrarAbaQualificacao) {
+        window.mostrarAbaQualificacao = function(abaId) {
+            // Ocultar todas as abas
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            
+            // Mostrar aba selecionada
+            document.getElementById(`aba-${abaId}`).classList.add('active');
+            document.querySelector(`[onclick="mostrarAbaQualificacao('${abaId}')"]`).classList.add('active');
+            
+            // Controlar botões de navegação
+            const isFirst = abaId === 'informacoes-gerais';
+            const isLast = abaId === 'valores-observacoes';
+            
+            document.getElementById('btn-anterior-qualificacao').style.display = isFirst ? 'none' : 'inline-flex';
+            document.getElementById('btn-proximo-qualificacao').style.display = isLast ? 'none' : 'inline-flex';
+            document.getElementById('btn-criar-qualificacao').style.display = isLast ? 'inline-flex' : 'none';
+        };
+        
+        window.proximaAbaQualificacao = function() {
+            const activeTab = document.querySelector('.tab-content.active');
+            if (activeTab.id === 'aba-informacoes-gerais') {
+                mostrarAbaQualificacao('detalhes-objeto');
+            } else if (activeTab.id === 'aba-detalhes-objeto') {
+                mostrarAbaQualificacao('valores-observacoes');
+            }
+        };
+        
+        window.abaAnteriorQualificacao = function() {
+            const activeTab = document.querySelector('.tab-content.active');
+            if (activeTab.id === 'aba-valores-observacoes') {
+                mostrarAbaQualificacao('detalhes-objeto');
+            } else if (activeTab.id === 'aba-detalhes-objeto') {
+                mostrarAbaQualificacao('informacoes-gerais');
+            }
+        };
+        
+        window.resetarFormularioQualificacao = function() {
+            document.getElementById('formQualificacaoContratacao').reset();
+            mostrarAbaQualificacao('informacoes-gerais');
+        };
+    }
+}
 
 // ==================== TOGGLE SIDEBAR ====================
 

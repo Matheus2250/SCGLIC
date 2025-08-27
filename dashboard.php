@@ -732,6 +732,16 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                     </form>
                 </div>
 
+                <!-- Botões de Visualização -->
+                <div class="view-toggle">
+                    <button class="view-toggle-btn active" onclick="toggleContratacaoView('lista')">
+                        <i data-lucide="list"></i> Lista
+                    </button>
+                    <button class="view-toggle-btn" onclick="toggleContratacaoView('cards')">
+                        <i data-lucide="grid-3x3"></i> Cards
+                    </button>
+                </div>
+
                 <!-- Tabela -->
                 <div class="table-container">
                     <div class="table-header">
@@ -754,7 +764,9 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                             <p style="margin: 0;">Importe uma planilha PCA para começar.</p>
                         </div>
                     <?php else: ?>
-                        <table>
+                        <!-- Visualização em Tabela -->
+                        <div class="table-contratacoes-view">
+                            <table>
                             <thead>
                                 <tr>
                                     <th>Nº DFD</th>
@@ -820,10 +832,115 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
-                        </table>
-                        
-                        <!-- Paginação Melhorada -->
-                        <?php echo $pagination->render(); ?>
+                            </table>
+                            
+                            <!-- Paginação Melhorada para Tabela -->
+                            <?php echo $pagination->render(); ?>
+                        </div>
+
+                        <!-- Visualização em Cards -->
+                        <div class="cards-contratacoes-view" style="display: none;">
+                            <div class="contratacoes-cards-container">
+                                <?php foreach ($dados as $item): ?>
+                                <?php
+                                    $classeSituacao = '';
+                                    if ($item['data_inicio_processo'] < date('Y-m-d') && $item['situacao_execucao'] == 'Não iniciado') {
+                                        $classeSituacao = 'atrasado-inicio';
+                                    } elseif ($item['data_conclusao_processo'] < date('Y-m-d') && $item['situacao_execucao'] != 'Concluído') {
+                                        $classeSituacao = 'atrasado-conclusao';
+                                    }
+                                ?>
+                                <div class="contratacao-card">
+                                    <!-- Header do Card -->
+                                    <div class="card-header">
+                                        <div class="card-title">
+                                            <h4 class="card-numero-dfd">DFD: <?php echo htmlspecialchars($item['numero_dfd']); ?></h4>
+                                            <p class="card-contratacao-num">
+                                                <?php echo htmlspecialchars($item['numero_contratacao'] ?? 'N/A'); ?>
+                                            </p>
+                                        </div>
+                                        <div class="card-status-area">
+                                            <span class="situacao-badge-card <?php echo $classeSituacao; ?>">
+                                                <?php echo htmlspecialchars($item['situacao_execucao']); ?>
+                                            </span>
+                                            <div class="categoria-badge-card">
+                                                <?php echo htmlspecialchars($item['categoria_contratacao']); ?>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Body do Card -->
+                                    <div class="card-body">
+                                        <div class="card-titulo">
+                                            <?php echo htmlspecialchars($item['titulo_contratacao']); ?>
+                                        </div>
+
+                                        <div class="card-details">
+                                            <div class="card-detail-item">
+                                                <span class="card-detail-label">Valor Total</span>
+                                                <span class="card-detail-value valor">
+                                                    <?php echo formatarMoeda($item['valor_total_contratacao']); ?>
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="card-detail-item">
+                                                <span class="card-detail-label">Área</span>
+                                                <span class="card-detail-value">
+                                                    <?php echo htmlspecialchars($item['area_requisitante']); ?>
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="card-detail-item">
+                                                <span class="card-detail-label">Data Início</span>
+                                                <span class="card-detail-value data">
+                                                    <?php echo formatarData($item['data_inicio_processo']); ?>
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="card-detail-item">
+                                                <span class="card-detail-label">Data Fim</span>
+                                                <span class="card-detail-value data">
+                                                    <?php echo formatarData($item['data_conclusao_processo']); ?>
+                                                </span>
+                                                <?php if ($item['dias_ate_conclusao'] !== null && $item['dias_ate_conclusao'] >= 0 && $item['dias_ate_conclusao'] <= 30): ?>
+                                                    <span class="card-prazo-info proximo">
+                                                        <?php echo $item['dias_ate_conclusao']; ?> dias restantes
+                                                    </span>
+                                                <?php elseif ($item['dias_ate_conclusao'] !== null && $item['dias_ate_conclusao'] < 0): ?>
+                                                    <span class="card-prazo-info vencido">
+                                                        Vencido há <?php echo abs($item['dias_ate_conclusao']); ?> dias
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+
+                                        <?php if ($item['tem_licitacao'] > 0): ?>
+                                            <div class="licitacao-indicator">
+                                                <i data-lucide="check-circle"></i>
+                                                Possui Licitação Vinculada
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <!-- Footer com Ações -->
+                                    <div class="card-actions">
+                                        <button onclick="verDetalhes('<?php echo $item['ids']; ?>')" 
+                                                class="btn-card btn-card-detalhes" title="Ver detalhes">
+                                            <i data-lucide="eye"></i> Detalhes
+                                        </button>
+                                        
+                                        <button onclick="verHistorico('<?php echo $item['numero_dfd']; ?>')"
+                                                class="btn-card btn-card-historico" title="Ver histórico">
+                                            <i data-lucide="history"></i> Histórico
+                                        </button>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            
+                            <!-- Paginação para Cards -->
+                            <?php echo $pagination->render(); ?>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1827,5 +1944,20 @@ window.onclick = function(event) {
     <script src="assets/mobile-improvements.js"></script>
     <script src="assets/construtor-graficos.js"></script>
     <script src="assets/pncp-integration.js"></script>
+    
+    <script>
+        // Inicializar visualização de contratações ao carregar a página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Restaurar preferência de visualização salva
+            if (typeof restoreContratacaoViewPreference === 'function') {
+                restoreContratacaoViewPreference();
+            }
+            
+            // Reinicializar ícones Lucide após carregar tudo
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        });
+    </script>
 </body>
 </html>

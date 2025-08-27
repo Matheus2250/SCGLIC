@@ -857,6 +857,8 @@ case 'editar_licitacao':
             $valor_estimado = limpar($_POST['valor_estimado'] ?? '');
             $status = limpar($_POST['status'] ?? '');
             $observacoes = limpar($_POST['observacoes'] ?? '');
+            $numero_dfd = limpar($_POST['numero_dfd'] ?? '');
+            $numero_contratacao = limpar($_POST['numero_contratacao'] ?? '');
             
             // Log dos dados capturados
             error_log("Dados capturados:");
@@ -947,8 +949,10 @@ case 'editar_licitacao':
                 valor_estimado, 
                 status, 
                 observacoes, 
+                numero_dfd, 
+                numero_contratacao, 
                 usuario_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             $stmt = $pdo->prepare($sql);
             $resultado = $stmt->execute([
@@ -961,6 +965,8 @@ case 'editar_licitacao':
                 $valor_numerico,
                 $status,
                 $observacoes,
+                $numero_dfd,
+                $numero_contratacao,
                 $_SESSION['usuario_id']
             ]);
             
@@ -1307,6 +1313,225 @@ case 'editar_licitacao':
                 'message' => 'Erro ao buscar dados dos gráficos: ' . $e->getMessage()
             ]);
         }
+        break;
+
+    case 'qualificar_contratacao':
+        verificarLogin();
+        
+        try {
+            // Verificar se tabela de qualificação de contratações existe, criar se não
+            $sql_check = "SHOW TABLES LIKE 'qualificacoes_contratacoes'";
+            $table_exists = $pdo->query($sql_check)->rowCount() > 0;
+            
+            if (!$table_exists) {
+                $sql_create = "CREATE TABLE qualificacoes_contratacoes (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    numero_dfd VARCHAR(50) NOT NULL,
+                    categoria_qualificacao ENUM('ESTRATEGICA', 'ALTA_PRIORIDADE', 'MEDIA_PRIORIDADE', 'BAIXA_PRIORIDADE', 'CRITICA', 'PADRAO') NOT NULL,
+                    nota_qualificacao INT NOT NULL CHECK (nota_qualificacao >= 1 AND nota_qualificacao <= 10),
+                    status_qualificacao ENUM('PENDENTE', 'APROVADO', 'REJEITADO', 'EM_ANALISE', 'REVISAO') DEFAULT 'PENDENTE',
+                    criterios TEXT NOT NULL,
+                    justificativa TEXT NOT NULL,
+                    observacoes_adicionais TEXT,
+                    usuario_id INT NOT NULL,
+                    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+                    INDEX idx_numero_dfd (numero_dfd),
+                    INDEX idx_categoria (categoria_qualificacao),
+                    INDEX idx_nota (nota_qualificacao),
+                    INDEX idx_status (status_qualificacao)
+                )";
+                $pdo->exec($sql_create);
+            }
+            
+            // Dados do formulário
+            $numero_dfd = limpar($_POST['numero_dfd']);
+            $categoria_qualificacao = limpar($_POST['categoria_qualificacao']);
+            $nota_qualificacao = intval($_POST['nota_qualificacao']);
+            $status_qualificacao = limpar($_POST['status_qualificacao']) ?: 'PENDENTE';
+            $criterios = limpar($_POST['criterios']);
+            $justificativa = limpar($_POST['justificativa']);
+            $observacoes_adicionais = limpar($_POST['observacoes_adicionais'] ?? '');
+            
+            // Validações
+            if (empty($numero_dfd) || empty($categoria_qualificacao) || empty($criterios) || empty($justificativa)) {
+                setMensagem('Todos os campos obrigatórios devem ser preenchidos.', 'erro');
+                header('Location: dashboard.php?secao=lista-contratacoes');
+                exit;
+            }
+            
+            if ($nota_qualificacao < 1 || $nota_qualificacao > 10) {
+                setMensagem('A nota deve estar entre 1 e 10.', 'erro');
+                header('Location: dashboard.php?secao=lista-contratacoes');
+                exit;
+            }
+            
+            // Verificar se já existe qualificação para este DFD
+            $sql_check_existing = "SELECT id FROM qualificacoes_contratacoes WHERE numero_dfd = ?";
+            $stmt_check = $pdo->prepare($sql_check_existing);
+            $stmt_check->execute([$numero_dfd]);
+            $existing = $stmt_check->fetch();
+            
+            if ($existing) {
+                // Atualizar qualificação existente
+                $sql_update = "UPDATE qualificacoes_contratacoes SET 
+                              categoria_qualificacao = ?, 
+                              nota_qualificacao = ?, 
+                              status_qualificacao = ?,
+                              criterios = ?, 
+                              justificativa = ?, 
+                              observacoes_adicionais = ?,
+                              usuario_id = ?,
+                              atualizado_em = CURRENT_TIMESTAMP
+                              WHERE numero_dfd = ?";
+                $stmt_update = $pdo->prepare($sql_update);
+                $stmt_update->execute([
+                    $categoria_qualificacao,
+                    $nota_qualificacao,
+                    $status_qualificacao,
+                    $criterios,
+                    $justificativa,
+                    $observacoes_adicionais,
+                    $_SESSION['usuario_id'],
+                    $numero_dfd
+                ]);
+                
+                setMensagem('Qualificação atualizada com sucesso!', 'sucesso');
+                registrarLog('atualizar_qualificacao_contratacao', "Qualificação atualizada para DFD: {$numero_dfd}", 'qualificacoes_contratacoes', $existing['id']);
+            } else {
+                // Criar nova qualificação
+                $sql_insert = "INSERT INTO qualificacoes_contratacoes 
+                              (numero_dfd, categoria_qualificacao, nota_qualificacao, status_qualificacao, criterios, justificativa, observacoes_adicionais, usuario_id) 
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                $stmt_insert = $pdo->prepare($sql_insert);
+                $stmt_insert->execute([
+                    $numero_dfd,
+                    $categoria_qualificacao,
+                    $nota_qualificacao,
+                    $status_qualificacao,
+                    $criterios,
+                    $justificativa,
+                    $observacoes_adicionais,
+                    $_SESSION['usuario_id']
+                ]);
+                
+                $new_id = $pdo->lastInsertId();
+                setMensagem('Contratação qualificada com sucesso!', 'sucesso');
+                registrarLog('criar_qualificacao_contratacao', "Nova qualificação criada para DFD: {$numero_dfd}", 'qualificacoes_contratacoes', $new_id);
+            }
+            
+        } catch (Exception $e) {
+            setMensagem('Erro ao processar qualificação: ' . $e->getMessage(), 'erro');
+            registrarLog('erro_qualificacao_contratacao', "Erro ao qualificar DFD {$numero_dfd}: " . $e->getMessage(), 'qualificacoes_contratacoes', null);
+        }
+        
+        header('Location: dashboard.php?secao=lista-contratacoes');
+        exit;
+
+    case 'buscar_contratacoes_pca':
+        verificarLogin();
+        
+        header('Content-Type: application/json');
+        $response = ['success' => false, 'message' => '', 'contratacoes' => []];
+        
+        try {
+            $termo = limpar($_POST['termo'] ?? '');
+            
+            if (strlen($termo) < 3) {
+                throw new Exception('Termo de busca deve ter pelo menos 3 caracteres');
+            }
+            
+            // Buscar nas tabelas do PCA com mais detalhes
+            $sql = "SELECT DISTINCT 
+                        numero_dfd, 
+                        titulo_contratacao,
+                        area_requisitante,
+                        valor_estimado,
+                        situacao_execucao,
+                        ano
+                    FROM pca_dados 
+                    WHERE (numero_dfd LIKE ? OR titulo_contratacao LIKE ?)
+                    AND ano IN (2025, 2026)
+                    AND numero_dfd IS NOT NULL 
+                    AND numero_dfd != ''
+                    AND titulo_contratacao IS NOT NULL 
+                    AND titulo_contratacao != ''
+                    ORDER BY numero_dfd 
+                    LIMIT 30";
+            
+            $stmt = $pdo->prepare($sql);
+            $termo_busca = "%$termo%";
+            $stmt->execute([$termo_busca, $termo_busca]);
+            $contratacoes = $stmt->fetchAll();
+            
+            $response['success'] = true;
+            $response['contratacoes'] = $contratacoes;
+            
+        } catch (Exception $e) {
+            $response['message'] = $e->getMessage();
+        }
+        
+        echo json_encode($response);
+        break;
+
+    case 'vincular_qualificacao_pca':
+        verificarLogin();
+        
+        header('Content-Type: application/json');
+        $response = ['success' => false, 'message' => ''];
+        
+        try {
+            $qualificacao_id = intval($_POST['qualificacao_id'] ?? 0);
+            $numero_dfd = limpar($_POST['numero_dfd'] ?? '');
+            $numero_contratacao = limpar($_POST['numero_contratacao'] ?? '');
+            
+            if ($qualificacao_id <= 0) {
+                throw new Exception('ID da qualificação é obrigatório');
+            }
+            
+            if (empty($numero_dfd) && empty($numero_contratacao)) {
+                throw new Exception('Pelo menos um campo (DFD ou Contratação) deve ser preenchido');
+            }
+            
+            // Verificar se a qualificação existe
+            $sql_check = "SELECT id FROM qualificacoes WHERE id = ?";
+            $stmt_check = $pdo->prepare($sql_check);
+            $stmt_check->execute([$qualificacao_id]);
+            
+            if (!$stmt_check->fetch()) {
+                throw new Exception('Qualificação não encontrada');
+            }
+            
+            // Atualizar qualificação com a vinculação
+            $sql_update = "UPDATE qualificacoes SET 
+                          numero_dfd = ?, 
+                          numero_contratacao = ?,
+                          atualizado_em = CURRENT_TIMESTAMP
+                          WHERE id = ?";
+            
+            $stmt_update = $pdo->prepare($sql_update);
+            $resultado = $stmt_update->execute([
+                $numero_dfd,
+                $numero_contratacao,
+                $qualificacao_id
+            ]);
+            
+            if (!$resultado) {
+                throw new Exception('Erro ao vincular qualificação');
+            }
+            
+            // Registrar log
+            registrarLog('VINCULAR_QUALIFICACAO_PCA', "Vinculou qualificação ID: $qualificacao_id com DFD: $numero_dfd", 'qualificacoes', $qualificacao_id);
+            
+            $response['success'] = true;
+            $response['message'] = 'Qualificação vinculada com sucesso!';
+            
+        } catch (Exception $e) {
+            $response['message'] = $e->getMessage();
+        }
+        
+        echo json_encode($response);
         break;
         
     default:
