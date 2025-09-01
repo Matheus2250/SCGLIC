@@ -857,7 +857,7 @@ case 'editar_licitacao':
             $valor_estimado = limpar($_POST['valor_estimado'] ?? '');
             $status = limpar($_POST['status'] ?? '');
             $observacoes = limpar($_POST['observacoes'] ?? '');
-            $numero_dfd = limpar($_POST['numero_dfd'] ?? '');
+            // REMOVIDO numero_dfd - usando apenas numero_contratacao
             $numero_contratacao = limpar($_POST['numero_contratacao'] ?? '');
             
             // Log dos dados capturados
@@ -938,7 +938,7 @@ case 'editar_licitacao':
                 throw new Exception('Este NUP já está cadastrado no sistema');
             }
             
-            // Inserir qualificação
+            // Inserir qualificação (APENAS com numero_contratacao, sem numero_dfd)
             $sql = "INSERT INTO qualificacoes (
                 nup, 
                 area_demandante, 
@@ -949,10 +949,9 @@ case 'editar_licitacao':
                 valor_estimado, 
                 status, 
                 observacoes, 
-                numero_dfd, 
                 numero_contratacao, 
                 usuario_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             $stmt = $pdo->prepare($sql);
             $resultado = $stmt->execute([
@@ -965,7 +964,6 @@ case 'editar_licitacao':
                 $valor_numerico,
                 $status,
                 $observacoes,
-                $numero_dfd,
                 $numero_contratacao,
                 $_SESSION['usuario_id']
             ]);
@@ -1483,15 +1481,14 @@ case 'editar_licitacao':
         
         try {
             $qualificacao_id = intval($_POST['qualificacao_id'] ?? 0);
-            $numero_dfd = limpar($_POST['numero_dfd'] ?? '');
             $numero_contratacao = limpar($_POST['numero_contratacao'] ?? '');
             
             if ($qualificacao_id <= 0) {
                 throw new Exception('ID da qualificação é obrigatório');
             }
             
-            if (empty($numero_dfd) && empty($numero_contratacao)) {
-                throw new Exception('Pelo menos um campo (DFD ou Contratação) deve ser preenchido');
+            if (empty($numero_contratacao)) {
+                throw new Exception('Número da contratação é obrigatório');
             }
             
             // Verificar se a qualificação existe
@@ -1503,16 +1500,14 @@ case 'editar_licitacao':
                 throw new Exception('Qualificação não encontrada');
             }
             
-            // Atualizar qualificação com a vinculação
+            // Atualizar qualificação com a vinculação (APENAS numero_contratacao)
             $sql_update = "UPDATE qualificacoes SET 
-                          numero_dfd = ?, 
                           numero_contratacao = ?,
                           atualizado_em = CURRENT_TIMESTAMP
                           WHERE id = ?";
             
             $stmt_update = $pdo->prepare($sql_update);
             $resultado = $stmt_update->execute([
-                $numero_dfd,
                 $numero_contratacao,
                 $qualificacao_id
             ]);
@@ -1522,10 +1517,39 @@ case 'editar_licitacao':
             }
             
             // Registrar log
-            registrarLog('VINCULAR_QUALIFICACAO_PCA', "Vinculou qualificação ID: $qualificacao_id com DFD: $numero_dfd", 'qualificacoes', $qualificacao_id);
+            registrarLog('VINCULAR_QUALIFICACAO_PCA', "Vinculou qualificação ID: $qualificacao_id com contratação: $numero_contratacao", 'qualificacoes', $qualificacao_id);
             
             $response['success'] = true;
-            $response['message'] = 'Qualificação vinculada com sucesso!';
+            $response['message'] = 'Qualificação vinculada com sucesso ao PCA!';
+            
+        } catch (Exception $e) {
+            $response['message'] = $e->getMessage();
+        }
+        
+        echo json_encode($response);
+        break;
+
+    case 'listar_contratacoes_pca':
+        verificarLogin();
+        
+        header('Content-Type: application/json');
+        $response = ['success' => false, 'message' => '', 'contratacoes' => []];
+        
+        try {
+            // Buscar APENAS numero_contratacao da tabela pca_dados
+            $sql = "SELECT DISTINCT numero_contratacao 
+                    FROM pca_dados 
+                    WHERE numero_contratacao IS NOT NULL 
+                    AND numero_contratacao != ''
+                    ORDER BY numero_contratacao 
+                    LIMIT 200";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            $contratacoes = $stmt->fetchAll();
+            
+            $response['success'] = true;
+            $response['contratacoes'] = $contratacoes;
             
         } catch (Exception $e) {
             $response['message'] = $e->getMessage();

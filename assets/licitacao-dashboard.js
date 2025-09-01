@@ -4654,3 +4654,84 @@ function fecharModalRelatorioAndamentos() {
         modal.remove();
     }
 }
+
+// ==================== SISTEMA DE TOGGLE LISTA/CARDS ====================
+
+/**
+ * Toggle entre visualização Lista e Cards para licitações
+ */
+function toggleLicitacaoView(viewType) {
+    console.log('toggleLicitacaoView chamado com:', viewType);
+    
+    const tableView = document.querySelector('.table-licitacoes-view');
+    const cardsView = document.querySelector('.cards-licitacoes-view');
+    const btnLista = document.getElementById('btn-lista-licitacoes');
+    const btnCards = document.getElementById('btn-cards-licitacoes');
+    
+    console.log('Elementos encontrados:', {
+        tableView: !!tableView,
+        cardsView: !!cardsView,
+        btnLista: !!btnLista,
+        btnCards: !!btnCards
+    });
+    
+    if (!tableView || !cardsView || !btnLista || !btnCards) {
+        console.error('Elementos do toggle de visualização não encontrados');
+        return;
+    }
+    
+    if (viewType === 'cards') {
+        // Mostrar cards, esconder tabela
+        tableView.style.display = 'none';
+        cardsView.style.display = 'block';
+        
+        // Atualizar botões
+        btnLista.classList.remove('active');
+        btnCards.classList.add('active');
+        
+        // Salvar preferência
+        localStorage.setItem('licitacaoViewPreference', 'cards');
+        console.log('Modo cards ativado');
+    } else {
+        // Mostrar tabela, esconder cards
+        tableView.style.display = 'block';
+        cardsView.style.display = 'none';
+        
+        // Atualizar botões
+        btnLista.classList.add('active');
+        btnCards.classList.remove('active');
+        
+        // Salvar preferência
+        localStorage.setItem('licitacaoViewPreference', 'lista');
+        console.log('Modo lista ativado');
+    }
+    
+    // Reinicializar ícones Lucide
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Restaurar preferência de visualização salva
+ */
+function restoreLicitacaoViewPreference() {
+    const savedPreference = localStorage.getItem('licitacaoViewPreference') || 'lista';
+    console.log('Restaurando preferência de visualização:', savedPreference);
+    
+    // Aguardar um pouco para garantir que o DOM foi totalmente carregado
+    setTimeout(() => {
+        toggleLicitacaoView(savedPreference);
+    }, 100);
+}
+
+// Adicionar ao inicialização do DOM
+document.addEventListener('DOMContentLoaded', function() {
+    // Só restaurar preferência se estivermos na página de licitações
+    if (document.getElementById('btn-lista-licitacoes') && document.getElementById('btn-cards-licitacoes')) {
+        restoreLicitacaoViewPreference();
+    }
+});
+
+// Disponibilizar função globalmente
+window.toggleLicitacaoView = toggleLicitacaoView;

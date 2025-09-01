@@ -209,6 +209,7 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
     <link rel="stylesheet" href="assets/qualificacao-dashboard.css">
     <link rel="stylesheet" href="assets/dark-mode.css">
     <link rel="stylesheet" href="assets/mobile-improvements.css">
+    <link rel="stylesheet" href="assets/unified-lists.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     
@@ -390,26 +391,41 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                 </div>
                 
                 <div class="table-container">
-                    <!-- Controles e Filtros -->
-                    <div class="table-controls">
-                        <div class="table-info">
-                            <h3>Qualificações Cadastradas</h3>
-                            <p>Total: <?php echo number_format($total_qualificacoes); ?> qualificações</p>
-                        </div>
+                    <!-- Header Unificado -->
+                    <div class="unified-list-header">
+                        <h2 class="unified-list-title">
+                            <i data-lucide="clipboard-list"></i>
+                            Gestão de Qualificações
+                        </h2>
                         
-                        <!-- Toggle de Visualização -->
-                        <div class="view-toggle">
-                            <button onclick="toggleQualificacaoView('lista')" class="view-toggle-btn active" id="btn-lista-qualif">
-                                <i data-lucide="list"></i> Lista
+                        <div class="unified-list-actions">
+                            <!-- Toggle Lista/Cards -->
+                            <div class="unified-view-toggle">
+                                <button id="btn-lista-qualificacoes" 
+                                        class="unified-toggle-btn active" 
+                                        onclick="unifiedListManager && unifiedListManager.switchView ? unifiedListManager.switchView('lista') : toggleQualificacaoView('lista')">
+                                    <i data-lucide="list"></i>
+                                    Lista
+                                </button>
+                                <button id="btn-cards-qualificacoes" 
+                                        class="unified-toggle-btn" 
+                                        onclick="unifiedListManager && unifiedListManager.switchView ? unifiedListManager.switchView('cards') : toggleQualificacaoView('cards')">
+                                    <i data-lucide="grid-3x3"></i>
+                                    Cards
+                                </button>
+                            </div>
+                            
+                            <!-- Botões de Ação -->
+                            <button onclick="abrirModal('modalCriarQualificacao')" 
+                                    class="unified-btn unified-btn-primary">
+                                <i data-lucide="plus-circle"></i>
+                                Nova Qualificação
                             </button>
-                            <button onclick="toggleQualificacaoView('cards')" class="view-toggle-btn" id="btn-cards-qualif">
-                                <i data-lucide="grid-3x3"></i> Cards
-                            </button>
-                        </div>
-                        
-                        <div class="table-actions">
-                            <button onclick="abrirModal('modalCriarQualificacao')" class="btn-primary">
-                                <i data-lucide="plus-circle"></i> Nova Qualificação
+                            
+                            <button onclick="exportarQualificacoes()" 
+                                    class="unified-btn unified-btn-success">
+                                <i data-lucide="download"></i>
+                                Exportar
                             </button>
                         </div>
                     </div>
@@ -490,6 +506,7 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                                 <th>Modalidade</th>
                                 <th>Objeto</th>
                                 <th>Status</th>
+                                <th>Contratação PCA</th>
                                 <th>Valor Estimado</th>
                                 <th>Ações</th>
                             </tr>
@@ -533,9 +550,19 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                                             <?php echo htmlspecialchars($qualificacao['status']); ?>
                                         </span>
                                     </td>
+                                    <td>
+                                        <?php if (!empty($qualificacao['numero_contratacao'])): ?>
+                                            <span class="pca-vinculado" style="color: #27ae60; font-weight: 500;">
+                                                <i data-lucide="link" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                                                <?php echo htmlspecialchars($qualificacao['numero_contratacao']); ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span style="color: #95a5a6; font-style: italic;">Não vinculado</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><span class="valor-verde"><?php echo formatarMoeda($qualificacao['valor_estimado']); ?></span></td>
                                     <td class="table-actions">
-                                        <?php if (empty($qualificacao['numero_dfd']) && empty($qualificacao['numero_contratacao'])): ?>
+                                        <?php if (empty($qualificacao['numero_contratacao'])): ?>
                                             <button onclick="abrirVinculacaoPCA(<?php echo $qualificacao['id']; ?>)" title="Vincular com o PCA" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; margin-right: 4px; font-size: 11px; font-weight: 600;">
                                                 <i data-lucide="link" style="width: 12px; height: 12px;"></i> PCA
                                             </button>
@@ -676,13 +703,13 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                                                     <span class="card-detail-value valor"><?php echo formatarMoeda($qualificacao['valor_estimado']); ?></span>
                                                 </div>
                                                 
-                                                <?php if (!empty($qualificacao['numero_dfd']) || !empty($qualificacao['numero_contratacao'])): ?>
-                                                <div class="vinculacao-pca">
-                                                    <i data-lucide="link"></i>
-                                                    <span>Vinculado ao PCA</span>
-                                                    <?php if (!empty($qualificacao['numero_dfd'])): ?>
-                                                        <small>DFD: <?php echo htmlspecialchars($qualificacao['numero_dfd']); ?></small>
-                                                    <?php endif; ?>
+                                                <?php if (!empty($qualificacao['numero_contratacao'])): ?>
+                                                <div class="card-detail-item">
+                                                    <span class="card-detail-label">Contratação PCA</span>
+                                                    <span class="card-detail-value pca-vinculado">
+                                                        <i data-lucide="link" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                                                        <?php echo htmlspecialchars($qualificacao['numero_contratacao']); ?>
+                                                    </span>
                                                 </div>
                                                 <?php endif; ?>
                                             </div>
@@ -691,7 +718,7 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                                         <!-- Footer com Ações -->
                                         <div class="card-actions">
                                             <!-- Botão Vincular (se disponível) -->
-                                            <?php if (empty($qualificacao['numero_dfd']) && empty($qualificacao['numero_contratacao'])): ?>
+                                            <?php if (empty($qualificacao['numero_contratacao'])): ?>
                                                 <div class="vincular-container">
                                                     <button onclick="abrirVinculacaoPCA(<?php echo $qualificacao['id']; ?>)" 
                                                             class="btn-card btn-vincular" title="Vincular com o PCA">
@@ -1201,16 +1228,11 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                                 </div>
 
                                 <div class="form-group">
-                                    <label>Número do DFD (opcional)</label>
-                                    <input type="text" name="numero_dfd" id="numero_dfd_criar" placeholder="Ex: 12345.123456/2024-12" readonly>
+                                    <label>Contratação PCA (opcional)</label>
+                                    <input type="text" name="numero_contratacao" id="numero_contratacao_criar" placeholder="Título da contratação" readonly>
                                     <button type="button" onclick="abrirSeletorContratacao()" class="btn-secondary" style="margin-top: 8px;">
                                         <i data-lucide="search"></i> Selecionar do PCA
                                     </button>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Número da Contratação (opcional)</label>
-                                    <input type="text" name="numero_contratacao" id="numero_contratacao_criar" placeholder="Título da contratação" readonly>
                                 </div>
                             </div>
                         </div>
@@ -1380,6 +1402,53 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
     <script src="assets/mobile-improvements.js"></script>
     <script src="assets/ux-improvements.js"></script>
     <script src="assets/notifications.js"></script>
+    <script src="assets/unified-lists.js"></script>
+    
+    <script>
+    // Função de toggle simples e direta
+    function toggleQualificacaoView(viewType) {
+        const tableView = document.querySelector('.table-qualificacoes-view');
+        const cardsView = document.querySelector('.cards-qualificacoes-view');
+        const btnLista = document.getElementById('btn-lista-qualificacoes');
+        const btnCards = document.getElementById('btn-cards-qualificacoes');
+        
+        if (viewType === 'cards') {
+            if (tableView) tableView.style.display = 'none';
+            if (cardsView) cardsView.style.display = 'block';
+            if (btnLista) btnLista.classList.remove('active');
+            if (btnCards) btnCards.classList.add('active');
+        } else {
+            if (tableView) tableView.style.display = 'block';
+            if (cardsView) cardsView.style.display = 'none';
+            if (btnLista) btnLista.classList.add('active');
+            if (btnCards) btnCards.classList.remove('active');
+        }
+        
+        // Reinicializar ícones Lucide
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+    
+    // Inicializar sistema
+    document.addEventListener('DOMContentLoaded', function() {
+        // Garantir que a função está disponível globalmente
+        window.toggleQualificacaoView = toggleQualificacaoView;
+        
+        // Inicializar com visualização em lista
+        toggleQualificacaoView('lista');
+    });
+    
+    // Função de exportação
+    function exportarQualificacoes() {
+        if (window.unifiedListManager && typeof window.unifiedListManager.exportData === 'function') {
+            window.unifiedListManager.exportData('csv');
+        } else {
+            // Fallback para método antigo
+            window.location.href = 'process.php?acao=exportar_qualificacoes&formato=csv';
+        }
+    }
+    </script>
     
 </body>
 </html>

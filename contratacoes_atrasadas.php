@@ -218,12 +218,14 @@ if (DEBUG_MODE) {
 }
 
 // Query para contar total de não iniciadas (para paginação)
+// EXCLUINDO as que já passaram da data de conclusão (vencidas)
 $sql_count_nao_iniciadas = "SELECT COUNT(DISTINCT p.numero_dfd) as total
     FROM pca_dados p
     INNER JOIN pca_importacoes pi ON p.importacao_id = pi.id
     WHERE pi.ano_pca = 2025
     AND p.data_inicio_processo IS NOT NULL
     AND p.data_inicio_processo < CURDATE() 
+    AND (p.data_conclusao_dfd IS NULL OR p.data_conclusao_dfd >= CURDATE()) -- Excluir vencidas
     AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado' OR p.situacao_execucao IS NULL OR p.situacao_execucao = '')
     AND p.numero_dfd IS NOT NULL 
     AND p.numero_dfd != ''
@@ -238,6 +240,7 @@ $total_paginas_nao_iniciadas = ceil($total_nao_iniciadas_paginacao / $itens_por_
 
 // CONTRATAÇÕES NÃO INICIADAS - FILTROS ATUALIZADOS COM PAGINAÇÃO
 // Critério: Apenas PCA 2025, mas não iniciaram, situação "Não iniciada"
+// EXCLUINDO as que já passaram da data de conclusão (vencidas)
 $sql_nao_iniciadas = "SELECT DISTINCT 
     p.numero_contratacao,
     p.numero_dfd,
@@ -254,6 +257,7 @@ $sql_nao_iniciadas = "SELECT DISTINCT
     WHERE pi.ano_pca = 2025
     AND p.data_inicio_processo IS NOT NULL
     AND p.data_inicio_processo < CURDATE() 
+    AND (p.data_conclusao_dfd IS NULL OR p.data_conclusao_dfd >= CURDATE()) -- Excluir vencidas
     AND (p.situacao_execucao = 'Não iniciada' OR p.situacao_execucao = 'Não iniciado' OR p.situacao_execucao = 'Não Iniciada' OR p.situacao_execucao = 'Não Iniciado' OR p.situacao_execucao IS NULL OR p.situacao_execucao = '')
     AND p.numero_dfd IS NOT NULL 
     AND p.numero_dfd != ''

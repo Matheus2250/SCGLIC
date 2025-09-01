@@ -720,15 +720,12 @@ document.addEventListener('DOMContentLoaded', function() {
     restoreActiveSection();
     
     // Só restaurar preferência se estivermos na página de qualificações
-    if (document.getElementById('btn-lista-qualif') && document.getElementById('btn-cards-qualif')) {
+    if (document.getElementById('btn-lista-qualificacoes') && document.getElementById('btn-cards-qualificacoes')) {
         restoreQualificacaoViewPreference();
     }
     
     // Inicializar formulários
     initializeForms();
-    
-    // Configurar busca de contratação no formulário
-    configurarBuscaFormulario();
     
     // Configurar resize handler com debounce
     const debouncedResize = debounce(handleResize, 250);
@@ -1297,6 +1294,20 @@ function preencherModalVisualizacao(qual) {
                 <label><strong>Valor Estimado:</strong></label>
                 <p>R$ ${parseFloat(qual.valor_estimado).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
             </div>
+            ${qual.numero_contratacao ? `
+            <div class="form-group">
+                <label><strong>Contratação PCA:</strong></label>
+                <p style="color: #27ae60; font-weight: 600;">
+                    <i data-lucide="link" style="width: 16px; height: 16px; margin-right: 8px;"></i>
+                    ${qual.numero_contratacao}
+                </p>
+            </div>
+            ` : `
+            <div class="form-group">
+                <label><strong>Contratação PCA:</strong></label>
+                <p style="color: #95a5a6; font-style: italic;">Não vinculado ao PCA</p>
+            </div>
+            `}
             <div class="form-group form-full">
                 <label><strong>Objeto:</strong></label>
                 <p>${qual.objeto}</p>
@@ -1509,8 +1520,8 @@ function toggleQualificacaoView(viewType) {
     
     const tableView = document.querySelector('.table-qualificacoes-view');
     const cardsView = document.querySelector('.cards-qualificacoes-view');
-    const btnLista = document.getElementById('btn-lista-qualif');
-    const btnCards = document.getElementById('btn-cards-qualif');
+    const btnLista = document.getElementById('btn-lista-qualificacoes');
+    const btnCards = document.getElementById('btn-cards-qualificacoes');
     
     console.log('Elementos encontrados:', {
         tableView: !!tableView,
@@ -1519,13 +1530,15 @@ function toggleQualificacaoView(viewType) {
         btnCards: !!btnCards
     });
     
-    if (!tableView || !cardsView || !btnLista || !btnCards) {
-        console.error('Elementos do toggle de visualização não encontrados');
-        console.log('tableView:', tableView);
-        console.log('cardsView:', cardsView);
-        console.log('btnLista:', btnLista);
-        console.log('btnCards:', btnCards);
+    if (!tableView || !cardsView) {
+        console.error('Views não encontradas. Tentando criar estrutura...');
+        // Se não existirem as views, pode ser que a página ainda não carregou completamente
+        setTimeout(() => toggleQualificacaoView(viewType), 500);
         return;
+    }
+    
+    if (!btnLista || !btnCards) {
+        console.warn('Botões não encontrados, mas continuando com o toggle das views');
     }
     
     if (viewType === 'cards') {
@@ -1533,9 +1546,9 @@ function toggleQualificacaoView(viewType) {
         tableView.style.display = 'none';
         cardsView.style.display = 'block';
         
-        // Atualizar botões
-        btnLista.classList.remove('active');
-        btnCards.classList.add('active');
+        // Atualizar botões se existirem
+        if (btnLista) btnLista.classList.remove('active');
+        if (btnCards) btnCards.classList.add('active');
         
         // Salvar preferência
         localStorage.setItem('qualificacaoViewPreference', 'cards');
@@ -1545,9 +1558,9 @@ function toggleQualificacaoView(viewType) {
         tableView.style.display = 'block';
         cardsView.style.display = 'none';
         
-        // Atualizar botões
-        btnLista.classList.add('active');
-        btnCards.classList.remove('active');
+        // Atualizar botões se existirem
+        if (btnLista) btnLista.classList.add('active');
+        if (btnCards) btnCards.classList.remove('active');
         
         // Salvar preferência
         localStorage.setItem('qualificacaoViewPreference', 'lista');
@@ -1599,44 +1612,34 @@ function abrirVinculacaoPCA(qualificacaoId) {
 }
 
 /**
- * Criar modal de vinculação com PCA
+ * Criar modal de vinculação com PCA - SIMPLIFICADO
  */
 function criarModalVinculacaoPCA() {
     const modalHTML = `
         <div id="modalVinculacaoPCA" class="modal" style="display: none;">
-            <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
-                        <i data-lucide="link"></i> Vincular com o PCA
+                        <i data-lucide="link"></i> Vincular com PCA
                     </h3>
                     <span class="close" onclick="fecharModal('modalVinculacaoPCA')">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <p>Vincule esta qualificação com uma contratação do PCA:</p>
+                    <p style="margin-bottom: 20px; color: #6c757d;">Selecione uma contratação do PCA para vincular com esta qualificação:</p>
                     
                     <form id="formVinculacaoPCA" action="process.php" method="POST">
                         <input type="hidden" name="acao" value="vincular_qualificacao_pca">
                         <input type="hidden" id="qualificacao_id_vinculacao" name="qualificacao_id">
                         
-                        <div class="form-group form-full">
-                            <label>Selecionar Contratação do PCA</label>
-                            <input type="text" id="busca_contratacao" placeholder="Digite para buscar contratação no PCA (DFD ou título)..." autocomplete="off">
-                            <div id="resultados_busca" class="busca-resultados" style="display: none;"></div>
-                            <input type="hidden" name="numero_dfd">
-                            <input type="hidden" name="numero_contratacao">
-                            <div id="contratacao_selecionada_modal" class="contratacao-preview" style="display: none;">
-                                <div class="preview-header">
-                                    <i data-lucide="check-circle"></i>
-                                    <span>Contratação Selecionada:</span>
-                                    <button type="button" onclick="limparSelecaoContratacaoModal()" class="btn-limpar">
-                                        <i data-lucide="x"></i>
-                                    </button>
-                                </div>
-                                <div class="preview-content">
-                                    <strong id="preview_dfd_modal"></strong>
-                                    <span id="preview_titulo_modal"></span>
-                                </div>
-                            </div>
+                        <div class="form-group">
+                            <label>Contratação Selecionada:</label>
+                            <input type="text" name="numero_contratacao" readonly placeholder="Clique no botão abaixo para selecionar..." style="background-color: #f8f9fa; border: 2px dashed #dee2e6;">
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="button" onclick="abrirSeletorContratacaoModal()" class="btn-secondary" style="width: 100%; padding: 12px;">
+                                <i data-lucide="list"></i> Selecionar Contratação do PCA
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -1677,12 +1680,14 @@ function criarModalVinculacaoPCA() {
             e.preventDefault();
             
             const formData = new FormData(this);
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
+            const submitBtn = document.querySelector('#modalVinculacaoPCA .btn-primary');
+            const originalText = submitBtn ? submitBtn.innerHTML : 'Vincular';
             
             // Mostrar loading
-            submitBtn.innerHTML = '<i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i> Vinculando...';
-            submitBtn.disabled = true;
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i> Vinculando...';
+                submitBtn.disabled = true;
+            }
             
             fetch('process.php', {
                 method: 'POST',
@@ -1704,8 +1709,10 @@ function criarModalVinculacaoPCA() {
             })
             .finally(() => {
                 // Restaurar botão
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
+                if (submitBtn) {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
                 // Reinicializar ícones
                 if (typeof lucide !== 'undefined') {
                     lucide.createIcons();
@@ -1777,26 +1784,202 @@ window.proximaAbaQualificacao = proximaAbaQualificacao;
 window.abaAnteriorQualificacao = abaAnteriorQualificacao;
 window.resetarFormularioQualificacao = resetarFormularioQualificacao;
 
-// ==================== BUSCA NO FORMULÁRIO DE CADASTRO ====================
+// ==================== SELETOR SIMPLES DE CONTRATAÇÃO ====================
 
 /**
- * Configurar busca no formulário de cadastro
+ * Abrir seletor de contratação (formulário)
  */
-function configurarBuscaFormulario() {
-    const campoBusca = document.getElementById('busca_contratacao_form');
-    if (campoBusca) {
-        let timeoutBusca;
-        campoBusca.addEventListener('input', function() {
-            clearTimeout(timeoutBusca);
-            const termo = this.value.trim();
-            
-            if (termo.length >= 3) {
-                timeoutBusca = setTimeout(() => buscarContratacoesPCAForm(termo), 500);
-            } else {
-                document.getElementById('resultados_busca_form').style.display = 'none';
-            }
-        });
+function abrirSeletorContratacao() {
+    if (!document.getElementById('modalSeletorContratacao')) {
+        criarModalSeletorContratacao();
     }
+    
+    document.getElementById('modalSeletorContratacao').style.display = 'block';
+    carregarContratacoesPCA();
+}
+
+/**
+ * Abrir seletor de contratação (modal vinculação)
+ */
+function abrirSeletorContratacaoModal() {
+    if (!document.getElementById('modalSeletorContratacao')) {
+        criarModalSeletorContratacao();
+    }
+    
+    // Marcar que é para o modal de vinculação
+    document.getElementById('modalSeletorContratacao').setAttribute('data-target', 'modal');
+    document.getElementById('modalSeletorContratacao').style.display = 'block';
+    carregarContratacoesPCA();
+}
+
+/**
+ * Criar modal seletor simples
+ */
+function criarModalSeletorContratacao() {
+    const modalHTML = `
+        <div id="modalSeletorContratacao" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3><i data-lucide="list"></i> Selecionar Contratação do PCA</h3>
+                    <span class="close" onclick="fecharModal('modalSeletorContratacao')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="loading-contratacoes" style="text-align: center; padding: 20px;">
+                        <i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i>
+                        <p>Carregando contratações...</p>
+                    </div>
+                    <div id="lista-contratacoes" style="display: none;">
+                        <!-- Lista será preenchida via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+/**
+ * Carregar contratações do PCA
+ */
+function carregarContratacoesPCA() {
+    fetch('process.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'acao=listar_contratacoes_pca'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.contratacoes && data.contratacoes.length > 0) {
+            mostrarListaContratacoes(data.contratacoes);
+        } else {
+            document.getElementById('lista-contratacoes').innerHTML = '<p style="text-align: center; color: #6c757d;">Nenhuma contratação encontrada.</p>';
+        }
+        document.getElementById('loading-contratacoes').style.display = 'none';
+        document.getElementById('lista-contratacoes').style.display = 'block';
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        document.getElementById('lista-contratacoes').innerHTML = '<p style="text-align: center; color: #e74c3c;">Erro ao carregar contratações.</p>';
+        document.getElementById('loading-contratacoes').style.display = 'none';
+        document.getElementById('lista-contratacoes').style.display = 'block';
+    });
+}
+
+/**
+ * Mostrar lista de contratações - APENAS NUMERO_CONTRATACAO
+ */
+function mostrarListaContratacoes(contratacoes) {
+    const container = document.getElementById('lista-contratacoes');
+    
+    // Adicionar campo de busca rápida
+    let html = `
+        <div style="padding: 10px;">
+            <input type="text" id="busca-rapida-contratacao" placeholder="Digite para filtrar contratações..." 
+                   style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px;">
+        </div>
+        <div class="contratacoes-list" id="contratacoes-list-items" style="max-height: 400px; overflow-y: auto;">
+    `;
+    
+    contratacoes.forEach(contratacao => {
+        const numeroContratacao = contratacao.numero_contratacao || contratacao.titulo_contratacao || 'Sem número';
+        const escapedValue = numeroContratacao.replace(/'/g, "\\'");
+        html += `
+            <div class="contratacao-item" data-contratacao="${numeroContratacao.toLowerCase()}" 
+                 onclick="selecionarContratacaoSimples('${escapedValue}')" 
+                 style="padding: 12px; border-bottom: 1px solid #e9ecef; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                <div class="contratacao-info">
+                    <strong style="color: #2c3e50;">${numeroContratacao}</strong>
+                </div>
+                <div class="contratacao-select">
+                    <i data-lucide="chevron-right" style="color: #3498db;"></i>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    // Adicionar CSS inline para hover
+    html += `
+    <style>
+        .contratacao-item:hover {
+            background-color: #f8f9fa !important;
+        }
+        .contratacao-item.hidden {
+            display: none !important;
+        }
+    </style>
+    `;
+    
+    container.innerHTML = html;
+    
+    // Configurar filtro em tempo real
+    const buscaRapida = document.getElementById('busca-rapida-contratacao');
+    if (buscaRapida) {
+        buscaRapida.addEventListener('input', function() {
+            const termo = this.value.toLowerCase();
+            const items = document.querySelectorAll('.contratacao-item');
+            
+            items.forEach(item => {
+                const texto = item.getAttribute('data-contratacao');
+                if (texto.includes(termo)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        });
+        
+        // Focar no campo de busca
+        buscaRapida.focus();
+    }
+    
+    // Reinicializar ícones
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Selecionar contratação simples - APENAS NUMERO_CONTRATACAO
+ */
+function selecionarContratacaoSimples(numeroContratacao) {
+    const modal = document.getElementById('modalSeletorContratacao');
+    const isForModal = modal.getAttribute('data-target') === 'modal';
+    
+    if (isForModal) {
+        // Para vinculação: preencher apenas numero_contratacao
+        const inputContratacao = document.querySelector('#formVinculacaoPCA input[name="numero_contratacao"]');
+        if (inputContratacao) {
+            inputContratacao.value = numeroContratacao;
+        }
+    } else {
+        // Para formulário de cadastro: preencher numero_contratacao_criar
+        const inputCriar = document.getElementById('numero_contratacao_criar');
+        if (inputCriar) {
+            inputCriar.value = numeroContratacao;
+            // Atualizar visual do campo para mostrar que foi selecionado
+            inputCriar.style.backgroundColor = '#e8f5e9';
+            inputCriar.style.borderColor = '#4caf50';
+            
+            // Remover estilo após 2 segundos
+            setTimeout(() => {
+                inputCriar.style.backgroundColor = '';
+                inputCriar.style.borderColor = '';
+            }, 2000);
+        }
+    }
+    
+    // Mostrar notificação de sucesso
+    showNotification(`Contratação selecionada: ${numeroContratacao}`, 'success');
+    
+    // Fechar modal
+    fecharModal('modalSeletorContratacao');
+    
+    // Limpar atributo
+    modal.removeAttribute('data-target');
 }
 
 /**
@@ -1923,12 +2106,11 @@ function selecionarContratacaoModal(numeroDfd, tituloContratacao) {
     }
 }
 
-// Disponibilizar funções de toggle e vinculação globalmente
+// Disponibilizar funções globalmente
 window.toggleQualificacaoView = toggleQualificacaoView;
 window.abrirVinculacaoPCA = abrirVinculacaoPCA;
-window.selecionarContratacao = selecionarContratacaoModal; // Usar nova função para modal
-window.limparSelecaoContratacao = limparSelecaoContratacao;
-window.limparSelecaoContratacaoModal = limparSelecaoContratacaoModal;
-window.configurarBuscaFormulario = configurarBuscaFormulario;
+window.abrirSeletorContratacao = abrirSeletorContratacao;
+window.abrirSeletorContratacaoModal = abrirSeletorContratacaoModal;
+window.selecionarContratacaoSimples = selecionarContratacaoSimples;
 
 console.log('📋 Qualificação Dashboard JavaScript carregado com sucesso!');

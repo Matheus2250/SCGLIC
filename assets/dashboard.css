@@ -3,6 +3,15 @@
  * Estilos para o painel de controle principal
  */
 
+/* CSS mínimo para fazer o toggle funcionar */
+.cards-contratacoes-view {
+    display: none;
+}
+
+.table-contratacoes-view {
+    display: block;
+}
+
 body {
     margin: 0;
     padding: 0;

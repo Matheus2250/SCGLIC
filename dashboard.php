@@ -297,6 +297,7 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
     <link rel="stylesheet" href="assets/dashboard.css">
     <link rel="stylesheet" href="assets/mobile-improvements.css">
     <link rel="stylesheet" href="assets/dark-mode.css">
+    <link rel="stylesheet" href="assets/unified-lists.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -732,19 +733,51 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                     </form>
                 </div>
 
-                <!-- Botões de Visualização -->
-                <div class="view-toggle">
-                    <button class="view-toggle-btn active" onclick="toggleContratacaoView('lista')">
-                        <i data-lucide="list"></i> Lista
-                    </button>
-                    <button class="view-toggle-btn" onclick="toggleContratacaoView('cards')">
-                        <i data-lucide="grid-3x3"></i> Cards
-                    </button>
-                </div>
+                <!-- Header Unificado PCA -->
+                <div class="unified-list-container" style="margin-top: 0;">
+                    <div class="unified-list-header">
+                        <h2 class="unified-list-title">
+                            <i data-lucide="clipboard-list"></i>
+                            Dados do PCA - Ano <?php echo $ano_selecionado; ?>
+                        </h2>
+                        
+                        <div class="unified-list-actions">
+                            <!-- Toggle Lista/Cards -->
+                            <div class="unified-view-toggle">
+                                <button id="btn-lista-planejamento" 
+                                        class="unified-toggle-btn active" 
+                                        onclick="unifiedListManager && unifiedListManager.switchView ? unifiedListManager.switchView('lista') : toggleContratacaoView('lista')">
+                                    <i data-lucide="list"></i>
+                                    Lista
+                                </button>
+                                <button id="btn-cards-planejamento" 
+                                        class="unified-toggle-btn" 
+                                        onclick="unifiedListManager && unifiedListManager.switchView ? unifiedListManager.switchView('cards') : toggleContratacaoView('cards')">
+                                    <i data-lucide="grid-3x3"></i>
+                                    Cards
+                                </button>
+                            </div>
+                            
+                            <!-- Botões de Ação -->
+                            <?php if ($eh_ano_atual): ?>
+                            <button onclick="abrirModalImportacaoPCA()" 
+                                    class="unified-btn unified-btn-primary">
+                                <i data-lucide="upload"></i>
+                                Importar PCA
+                            </button>
+                            <?php endif; ?>
+                            
+                            <button onclick="exportarDadosPCA()" 
+                                    class="unified-btn unified-btn-success">
+                                <i data-lucide="download"></i>
+                                Exportar
+                            </button>
+                        </div>
+                    </div>
 
                 <!-- Tabela -->
                 <div class="table-container">
-                    <div class="table-header">
+                    <div class="table-header" style="display: none;">
                         <h3 class="table-title">Dados do PCA - Ano <?php echo $ano_selecionado; ?></h3>
                         <div class="table-actions">
                             <span style="color: #7f8c8d;">Total: <?php echo $totalRegistros; ?> contratações</span>
@@ -1946,18 +1979,72 @@ window.onclick = function(event) {
     <script src="assets/pncp-integration.js"></script>
     
     <script>
+        // Função de toggle simples para contratações
+        function toggleContratacaoView(viewType) {
+            const tableView = document.querySelector('.table-contratacoes-view');
+            const cardsView = document.querySelector('.cards-contratacoes-view');
+            const btnLista = document.getElementById('btn-lista-planejamento');
+            const btnCards = document.getElementById('btn-cards-planejamento');
+            
+            if (viewType === 'cards') {
+                if (tableView) tableView.style.display = 'none';
+                if (cardsView) cardsView.style.display = 'block';
+                if (btnLista) btnLista.classList.remove('active');
+                if (btnCards) btnCards.classList.add('active');
+            } else {
+                if (tableView) tableView.style.display = 'block';
+                if (cardsView) cardsView.style.display = 'none';
+                if (btnLista) btnLista.classList.add('active');
+                if (btnCards) btnCards.classList.remove('active');
+            }
+            
+            // Reinicializar ícones Lucide
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+        
         // Inicializar visualização de contratações ao carregar a página
         document.addEventListener('DOMContentLoaded', function() {
-            // Restaurar preferência de visualização salva
-            if (typeof restoreContratacaoViewPreference === 'function') {
-                restoreContratacaoViewPreference();
-            }
+            // Garantir que a função está disponível globalmente
+            window.toggleContratacaoView = toggleContratacaoView;
+            
+            // Inicializar com visualização em lista
+            toggleContratacaoView('lista');
             
             // Reinicializar ícones Lucide após carregar tudo
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
         });
+    </script>
+    
+    <script src="assets/unified-lists.js"></script>
+    <script>
+    // Inicializar sistema - simplificado
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sistema simplificado - sem conflitos
+        console.log('Sistema de toggle ativado');
+    });
+    
+    // Função de exportação PCA
+    function exportarDadosPCA() {
+        if (window.unifiedListManager && typeof window.unifiedListManager.exportData === 'function') {
+            window.unifiedListManager.exportData('csv');
+        } else {
+            // Fallback para método antigo
+            window.location.href = `process.php?acao=exportar_pca&ano=<?php echo $ano_selecionado; ?>&formato=csv`;
+        }
+    }
+    
+    // Função para abrir modal de importação
+    function abrirModalImportacaoPCA() {
+        // Implementar abertura do modal de importação
+        const modal = document.getElementById('modalImportarPCA');
+        if (modal) {
+            modal.style.display = 'block';
+        }
+    }
     </script>
 </body>
 </html>

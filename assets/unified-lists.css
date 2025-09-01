@@ -1,0 +1,722 @@
+/**
+ * ============================================
+ * SISTEMA UNIFICADO DE LISTAS - CGLIC
+ * ============================================
+ * Padronização visual para todas as listas:
+ * - Qualificações
+ * - PCA/Planejamento  
+ * - Licitações
+ * - Contratos
+ * 
+ * Baseado na análise dos prints fornecidos
+ */
+
+/* ==================== VARIÁVEIS CSS ==================== */
+:root {
+    /* Cores principais - Baseadas no sistema atual */
+    --primary-color: #3498db;
+    --primary-hover: #2980b9;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5a6268;
+    --success-color: #27ae60;
+    --success-hover: #219a52;
+    --warning-color: #f39c12;
+    --warning-hover: #e67e22;
+    --danger-color: #e74c3c;
+    --danger-hover: #c0392b;
+    
+    /* Cores de background */
+    --bg-light: #f8f9fa;
+    --bg-white: #ffffff;
+    --bg-gray-100: #f1f3f4;
+    --bg-gray-200: #e9ecef;
+    
+    /* Cores de texto */
+    --text-primary: #2c3e50;
+    --text-secondary: #6c757d;
+    --text-muted: #95a5a6;
+    --text-blue: #2980b9;
+    
+    /* Sombras */
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+    --shadow-lg: 0 8px 25px rgba(0,0,0,0.2);
+    
+    /* Bordas */
+    --border-color: #e9ecef;
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    --spacing-xxl: 24px;
+}
+
+/* ==================== CONTAINER PRINCIPAL ==================== */
+.unified-list-container {
+    background: var(--bg-white);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin: var(--spacing-xl) 0;
+    overflow: hidden;
+}
+
+/* ==================== HEADER UNIFICADO ==================== */
+.unified-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xl);
+    background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-gray-100) 100%);
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.unified-list-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.unified-list-title i {
+    color: var(--primary-color);
+    width: 24px;
+    height: 24px;
+}
+
+.unified-list-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+/* ==================== TOGGLE VISUALIZAÇÃO ==================== */
+.unified-view-toggle {
+    display: inline-flex;
+    background: var(--bg-white);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.unified-toggle-btn {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.unified-toggle-btn.active {
+    background: var(--primary-color) !important;
+    color: white !important;
+}
+
+.unified-toggle-btn:hover:not(.active) {
+    background: var(--bg-gray-100);
+    color: var(--primary-color);
+}
+
+.unified-toggle-btn i {
+    width: 16px;
+    height: 16px;
+}
+
+/* ==================== BOTÕES DE AÇÃO ==================== */
+.unified-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.unified-btn i {
+    width: 16px;
+    height: 16px;
+}
+
+.unified-btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.unified-btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.unified-btn-success {
+    background: var(--success-color);
+    color: white;
+}
+
+.unified-btn-success:hover {
+    background: var(--success-hover);
+    transform: translateY(-1px);
+}
+
+.unified-btn-secondary {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.unified-btn-secondary:hover {
+    background: var(--secondary-hover);
+    transform: translateY(-1px);
+}
+
+/* ==================== SISTEMA DE FILTROS ==================== */
+.unified-filters-section {
+    padding: var(--spacing-xl);
+    background: var(--bg-light);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.unified-filters-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+    align-items: end;
+}
+
+.unified-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.unified-filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.unified-filter-input,
+.unified-filter-select {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    background: var(--bg-white);
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.unified-filter-input:focus,
+.unified-filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.unified-filter-input::placeholder {
+    color: var(--text-muted);
+}
+
+/* Filtros de data */
+.unified-date-range {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.unified-date-separator {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+/* Botões de filtro */
+.unified-filter-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-self: end;
+}
+
+.unified-btn-filter {
+    background: var(--primary-color);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-lg);
+}
+
+.unified-btn-filter:hover {
+    background: var(--primary-hover);
+}
+
+.unified-btn-clear {
+    background: var(--secondary-color);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-lg);
+}
+
+.unified-btn-clear:hover {
+    background: var(--secondary-hover);
+}
+
+/* ==================== ÁREA DE CONTEÚDO ==================== */
+.unified-content-area {
+    min-height: 400px;
+    position: relative;
+}
+
+/* ==================== TABELA UNIFICADA ==================== */
+.unified-table-view {
+    overflow-x: auto;
+}
+
+.unified-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-white);
+}
+
+.unified-table th {
+    background: var(--bg-gray-100);
+    padding: var(--spacing-md) var(--spacing-lg);
+    text-align: left;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.unified-table td {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.unified-table tbody tr:hover {
+    background: var(--bg-light);
+}
+
+/* ==================== GRID DE CARDS UNIFICADO ==================== */
+.unified-cards-view {
+    display: none;
+    padding: var(--spacing-xl);
+}
+
+.unified-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: var(--spacing-xl);
+}
+
+.unified-card {
+    background: var(--bg-white);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.unified-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
+}
+
+.unified-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--bg-gray-100);
+}
+
+.unified-card-id {
+    font-size: 14px;
+    color: var(--text-blue);
+    font-weight: 700;
+}
+
+.unified-card-status {
+    display: flex;
+    align-items: center;
+}
+
+.unified-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.unified-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-lg);
+    line-height: 1.4;
+}
+
+.unified-card-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+    flex: 1;
+}
+
+.unified-card-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.unified-card-detail-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.unified-card-detail-value {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.unified-card-detail-value.valor {
+    color: var(--success-color);
+    font-weight: 700;
+}
+
+.unified-card-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    padding-top: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+    border-top: 1px solid var(--bg-gray-100);
+    flex-shrink: 0;
+}
+
+.unified-card-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    white-space: nowrap;
+    min-width: fit-content;
+}
+
+.unified-card-btn i {
+    width: 14px;
+    height: 14px;
+}
+
+.unified-card-btn-view {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.unified-card-btn-view:hover {
+    background: var(--secondary-hover);
+}
+
+.unified-card-btn-edit {
+    background: var(--warning-color);
+    color: white;
+}
+
+.unified-card-btn-edit:hover {
+    background: var(--warning-hover);
+}
+
+.unified-card-btn-delete {
+    background: var(--danger-color);
+    color: white;
+}
+
+.unified-card-btn-delete:hover {
+    background: var(--danger-hover);
+}
+
+/* ==================== BADGES UNIFICADOS ==================== */
+.unified-status-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-lg);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* Status específicos */
+.status-pendente { background: #fff3cd; color: #856404; }
+.status-em-analise { background: #cce5ff; color: #0066cc; }
+.status-concluido { background: #d4edda; color: #155724; }
+.status-cancelado { background: #f8d7da; color: #721c24; }
+.status-aprovado { background: #d4edda; color: #155724; }
+.status-reprovado { background: #f8d7da; color: #721c24; }
+
+/* Modalidades */
+.unified-modalidade-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-lg);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    align-self: flex-start;
+    width: fit-content;
+}
+
+.badge-pregao { background: #3498db; color: white; }
+.badge-concurso { background: #9b59b6; color: white; }
+.badge-concorrencia { background: #e74c3c; color: white; }
+.badge-inexigibilidade { background: #f39c12; color: white; }
+.badge-dispensa { background: #2ecc71; color: white; }
+.badge-adesao { background: #95a5a6; color: white; }
+
+/* ==================== PAGINAÇÃO UNIFICADA ==================== */
+.unified-pagination-section {
+    padding: var(--spacing-xl);
+    background: var(--bg-light);
+    border-top: 1px solid var(--border-color);
+}
+
+.unified-pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-lg);
+}
+
+.unified-pagination-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.unified-pagination-summary {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.unified-items-per-page {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.unified-items-per-page label {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.unified-items-per-page select {
+    padding: 6px var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    background: var(--bg-white);
+}
+
+.unified-pagination-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.unified-page-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-white);
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.unified-page-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.unified-page-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.unified-page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.unified-page-info {
+    padding: 0 var(--spacing-md);
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* ==================== EMPTY STATE ==================== */
+.unified-empty-state {
+    text-align: center;
+    padding: 60px var(--spacing-xl);
+    color: var(--text-secondary);
+}
+
+.unified-empty-state i {
+    width: 64px;
+    height: 64px;
+    margin-bottom: var(--spacing-xl);
+    color: var(--text-muted);
+}
+
+.unified-empty-state h3 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 18px;
+    color: var(--text-primary);
+}
+
+.unified-empty-state p {
+    margin: 0 0 var(--spacing-xl) 0;
+    font-size: 14px;
+}
+
+/* ==================== RESPONSIVIDADE ==================== */
+@media (max-width: 768px) {
+    .unified-list-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-lg);
+    }
+    
+    .unified-list-actions {
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .unified-filters-container {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .unified-date-range {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .unified-date-separator {
+        text-align: center;
+    }
+    
+    .unified-filter-actions {
+        justify-content: stretch;
+    }
+    
+    .unified-btn-filter,
+    .unified-btn-clear {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .unified-cards-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+    }
+    
+    .unified-card {
+        padding: var(--spacing-lg);
+    }
+    
+    .unified-card-details {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .unified-card-actions {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .unified-card-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .unified-pagination-container {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .unified-view-toggle {
+        order: -1;
+        justify-self: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .unified-list-header {
+        padding: var(--spacing-lg);
+    }
+    
+    .unified-filters-section {
+        padding: var(--spacing-lg);
+    }
+    
+    .unified-cards-view {
+        padding: var(--spacing-lg);
+    }
+    
+    .unified-pagination-section {
+        padding: var(--spacing-lg);
+    }
+}

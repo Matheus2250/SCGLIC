@@ -218,6 +218,41 @@ $dados_mensal = $pdo->query("
     ORDER BY mes
 ")->fetchAll();
 
+// Buscar qualificações concluídas que ainda não foram licitadas
+// Removendo a verificação de licitação existente por enquanto para debug
+$qualificacoes_concluidas_sql = "
+    SELECT 
+        q.id,
+        q.nup,
+        q.area_demandante,
+        q.responsavel,
+        q.modalidade,
+        q.objeto,
+        q.palavras_chave,
+        q.valor_estimado,
+        q.status,
+        q.observacoes,
+        q.numero_contratacao,
+        q.criado_em,
+        q.atualizado_em,
+        -- Verificar se já existe licitação para este NUP
+        COALESCE((SELECT COUNT(*) FROM licitacoes l WHERE TRIM(l.nup) = TRIM(q.nup)), 0) as tem_licitacao
+    FROM qualificacoes q
+    WHERE q.status = 'CONCLUÍDO'
+    -- Temporariamente removido para mostrar todas as concluídas
+    -- AND NOT EXISTS (
+    --     SELECT 1 FROM licitacoes l WHERE TRIM(l.nup) = TRIM(q.nup)
+    -- )
+    ORDER BY q.atualizado_em DESC
+";
+
+try {
+    $qualificacoes_concluidas = $pdo->query($qualificacoes_concluidas_sql)->fetchAll();
+} catch (Exception $e) {
+    // Se a tabela qualificacoes não existir ou houver erro
+    $qualificacoes_concluidas = [];
+}
+
 // Configuração da paginação
 $licitacoes_por_pagina = isset($_GET['por_pagina']) ? max(10, min(100, intval($_GET['por_pagina']))) : 10;
 $pagina_atual = isset($_GET['pagina']) ? max(1, intval($_GET['pagina'])) : 1;
@@ -1029,6 +1064,9 @@ $contratacoes_pca = $pdo->query("
 
     <div class="nav-section">
         <div class="nav-section-title">Gerenciar</div>
+        <button class="nav-item <?php echo $secao_ativa === 'qualificacoes-prontas' ? 'active' : ''; ?>" onclick="showSection('qualificacoes-prontas')">
+            <i data-lucide="check-circle"></i> <span>Qualificações Prontas</span>
+        </button>
         <button class="nav-item <?php echo $secao_ativa === 'lista-licitacoes' ? 'active' : ''; ?>" onclick="showSection('lista-licitacoes')">
             <i data-lucide="list"></i> <span>Lista de Licitações</span>
         </button>
@@ -1163,6 +1201,125 @@ $contratacoes_pca = $pdo->query("
 </div>
             </div>
 
+            <!-- Nova Seção: Qualificações Prontas para Licitar -->
+            <div id="qualificacoes-prontas" class="content-section <?php echo $secao_ativa === 'qualificacoes-prontas' ? 'active' : ''; ?>">
+                <div class="dashboard-header">
+                    <h1><i data-lucide="check-circle"></i> Qualificações Prontas para Licitar</h1>
+                    <p>Qualificações concluídas aguardando abertura de processo licitatório</p>
+                </div>
+
+                <?php if (count($qualificacoes_concluidas) > 0): ?>
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-card">
+                        <div class="stat-number"><?php echo count($qualificacoes_concluidas); ?></div>
+                        <div class="stat-label">Total de Qualificações Concluídas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">
+                            <?php 
+                            $nao_licitadas = array_filter($qualificacoes_concluidas, function($q) { 
+                                return $q['tem_licitacao'] == 0; 
+                            });
+                            echo count($nao_licitadas);
+                            ?>
+                        </div>
+                        <div class="stat-label">Aguardando Licitação</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">
+                            <?php 
+                            $ja_licitadas = array_filter($qualificacoes_concluidas, function($q) { 
+                                return $q['tem_licitacao'] > 0; 
+                            });
+                            echo count($ja_licitadas);
+                            ?>
+                        </div>
+                        <div class="stat-label">Já Licitadas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number"><?php echo formatarMoeda(array_sum(array_column($qualificacoes_concluidas, 'valor_estimado'))); ?></div>
+                        <div class="stat-label">Valor Total Estimado</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">Qualificações Concluídas</h3>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>NUP</th>
+                                <th>Área Demandante</th>
+                                <th>Modalidade</th>
+                                <th>Objeto</th>
+                                <th>Valor Estimado</th>
+                                <th>Responsável</th>
+                                <th>Data Conclusão</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($qualificacoes_concluidas as $qual): ?>
+                            <tr <?php echo $qual['tem_licitacao'] > 0 ? 'style="background-color: #f0f0f0; opacity: 0.7;"' : ''; ?>>
+                                <td>
+                                    <strong style="color: #0066cc;"><?php echo htmlspecialchars($qual['nup']); ?></strong>
+                                    <?php if ($qual['tem_licitacao'] > 0): ?>
+                                        <br><small style="color: #e74c3c; font-weight: 600;">
+                                            <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i> Já licitado
+                                        </small>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo htmlspecialchars($qual['area_demandante']); ?></td>
+                                <td>
+                                    <span class="modalidade-badge">
+                                        <?php echo htmlspecialchars($qual['modalidade']); ?>
+                                    </span>
+                                </td>
+                                <td><?php echo htmlspecialchars(substr($qual['objeto'], 0, 100)) . (strlen($qual['objeto']) > 100 ? '...' : ''); ?></td>
+                                <td><strong style="color: #27ae60;"><?php echo formatarMoeda($qual['valor_estimado']); ?></strong></td>
+                                <td><?php echo htmlspecialchars($qual['responsavel']); ?></td>
+                                <td><?php echo date('d/m/Y', strtotime($qual['atualizado_em'])); ?></td>
+                                <td>
+                                    <?php if (temPermissao('licitacao_criar') && $qual['tem_licitacao'] == 0): ?>
+                                    <button onclick="criarLicitacaoDeQualificacao(<?php echo $qual['id']; ?>)" 
+                                            class="btn-success" 
+                                            style="padding: 6px 12px; font-size: 12px;"
+                                            title="Criar licitação a partir desta qualificação">
+                                        <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i>
+                                        Licitar
+                                    </button>
+                                    <?php elseif ($qual['tem_licitacao'] > 0): ?>
+                                    <span style="color: #6c757d; font-size: 12px; font-style: italic;">
+                                        <i data-lucide="check" style="width: 14px; height: 14px;"></i>
+                                        Já licitado
+                                    </span>
+                                    <?php endif; ?>
+                                    <button onclick="verDetalhesQualificacao(<?php echo $qual['id']; ?>)" 
+                                            class="btn-secondary" 
+                                            style="padding: 6px 12px; font-size: 12px; margin-left: 5px;"
+                                            title="Ver detalhes da qualificação">
+                                        <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php else: ?>
+                <div style="text-align: center; padding: 60px; background: #f8f9fa; border-radius: 8px; margin: 20px 0;">
+                    <i data-lucide="inbox" style="width: 64px; height: 64px; margin-bottom: 20px; color: #dee2e6;"></i>
+                    <h3 style="margin: 0 0 10px 0; color: #6c757d;">Nenhuma qualificação pronta para licitar</h3>
+                    <p style="margin: 0; color: #6c757d;">Todas as qualificações concluídas já foram licitadas ou não existem qualificações com status CONCLUÍDO.</p>
+                    <a href="qualificacao_dashboard.php" class="btn-primary" style="margin-top: 20px; display: inline-block; text-decoration: none;">
+                        <i data-lucide="arrow-right"></i> Ir para Qualificações
+                    </a>
+                </div>
+                <?php endif; ?>
+            </div>
+
             <div id="lista-licitacoes" class="content-section <?php echo $secao_ativa === 'lista-licitacoes' ? 'active' : ''; ?>">
     <div class="dashboard-header">
         <h1><i data-lucide="list"></i> Lista de Licitações</h1>
@@ -1175,6 +1332,24 @@ $contratacoes_pca = $pdo->query("
             
             
             <div class="table-filters">
+                <!-- Toggle Lista/Cards -->
+                <div class="view-toggle" style="margin-right: 15px; display: inline-flex; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6; overflow: hidden;">
+                    <button id="btn-lista-licitacoes" 
+                            class="toggle-btn active" 
+                            onclick="toggleLicitacaoView('lista')"
+                            style="padding: 8px 15px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; transition: all 0.3s ease;">
+                        <i data-lucide="list" style="width: 16px; height: 16px;"></i>
+                        Lista
+                    </button>
+                    <button id="btn-cards-licitacoes" 
+                            class="toggle-btn" 
+                            onclick="toggleLicitacaoView('cards')"
+                            style="padding: 8px 15px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; transition: all 0.3s ease;">
+                        <i data-lucide="grid-3x3" style="width: 16px; height: 16px;"></i>
+                        Cards
+                    </button>
+                </div>
+
                 <?php if (temPermissao('licitacao_criar')): ?>
                 <button onclick="abrirModalCriarLicitacao()" class="btn-primary" style="margin-right: 10px;">
                     <i data-lucide="plus-circle"></i> Nova Licitação
@@ -1248,7 +1423,9 @@ $contratacoes_pca = $pdo->query("
                 <?php endif; ?>
             </div>
         <?php else: ?>
-            <table>
+            <!-- Visualização em Tabela -->
+            <div class="table-licitacoes-view">
+                <table>
 <thead>
 <tr>
 <th>NUP</th>
@@ -1332,7 +1509,110 @@ foreach ($licitacoes_recentes as $licitacao):
 </tr>
 <?php endforeach; ?>
 </tbody>
-</table>
+                </table>
+            </div>
+
+            <!-- Visualização em Cards -->
+            <div class="cards-licitacoes-view" style="display: none;">
+                <div class="licitacoes-grid">
+                    <?php foreach ($licitacoes_recentes as $licitacao): ?>
+                        <?php
+                        // Definir classe do status
+                        $status_class = '';
+                        switch($licitacao['situacao']) {
+                            case 'HOMOLOGADA': $status_class = 'status-homologada'; break;
+                            case 'EM_ANDAMENTO': $status_class = 'status-em-andamento'; break;
+                            case 'CANCELADA': $status_class = 'status-cancelada'; break;
+                            case 'DESERTA': $status_class = 'status-deserta'; break;
+                            case 'FRACASSADA': $status_class = 'status-fracassada'; break;
+                            default: $status_class = 'status-pendente'; break;
+                        }
+                        ?>
+                        <div class="licitacao-card">
+                            <!-- Header do Card -->
+                            <div class="card-header">
+                                <div class="card-id">
+                                    <strong><?php echo htmlspecialchars($licitacao['nup']); ?></strong>
+                                </div>
+                                <div class="card-status">
+                                    <span class="status-badge <?php echo $status_class; ?>">
+                                        <?php echo str_replace('_', ' ', $licitacao['situacao']); ?>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Body do Card -->
+                            <div class="card-body">
+                                <h3 class="card-title"><?php echo htmlspecialchars(substr($licitacao['objeto'], 0, 100) . (strlen($licitacao['objeto']) > 100 ? '...' : '')); ?></h3>
+                                
+                                <div class="card-details">
+                                    <div class="card-detail-item">
+                                        <span class="card-detail-label">Contratação</span>
+                                        <span class="card-detail-value"><?php echo htmlspecialchars($licitacao['numero_contratacao_final'] ?? $licitacao['numero_contratacao'] ?? 'N/A'); ?></span>
+                                    </div>
+                                    
+                                    <div class="card-detail-item">
+                                        <span class="card-detail-label">Modalidade</span>
+                                        <span class="card-detail-value modalidade-badge badge-<?php echo strtolower($licitacao['modalidade']); ?>">
+                                            <?php echo htmlspecialchars($licitacao['modalidade']); ?>
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="card-detail-item">
+                                        <span class="card-detail-label">Pregoeiro</span>
+                                        <span class="card-detail-value"><?php echo htmlspecialchars($licitacao['pregoeiro'] ?: 'Não Definido'); ?></span>
+                                    </div>
+                                    
+                                    <div class="card-detail-item">
+                                        <span class="card-detail-label">Valor Homologado</span>
+                                        <span class="card-detail-value valor"><?php echo formatarMoeda($licitacao['valor_homologado'] ?? 0); ?></span>
+                                    </div>
+                                    
+                                    <div class="card-detail-item">
+                                        <span class="card-detail-label">Data Abertura</span>
+                                        <span class="card-detail-value"><?php echo $licitacao['data_abertura'] ? formatarData($licitacao['data_abertura']) : 'Não definida'; ?></span>
+                                    </div>
+                                    
+                                    <?php if ($licitacao['total_andamentos'] > 0): ?>
+                                    <div class="card-detail-item">
+                                        <span class="card-detail-label">Andamentos</span>
+                                        <span class="card-detail-value andamentos-badge">
+                                            <i data-lucide="activity" style="width: 14px; height: 14px; margin-right: 5px;"></i>
+                                            <?php echo $licitacao['total_andamentos']; ?>
+                                        </span>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            
+                            <!-- Footer com Ações -->
+                            <div class="card-actions">
+                                <?php if (temPermissao('licitacao_visualizar')): ?>
+                                <button onclick="verLicitacao(<?php echo $licitacao['id']; ?>)" 
+                                        class="btn-card btn-view" title="Visualizar detalhes">
+                                    <i data-lucide="eye"></i> Detalhes
+                                </button>
+                                <?php endif; ?>
+                                
+                                <?php if (temPermissao('licitacao_editar')): ?>
+                                <button onclick="editarLicitacao(<?php echo $licitacao['id']; ?>)" 
+                                        class="btn-card btn-edit" title="Editar licitação">
+                                    <i data-lucide="edit"></i> Editar
+                                </button>
+                                <?php endif; ?>
+                                
+                                <?php if (temPermissao('licitacao_excluir')): ?>
+                                <button onclick="excluirLicitacao(<?php echo $licitacao['id']; ?>)" 
+                                        class="btn-card btn-delete" title="Excluir licitação"
+                                        data-confirm="Tem certeza que deseja excluir esta licitação?">
+                                    <i data-lucide="trash-2"></i> Excluir
+                                </button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
 
             <!-- Informações de Paginação -->
             <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
@@ -1443,6 +1723,7 @@ foreach ($licitacoes_recentes as $licitacao):
 
                 <form action="process.php" method="POST" id="formCriarLicitacao">
                     <input type="hidden" name="acao" value="criar_licitacao">
+                    <input type="hidden" name="qualificacao_id" id="qualificacao_id" value="">
                     <?php echo getCSRFInput(); ?>
 
                     <!-- Aba 1: Vinculação PCA -->
@@ -1453,22 +1734,19 @@ foreach ($licitacoes_recentes as $licitacao):
                         <div class="form-grid">
                             <div class="form-group" style="grid-column: 1 / -1;">
                                 <label>Número da Contratação *</label>
-                                <div class="search-container" style="position: relative;">
-                                    <input
-                                        type="text"
-                                        name="numero_contratacao"
-                                        id="input_contratacao"
-                                        required
-                                        placeholder="Digite o número da contratação..."
-                                        autocomplete="off"
-                                        class="search-input"
-                                        oninput="pesquisarContratacaoInline(this.value)"
-                                        onfocus="mostrarSugestoesInline()"
-                                        onblur="ocultarSugestoesInline()"
-                                    >
-                                    <div id="sugestoes_contratacao" class="search-suggestions" style="display: none;">
-                                    </div>
-                                </div>
+                                <input
+                                    type="text"
+                                    name="numero_contratacao"
+                                    id="input_contratacao"
+                                    required
+                                    readonly
+                                    placeholder="Preenchido automaticamente da qualificação"
+                                    style="background-color: #f8f9fa; border: 1px solid #dee2e6;"
+                                >
+                                <small style="color: #6c757d; font-size: 12px; display: block; margin-top: 5px;">
+                                    <i data-lucide="info" style="width: 12px; height: 12px;"></i>
+                                    Este número é definido na qualificação e preenchido automaticamente
+                                </small>
 
                                 <input type="hidden" id="numero_dfd_selecionado" name="numero_dfd">
                                 <input type="hidden" id="titulo_contratacao_selecionado" name="titulo_contratacao">
@@ -1496,18 +1774,24 @@ foreach ($licitacoes_recentes as $licitacao):
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>NUP *</label>
-                                <input type="text" name="nup" id="nup_criar" required placeholder="xxxxx.xxxxxx/xxxx-xx" maxlength="20">
+                                <input type="text" name="nup" id="nup_criar" required placeholder="xxxxx.xxxxxx/xxxx-xx" maxlength="20" readonly>
                             </div>
 
                             <div class="form-group">
                                 <label>Modalidade *</label>
-                                <select name="modalidade" required>
-                                    <option value="">Selecione a modalidade</option>
-                                    <option value="DISPENSA">DISPENSA</option>
-                                    <option value="PREGAO">PREGÃO</option>
-                                    <option value="RDC">RDC</option>
-                                    <option value="INEXIBILIDADE">INEXIBILIDADE</option>
-                                </select>
+                                <input
+                                    type="text"
+                                    name="modalidade"
+                                    id="modalidade_criar"
+                                    required
+                                    readonly
+                                    placeholder="Modalidade da qualificação"
+                                    style="background-color: #f8f9fa; border: 1px solid #dee2e6;"
+                                >
+                                <small style="color: #6c757d; font-size: 12px; display: block; margin-top: 5px;">
+                                    <i data-lucide="info" style="width: 12px; height: 12px;"></i>
+                                    Modalidade definida na qualificação
+                                </small>
                             </div>
 
                             <div class="form-group">
@@ -1588,15 +1872,15 @@ foreach ($licitacoes_recentes as $licitacao):
                         </h4>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Valor Homologado (R$) *</label>
-                                <input type="text" name="valor_homologado" id="valor_homologado_criar" placeholder="0,00" required>
-                                <small style="color: #6b7280; font-size: 12px;">Valor homologado para a contratação</small>
+                                <label>Valor Estimado (R$) *</label>
+                                <input type="text" name="valor_estimado" id="valor_estimado_criar" placeholder="0,00" required readonly>
+                                <small style="color: #6b7280; font-size: 12px;">Valor estimado da qualificação</small>
                             </div>
 
                             <div class="form-group">
                                 <label>Valor Homologado (R$)</label>
                                 <input type="text" name="valor_homologado" id="valor_homologado_criar" placeholder="0,00">
-                                <small style="color: #6b7280; font-size: 12px;">Valor final homologado</small>
+                                <small style="color: #6b7280; font-size: 12px;">Valor final homologado (preencher após homologação)</small>
                             </div>
 
                             <div class="form-group">
@@ -1627,14 +1911,14 @@ foreach ($licitacoes_recentes as $licitacao):
 
                             <div class="form-group">
                                 <label>Responsável Instrução</label>
-                                <input type="text" name="resp_instrucao" placeholder="Nome do responsável">
-                                <small style="color: #6b7280; font-size: 12px;">Responsável pela instrução do processo</small>
+                                <input type="text" name="resp_instrucao" id="resp_instrucao_criar" placeholder="Nome do responsável" readonly>
+                                <small style="color: #6b7280; font-size: 12px;">Responsável pela instrução do processo (vem da qualificação)</small>
                             </div>
 
                             <div class="form-group">
                                 <label>Área Demandante</label>
-                                <input type="text" name="area_demandante" id="area_demandante_criar" placeholder="Área que solicitou">
-                                <small style="color: #6b7280; font-size: 12px;">Área que demandou a licitação</small>
+                                <input type="text" name="area_demandante" id="area_demandante_criar" placeholder="Área que solicitou" readonly>
+                                <small style="color: #6b7280; font-size: 12px;">Área que demandou a licitação (vem da qualificação)</small>
                             </div>
 
                             <div class="form-group">
@@ -2367,6 +2651,125 @@ foreach ($licitacoes_recentes as $licitacao):
             // Função placeholder - pode ser implementada para adicionar novo andamento
             console.log('Adicionar andamento - funcionalidade a ser implementada');
         }
+
+        /**
+         * Função para criar licitação a partir de qualificação
+         */
+        function criarLicitacaoDeQualificacao(qualificacaoId) {
+            console.log('Criando licitação para qualificação ID:', qualificacaoId);
+            
+            // Buscar dados da qualificação via AJAX
+            fetch('api/get_qualificacao.php?id=' + qualificacaoId)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Dados recebidos:', data);
+                    if (data.success) {
+                        // Abrir modal de criação
+                        document.getElementById('modalCriarLicitacao').style.display = 'block';
+                        
+                        // Preencher campos com dados da qualificação
+                        document.getElementById('qualificacao_id').value = data.qualificacao.id;
+                        document.getElementById('nup_criar').value = data.qualificacao.nup;
+                        document.getElementById('modalidade_criar').value = data.qualificacao.modalidade;
+                        document.getElementById('objeto_textarea').value = data.qualificacao.objeto;
+                        document.getElementById('valor_estimado_criar').value = formatarMoeda(data.qualificacao.valor_estimado);
+                        document.getElementById('resp_instrucao_criar').value = data.qualificacao.responsavel;
+                        document.getElementById('area_demandante_criar').value = data.qualificacao.area_demandante;
+                        
+                        // Se tiver contratação PCA vinculada, preencher também
+                        if (data.qualificacao.numero_contratacao) {
+                            document.getElementById('input_contratacao').value = data.qualificacao.numero_contratacao;
+                        }
+                        
+                        // Mostrar mensagem informativa
+                        const infoDiv = document.createElement('div');
+                        infoDiv.className = 'alert alert-info';
+                        infoDiv.style.cssText = 'background: #e3f2fd; color: #1976d2; padding: 15px; margin-bottom: 20px; border-radius: 8px; border-left: 4px solid #1976d2;';
+                        infoDiv.innerHTML = `
+                            <strong><i data-lucide="info-circle"></i> Licitação baseada em Qualificação</strong><br>
+                            Os dados foram preenchidos automaticamente com base na qualificação concluída NUP ${data.qualificacao.nup}.
+                            Complete os campos adicionais necessários para criar a licitação.
+                        `;
+                        
+                        const modalBody = document.querySelector('#modalCriarLicitacao .modal-body');
+                        const existingAlert = modalBody.querySelector('.alert-info');
+                        if (existingAlert) {
+                            existingAlert.remove();
+                        }
+                        modalBody.insertBefore(infoDiv, modalBody.firstChild);
+                        
+                        // Reinicializar ícones Lucide
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    } else {
+                        alert('Erro ao buscar dados da qualificação: ' + (data.message || 'Erro desconhecido'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao buscar dados da qualificação');
+                });
+        }
+
+        /**
+         * Função para ver detalhes da qualificação
+         */
+        function verDetalhesQualificacao(qualificacaoId) {
+            // Redirecionar para a página de qualificações com o ID específico
+            window.location.href = 'qualificacao_dashboard.php?acao=visualizar&id=' + qualificacaoId;
+        }
+
+        /**
+         * Função auxiliar para formatar moeda
+         */
+        function formatarMoeda(valor) {
+            if (typeof valor === 'string') {
+                valor = parseFloat(valor.replace(/[^\d,.-]/g, '').replace(',', '.'));
+            }
+            return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        /**
+         * Função simples de toggle para visualização Lista/Cards
+         */
+        function toggleLicitacaoView(viewType) {
+            const tableView = document.querySelector('.table-licitacoes-view');
+            const cardsView = document.querySelector('.cards-licitacoes-view');
+            const btnLista = document.getElementById('btn-lista-licitacoes');
+            const btnCards = document.getElementById('btn-cards-licitacoes');
+            
+            if (viewType === 'cards') {
+                if (tableView) tableView.style.display = 'none';
+                if (cardsView) cardsView.style.display = 'block';
+                if (btnLista) btnLista.classList.remove('active');
+                if (btnCards) btnCards.classList.add('active');
+            } else {
+                if (tableView) tableView.style.display = 'block';
+                if (cardsView) cardsView.style.display = 'none';
+                if (btnLista) btnLista.classList.add('active');
+                if (btnCards) btnCards.classList.remove('active');
+            }
+            
+            // Salvar preferência
+            localStorage.setItem('licitacaoView', viewType);
+            
+            // Reinicializar ícones Lucide
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
+        // Restaurar preferência de visualização
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedView = localStorage.getItem('licitacaoView') || 'lista';
+            if (savedView === 'cards') {
+                toggleLicitacaoView('cards');
+            }
+        });
     </script>
     <script src="assets/dark-mode.js"></script>
     <script src="assets/licitacao-dashboard.js"></script>

@@ -4,6 +4,28 @@
  * Baseado em licitacao-dashboard.css com tema amarelo
  */
 
+/* Apenas CSS mínimo para fazer o toggle funcionar */
+.cards-qualificacoes-view {
+    display: none;
+}
+
+.table-qualificacoes-view {
+    display: block;
+}
+
+/* ==================== ESTILOS PCA VINCULADO ==================== */
+
+.pca-vinculado {
+    color: #27ae60 !important;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    background: rgba(39, 174, 96, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
 /* ==================== ESTILOS PERSONALIZADOS TABELA ==================== */
 
 /* NUP em azul */
@@ -2205,6 +2227,60 @@ td:first-child {
 .contratacao-preview .preview-content span {
     color: #6c757d;
     font-size: 12px;
+}
+
+/* Lista de Contratações do Seletor */
+.contratacoes-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.contratacao-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.contratacao-item:hover {
+    background: #f8f9fa;
+}
+
+.contratacao-item:last-child {
+    border-bottom: none;
+}
+
+.contratacao-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.contratacao-info strong {
+    color: #3498db;
+    font-size: 14px;
+}
+
+.contratacao-info span {
+    color: #6c757d;
+    font-size: 13px;
+}
+
+.contratacao-select {
+    color: #95a5a6;
+    display: flex;
+    align-items: center;
+}
+
+.contratacao-select i {
+    width: 16px;
+    height: 16px;
 }
 
 /* ==================== RESPONSIVIDADE ==================== */
