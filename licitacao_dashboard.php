@@ -234,15 +234,12 @@ $qualificacoes_concluidas_sql = "
         q.observacoes,
         q.numero_contratacao,
         q.criado_em,
-        q.atualizado_em,
-        -- Verificar se já existe licitação para este NUP
-        COALESCE((SELECT COUNT(*) FROM licitacoes l WHERE TRIM(l.nup) = TRIM(q.nup)), 0) as tem_licitacao
+        q.atualizado_em
     FROM qualificacoes q
     WHERE q.status = 'CONCLUÍDO'
-    -- Temporariamente removido para mostrar todas as concluídas
-    -- AND NOT EXISTS (
-    --     SELECT 1 FROM licitacoes l WHERE TRIM(l.nup) = TRIM(q.nup)
-    -- )
+    AND NOT EXISTS (
+        SELECT 1 FROM licitacoes l WHERE TRIM(l.nup) = TRIM(q.nup)
+    )
     ORDER BY q.atualizado_em DESC
 ";
 
@@ -1209,38 +1206,6 @@ $contratacoes_pca = $pdo->query("
                 </div>
 
                 <?php if (count($qualificacoes_concluidas) > 0): ?>
-                <div class="stats-grid" style="margin-bottom: 30px;">
-                    <div class="stat-card">
-                        <div class="stat-number"><?php echo count($qualificacoes_concluidas); ?></div>
-                        <div class="stat-label">Total de Qualificações Concluídas</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number">
-                            <?php 
-                            $nao_licitadas = array_filter($qualificacoes_concluidas, function($q) { 
-                                return $q['tem_licitacao'] == 0; 
-                            });
-                            echo count($nao_licitadas);
-                            ?>
-                        </div>
-                        <div class="stat-label">Aguardando Licitação</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number">
-                            <?php 
-                            $ja_licitadas = array_filter($qualificacoes_concluidas, function($q) { 
-                                return $q['tem_licitacao'] > 0; 
-                            });
-                            echo count($ja_licitadas);
-                            ?>
-                        </div>
-                        <div class="stat-label">Já Licitadas</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number"><?php echo formatarMoeda(array_sum(array_column($qualificacoes_concluidas, 'valor_estimado'))); ?></div>
-                        <div class="stat-label">Valor Total Estimado</div>
-                    </div>
-                </div>
 
                 <div class="table-container">
                     <div class="table-header">
@@ -1262,14 +1227,9 @@ $contratacoes_pca = $pdo->query("
                         </thead>
                         <tbody>
                             <?php foreach ($qualificacoes_concluidas as $qual): ?>
-                            <tr <?php echo $qual['tem_licitacao'] > 0 ? 'style="background-color: #f0f0f0; opacity: 0.7;"' : ''; ?>>
+                            <tr>
                                 <td>
                                     <strong style="color: #0066cc;"><?php echo htmlspecialchars($qual['nup']); ?></strong>
-                                    <?php if ($qual['tem_licitacao'] > 0): ?>
-                                        <br><small style="color: #e74c3c; font-weight: 600;">
-                                            <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i> Já licitado
-                                        </small>
-                                    <?php endif; ?>
                                 </td>
                                 <td><?php echo htmlspecialchars($qual['area_demandante']); ?></td>
                                 <td>
@@ -1282,7 +1242,7 @@ $contratacoes_pca = $pdo->query("
                                 <td><?php echo htmlspecialchars($qual['responsavel']); ?></td>
                                 <td><?php echo date('d/m/Y', strtotime($qual['atualizado_em'])); ?></td>
                                 <td>
-                                    <?php if (temPermissao('licitacao_criar') && $qual['tem_licitacao'] == 0): ?>
+                                    <?php if (temPermissao('licitacao_criar')): ?>
                                     <button onclick="criarLicitacaoDeQualificacao(<?php echo $qual['id']; ?>)" 
                                             class="btn-success" 
                                             style="padding: 6px 12px; font-size: 12px;"
@@ -1290,11 +1250,6 @@ $contratacoes_pca = $pdo->query("
                                         <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i>
                                         Licitar
                                     </button>
-                                    <?php elseif ($qual['tem_licitacao'] > 0): ?>
-                                    <span style="color: #6c757d; font-size: 12px; font-style: italic;">
-                                        <i data-lucide="check" style="width: 14px; height: 14px;"></i>
-                                        Já licitado
-                                    </span>
                                     <?php endif; ?>
                                     <button onclick="verDetalhesQualificacao(<?php echo $qual['id']; ?>)" 
                                             class="btn-secondary" 
