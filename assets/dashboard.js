@@ -420,22 +420,22 @@ function showSection(sectionId) {
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.remove('active');
     });
-    
-    // Remover active de todos os nav-items
+
+    // Remover classe ativa de todos os nav-items
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
     });
-    
-    // Mostrar a seção selecionada
+
+    // Mostrar seção selecionada
     const targetSection = document.getElementById(sectionId);
     if (targetSection) {
         targetSection.classList.add('active');
     }
-    
-    // Adicionar active ao botão correto
-    const activeButton = document.querySelector(`button[onclick*="showSection('${sectionId}')"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
+
+    // Ativar nav-item clicado
+    const clickedElement = event.target.closest('.nav-item');
+    if (clickedElement) {
+        clickedElement.classList.add('active');
     }
     
     // Atualizar URL apenas no histórico, sem recarregar a página
@@ -1509,4 +1509,24 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(ensureConstrutorGraficos, 300);
         });
     }
+    
+    // Fix para todos os botões da sidebar - garantir funcionamento dos event listeners
+    const sidebarButtons = [
+        { selector: 'button[onclick*="dashboard"]', section: 'dashboard' },
+        { selector: 'button[onclick*="importar-pca"]', section: 'importar-pca' },
+        { selector: 'button[onclick*="pncp-integration"]', section: 'pncp-integration' },
+        { selector: 'button[onclick*="lista-contratacoes"]', section: 'lista-contratacoes' },
+        { selector: 'button[onclick*="relatorios"]', section: 'relatorios' }
+    ];
+    
+    sidebarButtons.forEach(({ selector, section }) => {
+        const button = document.querySelector(selector);
+        if (button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                showSection(section);
+            });
+        }
+    });
 });

@@ -1190,7 +1190,7 @@ $fim_item = min($pagina_atual * $qualificacoes_por_pagina, $total_qualificacoes)
                             </h4>
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label>NUP (Número Único de Protocolo) *</label>
+                                    <label>NUP (Número Único de Processo) *</label>
                                     <input type="text" name="nup" id="nup_criar" required placeholder="xxxxx.xxxxxx/xxxx-xx" maxlength="20">
                                 </div>
 

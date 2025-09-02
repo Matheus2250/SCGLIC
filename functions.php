@@ -552,22 +552,51 @@ function registrarTentativaLogin($email, $sucesso = false, $motivo = '') {
 function temPermissao($permissao, $usuario_id = null) {
     $nivel = $_SESSION['usuario_nivel'] ?? 1;
     
-    // Permissões por nível - ATUALIZADO
+    // Nova estrutura de permissões por nível
     $permissoes = [
         1 => ['*'], // Coordenador - acesso total
-        2 => [ // DIPLAN - Apenas edição em PLANEJAMENTO, visualização em licitações
+        
+        2 => [ // DIPLAN - Acesso total ao Planejamento (PCA)
             'pca_importar', 'pca_visualizar', 'pca_relatorios', 'pca_exportar', 'pca_editar',
+            // Visualização limitada nos outros módulos
+            'qualificacao_visualizar', 'qualificacao_exportar', 'qualificacao_relatorios',
+            'licitacao_visualizar', 'licitacao_exportar', 'licitacao_relatorios',
+            'contrato_visualizar', 'contrato_exportar', 'contrato_relatorios',
+            'risco_visualizar', 'risco_exportar'
+        ],
+        
+        3 => [ // DIQUALI - Acesso total à Qualificação
+            'qualificacao_criar', 'qualificacao_editar', 'qualificacao_excluir', 'qualificacao_visualizar', 'qualificacao_exportar', 'qualificacao_relatorios',
+            // Visualização limitada nos outros módulos
+            'pca_visualizar', 'pca_exportar', 'pca_relatorios',
+            'licitacao_visualizar', 'licitacao_exportar', 'licitacao_relatorios',
+            'contrato_visualizar', 'contrato_exportar', 'contrato_relatorios',
+            'risco_visualizar', 'risco_exportar'
+        ],
+        
+        4 => [ // DIPLI - Acesso total à Licitação
+            'licitacao_criar', 'licitacao_editar', 'licitacao_excluir', 'licitacao_visualizar', 'licitacao_exportar', 'licitacao_relatorios',
+            // Visualização limitada nos outros módulos
+            'pca_visualizar', 'pca_exportar', 'pca_relatorios',
+            'qualificacao_visualizar', 'qualificacao_exportar', 'qualificacao_relatorios',
+            'contrato_visualizar', 'contrato_exportar', 'contrato_relatorios',
+            'risco_visualizar', 'risco_criar', 'risco_editar'
+        ],
+        
+        5 => [ // CCONT - Acesso total aos Contratos
+            'contrato_criar', 'contrato_editar', 'contrato_excluir', 'contrato_visualizar', 'contrato_exportar', 'contrato_relatorios',
+            // Visualização limitada nos outros módulos
+            'pca_visualizar', 'pca_exportar', 'pca_relatorios',
+            'qualificacao_visualizar', 'qualificacao_exportar', 'qualificacao_relatorios',
             'licitacao_visualizar', 'licitacao_exportar', 'licitacao_relatorios',
             'risco_visualizar', 'risco_exportar'
         ],
-        3 => [ // DIPLI - Apenas edição em LICITAÇÕES, visualização em planejamento
-            'licitacao_criar', 'licitacao_editar', 'licitacao_excluir', 'licitacao_visualizar', 'licitacao_exportar', 'licitacao_relatorios',
+        
+        6 => [ // Visitante - Apenas visualização, relatórios e detalhes
             'pca_visualizar', 'pca_exportar', 'pca_relatorios',
-            'risco_visualizar', 'risco_criar', 'risco_editar'
-        ],
-        4 => [ // Visitante - apenas visualização e exportação
-            'pca_visualizar', 'pca_exportar', 'pca_relatorios',
+            'qualificacao_visualizar', 'qualificacao_exportar', 'qualificacao_relatorios',
             'licitacao_visualizar', 'licitacao_exportar', 'licitacao_relatorios',
+            'contrato_visualizar', 'contrato_exportar', 'contrato_relatorios',
             'risco_visualizar', 'risco_exportar', 'risco_relatorios'
         ]
     ];
@@ -595,22 +624,50 @@ function getNivelUsuario($usuario_id = null) {
 
 // Verificar se usuário é coordenador
 function isCoordenador($usuario_id = null) {
-    return true;
+    return ($_SESSION['usuario_nivel'] ?? 1) == 1;
 }
 
 // Verificar se usuário é DIPLAN
 function isDiplan($usuario_id = null) {
-    return true;
+    return ($_SESSION['usuario_nivel'] ?? 1) == 2;
+}
+
+// Verificar se usuário é DIQUALI
+function isDiquali($usuario_id = null) {
+    return ($_SESSION['usuario_nivel'] ?? 1) == 3;
 }
 
 // Verificar se usuário é DIPLI
 function isDipli($usuario_id = null) {
-    return ($_SESSION['usuario_nivel'] ?? 1) == 3;
+    return ($_SESSION['usuario_nivel'] ?? 1) == 4;
+}
+
+// Verificar se usuário é CCONT
+function isCcont($usuario_id = null) {
+    return ($_SESSION['usuario_nivel'] ?? 1) == 5;
 }
 
 // Verificar se usuário é Visitante
 function isVisitante($usuario_id = null) {
-    return ($_SESSION['usuario_nivel'] ?? 1) == 4;
+    return ($_SESSION['usuario_nivel'] ?? 1) == 6;
+}
+
+// Obter nome do nível do usuário
+function getNomeNivelUsuario($nivel = null) {
+    if ($nivel === null) {
+        $nivel = $_SESSION['usuario_nivel'] ?? 1;
+    }
+    
+    $nomes = [
+        1 => 'Coordenador',
+        2 => 'DIPLAN',
+        3 => 'DIQUALI', 
+        4 => 'DIPLI',
+        5 => 'CCONT',
+        6 => 'Visitante'
+    ];
+    
+    return $nomes[$nivel] ?? 'Desconhecido';
 }
 
 // Middleware de verificação de permissão

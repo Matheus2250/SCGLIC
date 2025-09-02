@@ -339,15 +339,15 @@ verificarLogin();
             <div class="usuario-info">
                 <div class="usuario-dados">
                     <div class="usuario-avatar">
-                        <?php echo strtoupper(substr($_SESSION['usuario_nome'], 0, 1)); ?>
+                        <?php echo strtoupper(substr(isset($_SESSION['usuario_nome']) ? $_SESSION['usuario_nome'] : 'U', 0, 1)); ?>
                     </div>
                     <div>
-                        <strong><?php echo htmlspecialchars($_SESSION['usuario_nome']); ?></strong><br>
-                        <small style="opacity: 0.8;"><?php echo htmlspecialchars($_SESSION['usuario_email']); ?></small>
+                        <strong><?php echo htmlspecialchars(isset($_SESSION['usuario_nome']) ? $_SESSION['usuario_nome'] : 'Usuário'); ?></strong><br>
+                        <small style="opacity: 0.8;"><?php echo htmlspecialchars(isset($_SESSION['usuario_email']) ? $_SESSION['usuario_email'] : 'email@exemplo.com'); ?></small>
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <?php if ($_SESSION['usuario_nivel'] == 1): ?>
+                    <?php if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] == 1): ?>
                     <a href="gerenciar_usuarios.php" class="btn-logout" style="background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.3);">
                         <i data-lucide="users"></i> Gerenciar Usuários
                     </a>

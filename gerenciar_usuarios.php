@@ -5,7 +5,7 @@ require_once 'functions.php';
 verificarLogin();
 
 // Verificar se o usuário tem permissão para gerenciar usuários (apenas Coordenador - nível 1)
-if ($_SESSION['usuario_nivel'] > 1) {
+if (!isset($_SESSION['usuario_nivel']) || $_SESSION['usuario_nivel'] > 1) {
     header('Location: selecao_modulos.php');
     exit;
 }
@@ -490,8 +490,10 @@ $usuarios = $stmt->fetchAll();
                         <option value="">Todos os níveis</option>
                         <option value="1" <?php echo $filtro_nivel == '1' ? 'selected' : ''; ?>>Coordenador</option>
                         <option value="2" <?php echo $filtro_nivel == '2' ? 'selected' : ''; ?>>DIPLAN</option>
-                        <option value="3" <?php echo $filtro_nivel == '3' ? 'selected' : ''; ?>>DIPLI</option>
-                        <option value="4" <?php echo $filtro_nivel == '4' ? 'selected' : ''; ?>>Visitante</option>
+                        <option value="3" <?php echo $filtro_nivel == '3' ? 'selected' : ''; ?>>DIQUALI</option>
+                        <option value="4" <?php echo $filtro_nivel == '4' ? 'selected' : ''; ?>>DIPLI</option>
+                        <option value="5" <?php echo $filtro_nivel == '5' ? 'selected' : ''; ?>>CCONT</option>
+                        <option value="6" <?php echo $filtro_nivel == '6' ? 'selected' : ''; ?>>Visitante</option>
                     </select>
                 </div>
                 
@@ -501,7 +503,9 @@ $usuarios = $stmt->fetchAll();
                         <option value="">Todos os departamentos</option>
                         <option value="CGLIC" <?php echo $filtro_departamento == 'CGLIC' ? 'selected' : ''; ?>>CGLIC</option>
                         <option value="DIPLAN" <?php echo $filtro_departamento == 'DIPLAN' ? 'selected' : ''; ?>>DIPLAN</option>
+                        <option value="DIQUALI" <?php echo $filtro_departamento == 'DIQUALI' ? 'selected' : ''; ?>>DIQUALI</option>
                         <option value="DIPLI" <?php echo $filtro_departamento == 'DIPLI' ? 'selected' : ''; ?>>DIPLI</option>
+                        <option value="CCONT" <?php echo $filtro_departamento == 'CCONT' ? 'selected' : ''; ?>>CCONT</option>
                     </select>
                 </div>
                 
@@ -535,25 +539,33 @@ $usuarios = $stmt->fetchAll();
                 <i data-lucide="info"></i> Como Funciona o Sistema de Níveis
             </h3>
             <p style="margin: 0 0 15px 0; color: #64748b;">
-                O sistema possui 4 níveis hierárquicos com permissões específicas:
+                O sistema possui 6 níveis hierárquicos com permissões específicas:
             </p>
             
             <div class="niveis-info">
                 <div class="nivel-info coordenador">
                     <h4>🎖️ Nível 1 - Coordenador</h4>
-                    <p>Acesso total ao sistema. Pode gerenciar usuários, executar backups, acessar todos os módulos e relatórios.</p>
+                    <p>Acesso total ao sistema. Pode gerenciar usuários, executar backups, acessar todos os módulos com permissões completas.</p>
                 </div>
                 <div class="nivel-info diplan">
                     <h4>📊 Nível 2 - DIPLAN</h4>
-                    <p>Foco em planejamento. Pode importar PCA, gerar relatórios de planejamento, visualizar licitações (sem editar).</p>
+                    <p>Acesso total ao Planejamento (PCA). Pode importar, editar dados do PCA. Visualização nos demais módulos.</p>
+                </div>
+                <div class="nivel-info diquali">
+                    <h4>✅ Nível 3 - DIQUALI</h4>
+                    <p>Acesso total à Qualificação. Pode criar, editar qualificações. Visualização nos demais módulos.</p>
                 </div>
                 <div class="nivel-info dipli">
-                    <h4>⚖️ Nível 3 - DIPLI</h4>
-                    <p>Foco em licitações. Pode criar e gerenciar licitações, visualizar PCA (sem importar), relatórios básicos.</p>
+                    <h4>⚖️ Nível 4 - DIPLI</h4>
+                    <p>Acesso total às Licitações. Pode criar, editar licitações e riscos. Visualização nos demais módulos.</p>
+                </div>
+                <div class="nivel-info ccont">
+                    <h4>📋 Nível 5 - CCONT</h4>
+                    <p>Acesso total aos Contratos. Pode criar, editar contratos. Visualização nos demais módulos.</p>
                 </div>
                 <div class="nivel-info visitante">
-                    <h4>👁️ Nível 4 - Visitante</h4>
-                    <p>Apenas visualização e exportação. Não pode inserir, editar ou excluir dados. Ideal para consultas e relatórios.</p>
+                    <h4>👁️ Nível 6 - Visitante</h4>
+                    <p>Apenas visualização, relatórios e detalhes. Não pode inserir, editar ou excluir dados em nenhum módulo.</p>
                 </div>
             </div>
         </div>
@@ -574,16 +586,7 @@ $usuarios = $stmt->fetchAll();
                         <p><?php echo htmlspecialchars($usuario['email']); ?></p>
                     </div>
                     <span class="nivel-atual nivel-<?php echo $usuario['nivel_acesso'] ?? 3; ?>">
-                        <?php 
-                        $nivel = $usuario['nivel_acesso'] ?? 3;
-                        switch($nivel) {
-                            case 1: echo 'Coordenador'; break;
-                            case 2: echo 'DIPLAN'; break;
-                            case 3: echo 'DIPLI'; break;
-                            case 4: echo 'Visitante'; break;
-                            default: echo 'Usuário';
-                        }
-                        ?>
+                        <?php echo getNomeNivelUsuario($usuario['nivel_acesso'] ?? 6); ?>
                     </span>
                 </div>
 
@@ -594,17 +597,23 @@ $usuarios = $stmt->fetchAll();
                     <div class="form-group">
                         <label>Nível de Acesso</label>
                         <select name="nivel_acesso" required>
-                            <option value="1" <?php echo ($usuario['nivel_acesso'] ?? 3) == 1 ? 'selected' : ''; ?>>
+                            <option value="1" <?php echo ($usuario['nivel_acesso'] ?? 6) == 1 ? 'selected' : ''; ?>>
                                 1 - Coordenador (Acesso Total)
                             </option>
-                            <option value="2" <?php echo ($usuario['nivel_acesso'] ?? 3) == 2 ? 'selected' : ''; ?>>
+                            <option value="2" <?php echo ($usuario['nivel_acesso'] ?? 6) == 2 ? 'selected' : ''; ?>>
                                 2 - DIPLAN (Planejamento)
                             </option>
-                            <option value="3" <?php echo ($usuario['nivel_acesso'] ?? 3) == 3 ? 'selected' : ''; ?>>
-                                3 - DIPLI (Licitações)
+                            <option value="3" <?php echo ($usuario['nivel_acesso'] ?? 6) == 3 ? 'selected' : ''; ?>>
+                                3 - DIQUALI (Qualificação)
                             </option>
-                            <option value="4" <?php echo ($usuario['nivel_acesso'] ?? 3) == 4 ? 'selected' : ''; ?>>
-                                4 - Visitante (Somente Leitura)
+                            <option value="4" <?php echo ($usuario['nivel_acesso'] ?? 6) == 4 ? 'selected' : ''; ?>>
+                                4 - DIPLI (Licitações)
+                            </option>
+                            <option value="5" <?php echo ($usuario['nivel_acesso'] ?? 6) == 5 ? 'selected' : ''; ?>>
+                                5 - CCONT (Contratos)
+                            </option>
+                            <option value="6" <?php echo ($usuario['nivel_acesso'] ?? 6) == 6 ? 'selected' : ''; ?>>
+                                6 - Visitante (Somente Leitura)
                             </option>
                         </select>
                     </div>
@@ -618,8 +627,14 @@ $usuarios = $stmt->fetchAll();
                             <option value="diplan" <?php echo ($usuario['tipo_usuario'] ?? '') == 'diplan' ? 'selected' : ''; ?>>
                                 DIPLAN
                             </option>
+                            <option value="diquali" <?php echo ($usuario['tipo_usuario'] ?? '') == 'diquali' ? 'selected' : ''; ?>>
+                                DIQUALI
+                            </option>
                             <option value="dipli" <?php echo ($usuario['tipo_usuario'] ?? '') == 'dipli' ? 'selected' : ''; ?>>
                                 DIPLI
+                            </option>
+                            <option value="ccont" <?php echo ($usuario['tipo_usuario'] ?? '') == 'ccont' ? 'selected' : ''; ?>>
+                                CCONT
                             </option>
                             <option value="visitante" <?php echo ($usuario['tipo_usuario'] ?? '') == 'visitante' ? 'selected' : ''; ?>>
                                 Visitante
@@ -636,8 +651,14 @@ $usuarios = $stmt->fetchAll();
                             <option value="DIPLAN" <?php echo ($usuario['departamento'] ?? '') == 'DIPLAN' ? 'selected' : ''; ?>>
                                 DIPLAN
                             </option>
+                            <option value="DIQUALI" <?php echo ($usuario['departamento'] ?? '') == 'DIQUALI' ? 'selected' : ''; ?>>
+                                DIQUALI
+                            </option>
                             <option value="DIPLI" <?php echo ($usuario['departamento'] ?? '') == 'DIPLI' ? 'selected' : ''; ?>>
                                 DIPLI
+                            </option>
+                            <option value="CCONT" <?php echo ($usuario['departamento'] ?? '') == 'CCONT' ? 'selected' : ''; ?>>
+                                CCONT
                             </option>
                         </select>
                     </div>
