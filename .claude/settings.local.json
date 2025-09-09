@@ -42,7 +42,8 @@
       "Bash(del \"C:\\xampp\\htdocs\\sistema_licitacao\\contratos_dashboard_csv.php\")",
       "Bash(del \"C:\\xampp\\htdocs\\sistema_licitacao\\debug_contratacoes.php\")",
       "Bash(git checkout:*)",
-      "Bash(del \"C:\\xampp\\htdocs\\sistema_licitacao\\test_api_qual.php\")"
+      "Bash(del \"C:\\xampp\\htdocs\\sistema_licitacao\\test_api_qual.php\")",
+      "Bash(del \"C:\\laragon\\www\\sistema_licitacao\\debug_importacao.php\")"
     ],
     "deny": [],
     "additionalDirectories": [

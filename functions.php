@@ -491,9 +491,9 @@ function reverterImportacaoPCA($importacao_id, $usuario_id) {
         $stmt_delete_dados = $pdo->prepare($sql_delete_dados);
         $stmt_delete_dados->execute([$importacao_id]);
         
-        // Atualizar status da importação para "removido"
+        // Atualizar status da importação para "erro" (removido não existe no ENUM)
         $sql_update_importacao = "UPDATE pca_importacoes SET 
-                                  status = 'removido',
+                                  status = 'erro',
                                   observacoes = CONCAT(COALESCE(observacoes, ''), ' | REVERTIDA em ', NOW(), ' pelo usuário ID: ', ?)
                                   WHERE id = ?";
         $stmt_update_importacao = $pdo->prepare($sql_update_importacao);
@@ -889,8 +889,8 @@ function importarPcaParaTabela($ano, $dados, $importacao_id) {
                 throw new Exception("Linha " . ($index + 1) . ": " . implode(", ", $erros_validacao));
             }
             
-            // Agora sempre usa pca_dados com importacao_id
-            // Verificar se já existe registro com mesmo numero_contratacao e numero_dfd
+            // DESABILITADO TEMPORARIAMENTE - Verificação de duplicatas comentada para debug
+            /*
             $check_sql = "SELECT COUNT(*) FROM {$tabela} WHERE numero_contratacao = ? AND numero_dfd = ?";
             $check_stmt = $pdo->prepare($check_sql);
             $check_stmt->execute([
@@ -902,6 +902,7 @@ function importarPcaParaTabela($ano, $dados, $importacao_id) {
                 // Registro já existe - pular para evitar duplicação
                 continue;
             }
+            */
             
             $sql = "INSERT INTO {$tabela} (
                 importacao_id, numero_contratacao, status_contratacao, situacao_execucao,

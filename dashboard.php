@@ -616,11 +616,12 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                                                 break;
                                             case 'erro':
                                                 $statusClass = 'error';
-                                                $statusText = 'Erro';
-                                                break;
-                                            case 'removido':
-                                                $statusClass = 'error';
-                                                $statusText = 'Revertida';
+                                                // Verificar se foi revertida olhando as observações
+                                                if (strpos($importacao['observacoes'] ?? '', 'REVERTIDA') !== false) {
+                                                    $statusText = 'Revertida';
+                                                } else {
+                                                    $statusText = 'Erro';
+                                                }
                                                 break;
                                             default:
                                                 $statusClass = 'info';
@@ -651,14 +652,14 @@ $historico_importacoes = buscarHistoricoImportacoes($ano_selecionado, 10);
                                         <?php endif; ?>
                                     </td>
                                     <td style="text-align: center;">
-                                        <?php if ($importacao['status'] !== 'removido' && temPermissao('pca_importar') && $_SESSION['usuario_nivel'] <= 2): ?>
+                                        <?php if (strpos($importacao['observacoes'] ?? '', 'REVERTIDA') === false && temPermissao('pca_importar') && $_SESSION['usuario_nivel'] <= 2): ?>
                                             <button onclick="confirmarReversao(<?php echo $importacao['id']; ?>, '<?php echo htmlspecialchars($importacao['nome_arquivo'], ENT_QUOTES); ?>')" 
                                                     class="btn-acao btn-excluir" 
                                                     title="Reverter importação - REMOVE todos os dados desta importação"
                                                     style="background: #e74c3c; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer;">
                                                 <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
                                             </button>
-                                        <?php elseif ($importacao['status'] === 'removido'): ?>
+                                        <?php elseif (strpos($importacao['observacoes'] ?? '', 'REVERTIDA') !== false): ?>
                                             <span style="color: #7f8c8d; font-size: 12px; font-style: italic;">Revertida</span>
                                         <?php else: ?>
                                             <span style="color: #7f8c8d; font-size: 12px;">-</span>
